@@ -11,6 +11,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Loaded += MainWindow_Loaded;
+        StateChanged += MainWindow_StateChanged;
     }
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -758,6 +759,19 @@ public partial class MainWindow : Window
     {
         App.Settings.General.LaunchAtLogin = LaunchAtLoginCheckbox.IsChecked ?? false;
         App.Settings.Save();
+    }
+
+    private void MinimizeToTrayCheckbox_Changed(object sender, RoutedEventArgs e)
+    {
+        // XAML control not yet available - needs rebuild
+    }
+
+    private void MainWindow_StateChanged(object? sender, EventArgs e)
+    {
+        if (WindowState == WindowState.Minimized && App.Settings.General.MinimizeToTray)
+        {
+            Hide();
+        }
     }
 
     private void RestoreClipboardCheckbox_Changed(object sender, RoutedEventArgs e)

@@ -11,6 +11,7 @@ public partial class App : System.Windows.Application
     private TaskbarIcon? _notifyIcon;
     private MainWindow? _mainWindow;
     private RecordingOverlayWindow? _recordingOverlay;
+    private System.Windows.Controls.MenuItem? _recordMenuItem;
 
     public static string AppDataPath { get; private set; } = null!;
     public static string ModelsPath { get; private set; } = null!;
@@ -139,6 +140,31 @@ public partial class App : System.Windows.Application
         // Create context menu
         var contextMenu = new System.Windows.Controls.ContextMenu();
 
+        // Recording controls
+        _recordMenuItem = new System.Windows.Controls.MenuItem { Header = "Start Recording" };
+        _recordMenuItem.Click += async (s, e) =>
+        {
+            if (App.Audio.IsRecording)
+            {
+                // Stop recording and transcribe
+                var audioFile = await App.Audio.StopRecordingAsync();
+                if (!string.IsNullOrEmpty(audioFile))
+                {
+                    _ = App.Whisper.TranscribeAsync(audioFile);
+                }
+                _recordMenuItem.Header = "Start Recording";
+            }
+            else
+            {
+                // Start recording
+                App.Audio.StartRecording();
+                _recordMenuItem.Header = "Stop Recording";
+            }
+        };
+        contextMenu.Items.Add(_recordMenuItem);
+
+        contextMenu.Items.Add(new System.Windows.Controls.Separator());
+
         var showItem = new System.Windows.Controls.MenuItem { Header = "Show whisperMeOff" };
         showItem.Click += (s, e) =>
         {
@@ -212,6 +238,8 @@ public partial class App : System.Windows.Application
         {
             _recordingOverlay?.Show();
             UpdateTrayIcon(true);
+            if (_recordMenuItem != null)
+                _recordMenuItem.Header = "Stop Recording";
         });
     }
 
@@ -221,6 +249,8 @@ public partial class App : System.Windows.Application
         {
             _recordingOverlay?.Hide();
             UpdateTrayIcon(false);
+            if (_recordMenuItem != null)
+                _recordMenuItem.Header = "Start Recording";
         });
     }
 

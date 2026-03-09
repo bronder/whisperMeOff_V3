@@ -229,6 +229,9 @@
                             <StackPanel>
                                 <CheckBox x:Name="LaunchAtLoginCheckbox" Content="Launch at login"
                                           Checked="LaunchAtLoginCheckbox_Changed" Unchecked="LaunchAtLoginCheckbox_Changed"/>
+                                <CheckBox x:Name="MinimizeToTrayCheckbox" Content="Minimize to system tray"
+                                          Margin="0,10,0,0"
+                                          Checked="MinimizeToTrayCheckbox_Changed" Unchecked="MinimizeToTrayCheckbox_Changed"/>
                             </StackPanel>
                         </Border>
 

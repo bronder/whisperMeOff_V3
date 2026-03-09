@@ -13,6 +13,8 @@
   - Gruvbox
   - Monokai
   - Synthwave (retro-futuristic neon)
+- **System Tray Recording**: Right-click the tray icon to start/stop recording without opening the app
+- **Minimize to Tray**: Option to minimize to system tray instead of taskbar
 - **Theme Persistence**: Selected theme is saved and restored on app restart
 - **Llama Status Display**: Improved model status showing whether Llama is loaded
 
