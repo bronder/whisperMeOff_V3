@@ -86,16 +86,14 @@ Simply replace the existing `whisperMeOff.exe` with the new version. Your settin
 #### Version 1.2.0
 - **Audio Visualization**: Real-time waveform display and VU meter during recording
 - **Toggle Recording Mode**: Press-to-start/stop recording option (in addition to push-to-talk)
-- **Better Hotkey UI**: Improved hotkey configuration interface
+- **History Export**: Export transcription history to JSON/CSV/TXT
 
 #### Version 1.3.0
 - **Extended Language Support**: Full language dropdown with 50+ languages
-- **History Export**: Export transcription history to JSON/CSV/TXT
 - **Keyboard Navigation**: Full keyboard navigation for accessibility
 
 #### Version 2.0.0
 - **Custom Vocabulary**: User-defined word lists for better recognition
-- **Plugin System**: Extensible formatting pipeline
 - **Advanced Settings**: More transcription parameters (temperature, beam size, etc.)
 
 ---
