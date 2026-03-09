@@ -5,13 +5,14 @@
 ### Version 1.1.0
 
 #### Features
-- **Theme Support**: New visual theme system with 6 themes to choose from:
+- **Theme Support**: New visual theme system with 7 themes to choose from:
   - Light (default)
   - Dark
   - Nord (arctic, north-bluish)
   - Dracula
   - Gruvbox
   - Monokai
+  - Synthwave (retro-futuristic neon)
 - **Theme Persistence**: Selected theme is saved and restored on app restart
 - **Llama Status Display**: Improved model status showing whether Llama is loaded
 

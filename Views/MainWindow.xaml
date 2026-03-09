@@ -171,6 +171,7 @@
                                     <ComboBoxItem Content="Dracula"/>
                                     <ComboBoxItem Content="Gruvbox"/>
                                     <ComboBoxItem Content="Monokai"/>
+                                    <ComboBoxItem Content="Synthwave"/>
                                 </ComboBox>
                             </StackPanel>
                         </Border>

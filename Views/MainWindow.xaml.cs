@@ -745,7 +745,7 @@ public partial class MainWindow : Window
     {
         if (ThemeComboBox.SelectedIndex >= 0)
         {
-            string[] themes = { "Light", "Dark", "Nord", "Dracula", "Gruvbox", "Monokai" };
+            string[] themes = { "Light", "Dark", "Nord", "Dracula", "Gruvbox", "Monokai", "Synthwave" };
             var theme = themes[ThemeComboBox.SelectedIndex];
             App.Theme.ApplyTheme(theme);
             App.Settings.General.Theme = theme;
