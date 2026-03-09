@@ -100,6 +100,7 @@ public class AudioSettings
 
 public class GeneralSettings
 {
+    public string Theme { get; set; } = "Light";
     public string HotkeyTriggerKey { get; set; } = "r";
     public bool LaunchAtLogin { get; set; } = false;
     public string ModelDownloadPath { get; set; } = "";

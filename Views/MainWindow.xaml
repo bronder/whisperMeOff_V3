@@ -154,6 +154,27 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Theme Configuration -->
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Application Theme" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                                <TextBlock Text="Choose between light and dark visual themes"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
+                                <ComboBox x:Name="ThemeComboBox" Width="200" HorizontalAlignment="Left"
+                                          SelectionChanged="ThemeComboBox_SelectionChanged"
+                                          Background="{DynamicResource CardBrush}"
+                                          Foreground="{DynamicResource TextBrush}">
+                                    <ComboBoxItem Content="Light"/>
+                                    <ComboBoxItem Content="Dark"/>
+                                    <ComboBoxItem Content="Nord"/>
+                                    <ComboBoxItem Content="Dracula"/>
+                                    <ComboBoxItem Content="Gruvbox"/>
+                                    <ComboBoxItem Content="Monokai"/>
+                                </ComboBox>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Whisper Model Download Path -->
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
@@ -441,9 +462,22 @@
                                 <TextBlock Text="Find models at huggingface.co/models — search for GGUF quantized models"
                                            Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"
                                            TextWrapping="Wrap"/>
-                                <Button Content="Download Model" Click="DownloadLlamaModel_Click"
-                                        Style="{DynamicResource PrimaryButtonStyle}" Margin="0,10,0,0"
-                                        HorizontalAlignment="Left"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <Button Click="DownloadLlamaModel_Click"
+                                            Style="{DynamicResource PrimaryButtonStyle}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="Download Model" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Click="BrowseHuggingFaceLlama_Click"
+                                            Style="{DynamicResource PrimaryButtonStyle}" Margin="10,0,0,0">
+                                        <StackPanel Orientation="Horizontal">
+                                            <Path Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" 
+                                                  Fill="White" Width="16" Height="16" Stretch="Uniform" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Browse Models" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
 
                                 <!-- Download Progress for Llama -->
                                 <ProgressBar x:Name="LlamaDownloadProgressBar" Height="8" Margin="0,15,0,0"
@@ -456,7 +490,13 @@
                                 <TextBlock Text="HuggingFace Token (for private models)" FontSize="14" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}" Margin="0,20,0,0"/>
                                 <PasswordBox x:Name="HuggingFaceTokenBox" Margin="0,10,0,0"
-                                             PasswordChanged="HuggingFaceTokenBox_PasswordChanged"/>
+                                            PasswordChanged="HuggingFaceTokenBox_PasswordChanged"
+                                            Background="{DynamicResource CardBrush}"
+                                            Foreground="{DynamicResource TextBrush}"
+                                            BorderBrush="{DynamicResource BorderBrush}"
+                                            BorderThickness="1"
+                                            Padding="10,8"
+                                            CaretBrush="{DynamicResource TextBrush}"/>
                                 <TextBlock Text="Required for gated/private models. Get yours at huggingface.co/settings/tokens"
                                            Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"/>
                             </StackPanel>
@@ -480,7 +520,8 @@
 
                     <!-- History List -->
                     <ListBox x:Name="HistoryListBox" Grid.Row="1" Margin="0,10,0,0"
-                             Background="Transparent" BorderThickness="0">
+                             Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="15" Margin="0,5">
@@ -493,9 +534,9 @@
                                             <TextBlock Text="{Binding DisplayTime}" FontSize="11"
                                                        Foreground="{DynamicResource SecondaryTextBrush}"/>
                                             <TextBlock Text="{Binding Text}" TextWrapping="Wrap"
-                                                       Foreground="{DynamicResource TextBrush}" MaxHeight="60"/>
+                                                       Foreground="{DynamicResource TextBrush}"/>
                                         </StackPanel>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
                                             <Button Content="Copy" Click="CopyTranscription_Click"
                                                     Tag="{Binding Id}"
                                                     Style="{DynamicResource SecondaryButtonStyle}" Margin="5,0"/>

@@ -20,6 +20,7 @@ public partial class App : System.Windows.Application
     public static string DatabasePath { get; private set; } = null!;
 
     public static SettingsService Settings { get; private set; } = null!;
+    public static ThemeService Theme { get; private set; } = null!;
     public static AudioService Audio { get; private set; } = null!;
     public static WhisperService Whisper { get; private set; } = null!;
     public static LlamaService Llama { get; private set; } = null!;
@@ -49,6 +50,7 @@ public partial class App : System.Windows.Application
 
         // Initialize services
         Settings = new SettingsService();
+        Theme = new ThemeService();
         Database = new DatabaseService();
         Audio = new AudioService();
         Whisper = new WhisperService();
@@ -59,6 +61,9 @@ public partial class App : System.Windows.Application
 
         // Load settings
         Settings.Load();
+        
+        // Apply saved theme
+        Theme.ApplyTheme(Settings.General.Theme);
 
         // Update model paths based on settings - use custom paths if set
         var customWhisperPath = Settings.General.ModelDownloadPath;

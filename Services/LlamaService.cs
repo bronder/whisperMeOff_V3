@@ -14,6 +14,8 @@ public class LlamaService : IDisposable
 
     public bool IsLoaded => _isLoaded;
     public string? ModelPath => _modelPath;
+    
+    public event EventHandler<bool>? ModelLoaded;
 
     public async Task InitializeAsync(string modelPath)
     {
@@ -44,6 +46,7 @@ public class LlamaService : IDisposable
             
             _isLoaded = true;
             System.Diagnostics.Debug.WriteLine($"[LLAMA] Successfully initialized with model: {modelPath}");
+            ModelLoaded?.Invoke(this, true);
         }
         catch (Exception ex)
         {
@@ -201,6 +204,8 @@ Corrected:";
         _context = null;
         _model?.Dispose();
         _model = null;
+        
+        ModelLoaded?.Invoke(this, false);
     }
 
     public void Dispose()

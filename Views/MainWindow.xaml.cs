@@ -20,9 +20,18 @@ public partial class MainWindow : Window
 
         // Load audio devices
         LoadAudioDevices();
-    
+     
         // Load settings to UI
         LoadSettingsToUI();
+
+        // Subscribe to Llama model load/unload events
+        App.Llama.ModelLoaded += (s, isLoaded) => Dispatcher.Invoke(() =>
+        {
+            if (App.Settings.Llama.Enabled)
+            {
+                LlamaStatusText.Text = isLoaded ? "Enabled (Loaded)" : "Enabled (Not Loaded)";
+            }
+        });
 
         // Load history
         await LoadHistoryAsync();
@@ -122,6 +131,23 @@ public partial class MainWindow : Window
             WhisperStatusText.Text = "Ready";
         }
 
+        // Llama status - show whether enabled and loaded
+        if (App.Settings.Llama.Enabled)
+        {
+            if (App.Llama.IsLoaded)
+            {
+                LlamaStatusText.Text = "Enabled (Loaded)";
+            }
+            else
+            {
+                LlamaStatusText.Text = "Enabled (Not Loaded)";
+            }
+        }
+        else
+        {
+            LlamaStatusText.Text = "Disabled";
+        }
+
         // Check which Whisper models are already downloaded
         var whisperPath = App.WhisperModelsPath;
         if (System.IO.Directory.Exists(whisperPath))
@@ -193,6 +219,9 @@ public partial class MainWindow : Window
         {
             quickStartHotkeyRun.Text = App.Settings.General.HotkeyTriggerKey.ToUpper();
         }
+        
+        // Theme
+        ThemeComboBox.SelectedIndex = App.Theme.GetCurrentThemeIndex();
 
         // Launch at login
         LaunchAtLoginCheckbox.IsChecked = App.Settings.General.LaunchAtLogin;
@@ -592,6 +621,22 @@ public partial class MainWindow : Window
         }
     }
 
+    private void BrowseHuggingFaceLlama_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "https://huggingface.co/models?num_parameters=min:0,max:6B&library=gguf&apps=llama.cpp&sort=likes",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ERROR] Could not open URL: {ex.Message}");
+        }
+    }
+
     private async void DownloadLlamaModel_Click(object sender, RoutedEventArgs e)
     {
         var modelId = HuggingFaceModelIdTextBox.Text.Trim();
@@ -693,6 +738,19 @@ public partial class MainWindow : Window
             {
                 quickStartHotkeyRun.Text = text.ToUpper();
             }
+        }
+    }
+
+    private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ThemeComboBox.SelectedIndex >= 0)
+        {
+            string[] themes = { "Light", "Dark", "Nord", "Dracula", "Gruvbox", "Monokai" };
+            var theme = themes[ThemeComboBox.SelectedIndex];
+            App.Theme.ApplyTheme(theme);
+            App.Settings.General.Theme = theme;
+            App.Settings.Save();
+            System.Diagnostics.Debug.WriteLine($"[UI] Theme changed to: {theme}");
         }
     }
 
