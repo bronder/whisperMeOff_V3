@@ -15,9 +15,6 @@ Offline voice-to-text transcription with auto-paste for Windows.
 ## Screenshots
 
 ![Main Window - Light Theme](docs/screenshots/main-light.png)
-![Main Window - Dark Theme](docs/screenshots/main-dark.png)
-![Main Window - Synthwave Theme](docs/screenshots/main-synthwave.png)
-![Main Window - Nord Theme](docs/screenshots/main-nord.png)
 
 ## Requirements
 
