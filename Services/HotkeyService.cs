@@ -13,6 +13,21 @@ public class HotkeyService : IDisposable
     [DllImport("user32.dll")]
     private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+    private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+    private const int WH_KEYBOARD_LL = 13;
+    private const int WM_KEYDOWN = 0x0100;
+    private const int WM_KEYUP = 0x0101;
     private const int HOTKEY_ID = 9000;
     private const uint MOD_CONTROL = 0x0002;
     private const uint MOD_SHIFT = 0x0004;
@@ -21,6 +36,9 @@ public class HotkeyService : IDisposable
     private HwndSource? _source;
     private string _triggerKey = "r";
     private IntPtr _previousWindow;
+    private IntPtr _keyboardHookId = IntPtr.Zero;
+    private LowLevelKeyboardProc? _keyboardProc;
+    private bool _isHotkeyPressed;
 
     public event EventHandler? HotkeyPressed;
     public event EventHandler? HotkeyReleased;
@@ -31,6 +49,10 @@ public class HotkeyService : IDisposable
         _windowHandle = helper.Handle;
         _source = HwndSource.FromHwnd(_windowHandle);
         _source?.AddHook(HwndHook);
+
+        // Set up keyboard hook for release detection
+        _keyboardProc = KeyboardHookCallback;
+        _keyboardHookId = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, GetModuleHandle(null), 0);
 
         RegisterCurrentHotkey();
     }
@@ -71,6 +93,39 @@ public class HotkeyService : IDisposable
 
         return 0;
     }
+
+    private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode >= 0)
+        {
+            int vkCode = Marshal.ReadInt32(lParam);
+            uint triggerVk = GetVirtualKeyCode(_triggerKey);
+
+            // Check if our trigger key was released
+            if (wParam == (IntPtr)WM_KEYUP && vkCode == triggerVk)
+            {
+                if (_isHotkeyPressed)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Hotkey released");
+                    _isHotkeyPressed = false;
+                    HotkeyReleased?.Invoke(this, EventArgs.Empty);
+                }
+            }
+            // Check if our trigger key was pressed
+            else if (wParam == (IntPtr)WM_KEYDOWN && vkCode == triggerVk)
+            {
+                // Check if Ctrl+Shift are also held
+                if ((GetAsyncKeyState(0x11) & 0x8000) != 0 && (GetAsyncKeyState(0x10) & 0x8000) != 0)
+                {
+                    _isHotkeyPressed = true;
+                }
+            }
+        }
+        return CallNextHookEx(_keyboardHookId, nCode, wParam, lParam);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
 
     private IntPtr HwndHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
@@ -117,5 +172,13 @@ public class HotkeyService : IDisposable
     {
         _source?.RemoveHook(HwndHook);
         UnregisterHotKey(_windowHandle, HOTKEY_ID);
+        
+        if (_keyboardHookId != IntPtr.Zero)
+        {
+            UnhookWindowsHookEx(_keyboardHookId);
+            _keyboardHookId = IntPtr.Zero;
+        }
     }
+
+    private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
 }

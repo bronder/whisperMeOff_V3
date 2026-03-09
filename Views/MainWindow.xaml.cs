@@ -28,8 +28,26 @@ public partial class MainWindow : Window
         await LoadHistoryAsync();
 
         // Subscribe to recording events to update button state
-        App.Audio.RecordingStarted += (s, ev) => Dispatcher.Invoke(() => RecordButton.Content = "Stop Recording");
-        App.Audio.RecordingStopped += (s, ev) => Dispatcher.Invoke(() => RecordButton.Content = "Start Recording");
+        App.Audio.RecordingStarted += (s, ev) => Dispatcher.Invoke(() =>
+        {
+            RecordButton.Content = "Stop Recording";
+            StatusIndicator.Fill = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.Red);
+            AudioLevelMeter.Visibility = Visibility.Visible;
+            AudioLevelMeter.Value = 0;
+        });
+        App.Audio.RecordingStopped += (s, ev) => Dispatcher.Invoke(() =>
+        {
+            RecordButton.Content = "Start Recording";
+            StatusIndicator.Fill = (System.Windows.Media.Brush)FindResource("AccentBrush");
+            AudioLevelMeter.Visibility = Visibility.Collapsed;
+            AudioLevelMeter.Value = 0;
+        });
+        
+        // Subscribe to audio level changes
+        App.Audio.AudioLevelChanged += (s, level) => Dispatcher.Invoke(() =>
+        {
+            AudioLevelMeter.Value = level;
+        });
     }
 
     private void LoadAudioDevices()
@@ -167,9 +185,24 @@ public partial class MainWindow : Window
         // Hotkey
         HotkeyTriggerTextBox.Text = App.Settings.General.HotkeyTriggerKey;
         HotkeyDisplay.Text = App.Settings.General.HotkeyTriggerKey.ToUpper();
+        HotkeyStatusText.Text = $"Ctrl+Shift+{App.Settings.General.HotkeyTriggerKey.ToUpper()}";
+        
+        // Update Quick Start hotkey display
+        var quickStartHotkeyRun = FindName("QuickStartHotkeyRun") as System.Windows.Documents.Run;
+        if (quickStartHotkeyRun != null)
+        {
+            quickStartHotkeyRun.Text = App.Settings.General.HotkeyTriggerKey.ToUpper();
+        }
 
         // Launch at login
         LaunchAtLoginCheckbox.IsChecked = App.Settings.General.LaunchAtLogin;
+        
+        // Clipboard restore settings
+        RestoreClipboardCheckbox.IsChecked = App.Settings.General.RestoreClipboard;
+        ClipboardDelayTextBox.Text = App.Settings.General.ClipboardRestoreDelayMs.ToString();
+        
+        // Recording mode
+        PushToTalkCheckbox.IsChecked = App.Settings.General.PushToTalkMode;
     }
 
     public void NavigateToSettings()
@@ -271,11 +304,15 @@ public partial class MainWindow : Window
                     await Task.Delay(100);
                     await App.Clipboard.PasteToWindow(previousWindow);
 
-                    // Restore previous clipboard after a delay (so user can paste)
-                    await Task.Delay(500);
-                    if (!string.IsNullOrEmpty(previousClipboard))
+                    // Restore previous clipboard after delay (if enabled)
+                    if (App.Settings.General.RestoreClipboard && !string.IsNullOrEmpty(previousClipboard))
                     {
-                        App.Clipboard.SetText(previousClipboard);
+                        var delay = App.Settings.General.ClipboardRestoreDelayMs;
+                        if (delay > 0)
+                        {
+                            await Task.Delay(delay);
+                            App.Clipboard.SetText(previousClipboard);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -621,12 +658,41 @@ public partial class MainWindow : Window
         {
             App.Hotkey.SetTriggerKey(text.ToLower());
             HotkeyDisplay.Text = text.ToUpper();
+            HotkeyStatusText.Text = $"Ctrl+Shift+{text.ToUpper()}";
+            
+            // Update Quick Start hotkey display
+            var quickStartHotkeyRun = FindName("QuickStartHotkeyRun") as System.Windows.Documents.Run;
+            if (quickStartHotkeyRun != null)
+            {
+                quickStartHotkeyRun.Text = text.ToUpper();
+            }
         }
     }
 
     private void LaunchAtLoginCheckbox_Changed(object sender, RoutedEventArgs e)
     {
         App.Settings.General.LaunchAtLogin = LaunchAtLoginCheckbox.IsChecked ?? false;
+        App.Settings.Save();
+    }
+
+    private void RestoreClipboardCheckbox_Changed(object sender, RoutedEventArgs e)
+    {
+        App.Settings.General.RestoreClipboard = RestoreClipboardCheckbox.IsChecked ?? false;
+        App.Settings.Save();
+    }
+
+    private void ClipboardDelayTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (int.TryParse(ClipboardDelayTextBox.Text, out int delay) && delay > 0)
+        {
+            App.Settings.General.ClipboardRestoreDelayMs = delay;
+            App.Settings.Save();
+        }
+    }
+
+    private void PushToTalkCheckbox_Changed(object sender, RoutedEventArgs e)
+    {
+        App.Settings.General.PushToTalkMode = PushToTalkCheckbox.IsChecked ?? true;
         App.Settings.Save();
     }
 

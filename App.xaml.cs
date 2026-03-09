@@ -223,15 +223,25 @@ public partial class App : System.Windows.Application
     {
         Dispatcher.Invoke(() =>
         {
-            // Toggle recording on/off
-            if (Audio.IsRecording)
+            if (Settings.General.PushToTalkMode)
             {
-                // Stop recording and process transcription
-                _ = StopRecordingAndTranscribeAsync();
+                // Push-to-talk mode: Start recording when hotkey pressed
+                if (!Audio.IsRecording)
+                {
+                    Audio.StartRecording();
+                }
             }
             else
             {
-                Audio.StartRecording();
+                // Toggle mode: Press to start/stop
+                if (Audio.IsRecording)
+                {
+                    _ = StopRecordingAndTranscribeAsync();
+                }
+                else
+                {
+                    Audio.StartRecording();
+                }
             }
         });
     }
@@ -247,7 +257,14 @@ public partial class App : System.Windows.Application
 
     private void OnHotkeyReleased(object? sender, EventArgs e)
     {
-        // Currently not used - keeping for potential future push-to-talk mode
+        // Push-to-talk: stop recording and transcribe when key is released
+        Dispatcher.Invoke(() =>
+        {
+            if (Settings.General.PushToTalkMode && Audio.IsRecording)
+            {
+                _ = StopRecordingAndTranscribeAsync();
+            }
+        });
     }
 
     private async Task ProcessTranscriptionAsync(string audioFile)

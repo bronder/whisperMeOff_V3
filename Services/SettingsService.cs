@@ -87,4 +87,7 @@ public class GeneralSettings
     public bool LaunchAtLogin { get; set; } = false;
     public string ModelDownloadPath { get; set; } = "";
     public string LlamaDownloadPath { get; set; } = "";
+    public bool RestoreClipboard { get; set; } = true;
+    public int ClipboardRestoreDelayMs { get; set; } = 1000;
+    public bool PushToTalkMode { get; set; } = true; // true = hold to talk, false = toggle
 }
