@@ -76,6 +76,29 @@ Simply replace the existing `whisperMeOff.exe` with the new version. Your settin
 - Large models may require more memory
 - Some antivirus software may flag the application
 
+---
+
+## Future Releases
+
+### Planned Features
+
+#### Version 1.2.0
+- **Audio Visualization**: Real-time waveform display and VU meter during recording
+- **Toggle Recording Mode**: Press-to-start/stop recording option (in addition to push-to-talk)
+- **Better Hotkey UI**: Improved hotkey configuration interface
+
+#### Version 1.3.0
+- **Extended Language Support**: Full language dropdown with 50+ languages
+- **History Export**: Export transcription history to JSON/CSV/TXT
+- **Keyboard Navigation**: Full keyboard navigation for accessibility
+
+#### Version 2.0.0
+- **Custom Vocabulary**: User-defined word lists for better recognition
+- **Plugin System**: Extensible formatting pipeline
+- **Advanced Settings**: More transcription parameters (temperature, beam size, etc.)
+
+---
+
 ## Support
 
 For issues and feature requests, please open an issue on the project repository.
