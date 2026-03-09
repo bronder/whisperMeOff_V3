@@ -265,6 +265,7 @@ public class AudioService : IDisposable
     public void Dispose()
     {
         Cleanup();
+        _disposed = true;
     }
 }
 

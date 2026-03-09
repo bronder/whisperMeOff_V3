@@ -52,7 +52,7 @@ public class HotkeyService : IDisposable
 
         // Set up keyboard hook for release detection
         _keyboardProc = KeyboardHookCallback;
-        _keyboardHookId = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, GetModuleHandle(null), 0);
+        _keyboardHookId = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, GetModuleHandle((string?)null), 0);
 
         RegisterCurrentHotkey();
     }

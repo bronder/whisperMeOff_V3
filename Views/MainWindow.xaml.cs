@@ -278,12 +278,12 @@ public partial class MainWindow : Window
         try
         {
             System.Diagnostics.Debug.WriteLine("[DEBUG] Starting Whisper transcription...");
-            var text = await App.Whisper.TranscribeAsync(audioFile);
+            var text = await App.Whisper.TranscribeAsync(audioFile) ?? string.Empty;
             System.Diagnostics.Debug.WriteLine($"[DEBUG] Whisper transcription complete: {text?.Substring(0, Math.Min(50, text?.Length ?? 0))}...");
 
             System.Diagnostics.Debug.WriteLine("[DEBUG] llama Enabled: " + App.Settings.Llama.Enabled + ", Llama Loaded: " + App.Llama.IsLoaded );
 
-            if (App.Settings.Llama.Enabled && App.Llama.IsLoaded)
+            if (App.Settings.Llama.Enabled && App.Llama.IsLoaded && !string.IsNullOrEmpty(text))
             {
                 System.Diagnostics.Debug.WriteLine("[DEBUG] Running Llama text formatting...");
                 text = await App.Llama.FormatTextAsync(text);
@@ -327,13 +327,13 @@ public partial class MainWindow : Window
                 }
             });
 
-            await App.Database.AddTranscriptionAsync(text, App.Audio.LastRecordingDuration,
+            await App.Database.AddTranscriptionAsync(text ?? string.Empty, App.Audio.LastRecordingDuration,
                 App.Settings.Whisper.ModelPath, App.Settings.Whisper.Language);
 
             // UI updates must run on the UI thread
             await Dispatcher.InvokeAsync(async () =>
             {
-                UpdateLastTranscription(text);
+                UpdateLastTranscription(text ?? string.Empty);
                 await LoadHistoryAsync();
             });
 

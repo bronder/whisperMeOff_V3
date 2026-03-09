@@ -2,6 +2,18 @@
 
 ## Latest Release
 
+### Version 1.0.1
+
+#### Bug Fixes
+- **Audio Service**: Fixed disposal tracking to prevent operations after dispose
+- **Null Safety**: Improved null handling in transcription pipeline to prevent crashes
+- **Hotkey Service**: Fixed keyboard hook initialization for better reliability
+
+#### Improvements
+- Removed redundant System.Text.Json dependency (now transitively provided)
+
+---
+
 ### Version 1.0.0
 
 #### Features
