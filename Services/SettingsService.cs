@@ -24,11 +24,20 @@ public class SettingsService
                     Llama = settings.Llama ?? new LlamaSettings();
                     Audio = settings.Audio ?? new AudioSettings();
                     General = settings.General ?? new GeneralSettings();
+                    
+                    System.Diagnostics.Debug.WriteLine($"[Settings] Loaded from {App.SettingsPath}");
+                    System.Diagnostics.Debug.WriteLine($"[Settings] Llama ModelId: {Llama.ModelId}");
+                    System.Diagnostics.Debug.WriteLine($"[Settings] Llama Token: {(string.IsNullOrEmpty(Llama.HuggingFaceToken) ? "(empty)" : "***")}");
                 }
             }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[Settings] No settings file at {App.SettingsPath}");
+            }
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[Settings] Load error: {ex.Message}");
             // Use defaults on error
         }
 
@@ -39,16 +48,24 @@ public class SettingsService
 
     public void Save()
     {
-        var settings = new AppSettings
+        try
         {
-            Whisper = Whisper,
-            Llama = Llama,
-            Audio = Audio,
-            General = General
-        };
+            var settings = new AppSettings
+            {
+                Whisper = Whisper,
+                Llama = Llama,
+                Audio = Audio,
+                General = General
+            };
 
-        var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(App.SettingsPath, json);
+            var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(App.SettingsPath, json);
+            System.Diagnostics.Debug.WriteLine($"[Settings] Saved to {App.SettingsPath}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Settings] Save error: {ex.Message}");
+        }
     }
 }
 

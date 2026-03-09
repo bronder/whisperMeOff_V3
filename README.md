@@ -16,6 +16,35 @@ Offline voice-to-text transcription with auto-paste for Windows.
 - Windows 10/11
 - .NET 10.0 Runtime
 
+## Dependencies & NuGet Packages
+
+This project uses the following NuGet packages:
+
+### Audio & Transcription
+| Package | Version | Description |
+|---------|---------|-------------|
+| [NAudio](https://github.com/naudio/NAudio) | 2.2.1 | Audio capture and playback library for Windows |
+| [Whisper.net](https://github.com/sandrohanea/whisper.net) | 1.9.1-preview1 | .NET binding for Whisper.cpp |
+| [Whisper.net.Runtime](https://github.com/sandrohanea/whisper.net) | 1.9.1-preview1 | Runtime components for Whisper |
+
+### AI & ML
+| Package | Version | Description |
+|---------|---------|-------------|
+| [LLamaSharp](https://github.com/ggerganov/llama.cpp) | 0.11.1 | .NET binding for llama.cpp |
+| [LLamaSharp.Backend.Cpu](https://github.com/ggerganov/llama.cpp) | 0.11.1 | CPU backend for LLamaSharp |
+
+### UI & Desktop
+| Package | Version | Description |
+|---------|---------|-------------|
+| [Hardcodet.NotifyIcon.Wpf](https://github.com/hardcodet/wpf-notifyicon) | 1.1.0 | System tray icon support for WPF |
+| [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | 8.2.2 | MVVM toolkit for WPF apps |
+
+### Data & Utilities
+| Package | Version | Description |
+|---------|---------|-------------|
+| [Microsoft.Data.Sqlite](https://docs.microsoft.com/en-us/dotnet/standard/data/sqlite/) | 8.0.0 | SQLite database support |
+| [MathNet.Numerics](https://numerics.mathdotnet.com/) | 5.0.0 | Numerical computing library |
+
 ## Installation
 
 1. Download the latest release
@@ -47,6 +76,8 @@ Offline voice-to-text transcription with auto-paste for Windows.
 #### General Settings
 - **Hotkey**: Change the trigger key (default: R)
 - **Download Paths**: Customize where models are saved
+- **Recording Mode**: Choose Push-to-talk (hold to record) or Toggle (press to start/stop)
+- **Clipboard**: Configure clipboard restore behavior
 
 ## Model Sizes
 

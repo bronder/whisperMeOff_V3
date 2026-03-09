@@ -203,6 +203,10 @@ public partial class MainWindow : Window
         
         // Recording mode
         PushToTalkCheckbox.IsChecked = App.Settings.General.PushToTalkMode;
+        
+        // Mark as initialized - now TextChanged will save settings
+        _isInitialized = true;
+        System.Diagnostics.Debug.WriteLine("[UI] MainWindow initialized");
     }
 
     public void NavigateToSettings()
@@ -276,6 +280,8 @@ public partial class MainWindow : Window
             System.Diagnostics.Debug.WriteLine("[DEBUG] Starting Whisper transcription...");
             var text = await App.Whisper.TranscribeAsync(audioFile);
             System.Diagnostics.Debug.WriteLine($"[DEBUG] Whisper transcription complete: {text?.Substring(0, Math.Min(50, text?.Length ?? 0))}...");
+
+            System.Diagnostics.Debug.WriteLine("[DEBUG] llama Enabled: " + App.Settings.Llama.Enabled + ", Llama Loaded: " + App.Llama.IsLoaded );
 
             if (App.Settings.Llama.Enabled && App.Llama.IsLoaded)
             {
@@ -568,9 +574,20 @@ public partial class MainWindow : Window
             App.Settings.Save();
             LlamaModelPathText.Text = System.IO.Path.GetFileName(dialog.FileName);
 
-            if (App.Settings.Llama.Enabled)
+            // Reinitialize Llama with the new model
+            if (App.Settings.Llama.Enabled && !string.IsNullOrEmpty(dialog.FileName))
             {
-                Task.Run(async () => await App.Llama.InitializeAsync(dialog.FileName));
+                LlamaStatusText.Text = "Loading model...";
+                Task.Run(async () =>
+                {
+                    await App.Llama.InitializeAsync(dialog.FileName);
+                    await Dispatcher.InvokeAsync(() =>
+                    {
+                        LlamaStatusText.Text = App.Llama.IsLoaded 
+                            ? $"Model loaded: {System.IO.Path.GetFileName(dialog.FileName)}"
+                            : "Failed to load model";
+                    });
+                });
             }
         }
     }
@@ -641,14 +658,24 @@ public partial class MainWindow : Window
 
     private void HuggingFaceTokenBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
+        // Don't save during initialization
+        if (!_isInitialized) return;
+        
         App.Settings.Llama.HuggingFaceToken = HuggingFaceTokenBox.Password;
         App.Settings.Save();
+        System.Diagnostics.Debug.WriteLine("[UI] Saved HuggingFaceToken");
     }
 
+    private bool _isInitialized = false;
+    
     private void HuggingFaceModelIdTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        // Don't save during initialization
+        if (!_isInitialized) return;
+        
         App.Settings.Llama.ModelId = HuggingFaceModelIdTextBox.Text;
         App.Settings.Save();
+        System.Diagnostics.Debug.WriteLine($"[UI] Saved ModelId: {HuggingFaceModelIdTextBox.Text}");
     }
 
     private void HotkeyTriggerTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -727,7 +754,11 @@ public partial class MainWindow : Window
                 var record = await App.Database.GetTranscriptionAsync(id);
                 if (record != null)
                 {
-                    App.Clipboard.SetText(record.Text);
+                    // Must run clipboard on UI thread
+                    System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        App.Clipboard.SetText(record.Text);
+                    });
                 }
             });
         }
