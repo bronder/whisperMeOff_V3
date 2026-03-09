@@ -14,7 +14,7 @@ Offline voice-to-text transcription with auto-paste for Windows.
 
 ## Screenshots
 
-![Main Window - Light Theme](docs/screenshots/main-light.png)
+<img src="docs/screenshots/main-light.png" width="600" alt="Main Window - Light Theme">
 
 ## Requirements
 
