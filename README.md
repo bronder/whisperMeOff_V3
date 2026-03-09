@@ -10,7 +10,14 @@ Offline voice-to-text transcription with auto-paste for Windows.
 - **Llama Formatting**: Optional Llama-based text formatting for cleaner output
 - **Offline**: Works completely offline - no internet required for transcription
 - **HuggingFace Support**: Download GGUF models directly from HuggingFace
-- **Theme Support**: Choose from 6 visual themes (Light, Dark, Nord, Dracula, Gruvbox, Monokai)
+- **Theme Support**: Choose from 7 visual themes (Light, Dark, Nord, Dracula, Gruvbox, Monokai, Synthwave)
+
+## Screenshots
+
+![Main Window - Light Theme](docs/screenshots/main-light.png)
+![Main Window - Dark Theme](docs/screenshots/main-dark.png)
+![Main Window - Synthwave Theme](docs/screenshots/main-synthwave.png)
+![Main Window - Nord Theme](docs/screenshots/main-nord.png)
 
 ## Requirements
 
