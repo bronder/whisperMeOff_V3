@@ -73,7 +73,6 @@ public class AudioService : IDisposable
 
     public void StartRecording()
     {
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] StartRecording called. _isRecording={_isRecording}, _disposed={_disposed}, _waveIn={_waveIn}");
         if (_isRecording || _disposed) return;
 
         try

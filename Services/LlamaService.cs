@@ -79,12 +79,8 @@ public class LlamaService : IDisposable
         {
             System.Diagnostics.Debug.WriteLine($"[LLAMA] Formatting text: {rawText.Length} chars");
             
-            // Clean up/format the transcription
-            var prompt = $@"Fix the capitalization and punctuation in this text. Make it readable. Return only the corrected text, nothing else.
-
-Text: {rawText}
-
-Corrected:";
+            // Define the prompt - only fix spelling and grammar, no formatting
+            var prompt = $@"Fix only the spelling and grammar errors in this text. Do not add any formatting, bullet points, or new content. Just correct the errors: {rawText}";
 
             System.Diagnostics.Debug.WriteLine("[LLAMA] === FULL PROMPT ===");
             System.Diagnostics.Debug.WriteLine(prompt);
@@ -94,21 +90,34 @@ Corrected:";
             {
                 Temperature = 0.1f,
                 MaxTokens = 512,
-                AntiPrompts = new List<string> { "Text:", "Corrected:", "\n\n", "Here is", "Sure,", "Here'", "Explanation:" }
+                AntiPrompts = new List<string> { "* ", "-", "#", "1.", "\n\n", "Here is", "Sure,", "Here'", "Explanation:" }
             };
 
             System.Diagnostics.Debug.WriteLine("[LLAMA] Starting inference...");
             var result = new System.Text.StringBuilder();
             
-            await foreach (var token in _executor.InferAsync(prompt, inferenceParams))
+            // Run inference on background thread to avoid UI thread issues when minimized
+            await Task.Run(async () =>
             {
-                result.Append(token);
-                
-                // Stop if we hit a reasonable length
-                if (result.Length > rawText.Length * 3)
-                    break;
-            }
-
+                try
+                {
+                    var syncExecutor = _executor;
+                    if (syncExecutor == null) return;
+                    
+                    await foreach (var token in syncExecutor.InferAsync(prompt, inferenceParams))
+                    {
+                        result.Append(token);
+                        
+                        if (result.Length > rawText.Length * 3)
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LLAMA] Inference exception: {ex.Message}");
+                }
+            });
+            
             var formatted = result.ToString().Trim();
             
             // Log the full output for debugging

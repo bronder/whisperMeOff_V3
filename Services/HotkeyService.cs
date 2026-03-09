@@ -39,13 +39,28 @@ public class HotkeyService : IDisposable
     private IntPtr _keyboardHookId = IntPtr.Zero;
     private LowLevelKeyboardProc? _keyboardProc;
     private bool _isHotkeyPressed;
+    private System.Windows.Window? _messageWindow; // Separate window for hotkey messages
 
     public event EventHandler? HotkeyPressed;
     public event EventHandler? HotkeyReleased;
 
     public void Initialize(Window window)
     {
-        var helper = new WindowInteropHelper(window);
+        // Create a separate hidden window to handle hotkey messages
+        // This window stays active even when main window is minimized/hidden
+        _messageWindow = new System.Windows.Window
+        {
+            Width = 0,
+            Height = 0,
+            WindowStyle = WindowStyle.None,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false,
+            ShowActivated = false,
+            Visibility = Visibility.Hidden
+        };
+        _messageWindow.Show();
+        
+        var helper = new WindowInteropHelper(_messageWindow);
         _windowHandle = helper.Handle;
         _source = HwndSource.FromHwnd(_windowHandle);
         _source?.AddHook(HwndHook);
@@ -135,7 +150,6 @@ public class HotkeyService : IDisposable
         {
             // Record the previous window for auto-paste
             _previousWindow = GetForegroundWindow();
-            System.Diagnostics.Debug.WriteLine($"Hotkey pressed, previous window: {_previousWindow}");
 
             HotkeyPressed?.Invoke(this, EventArgs.Empty);
             handled = true;
@@ -143,6 +157,12 @@ public class HotkeyService : IDisposable
 
         return IntPtr.Zero;
     }
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
 
     public void SetTriggerKey(string key)
     {
@@ -177,6 +197,13 @@ public class HotkeyService : IDisposable
         {
             UnhookWindowsHookEx(_keyboardHookId);
             _keyboardHookId = IntPtr.Zero;
+        }
+        
+        // Close the message window
+        if (_messageWindow != null)
+        {
+            _messageWindow.Close();
+            _messageWindow = null;
         }
     }
 
