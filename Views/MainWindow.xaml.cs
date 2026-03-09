@@ -1,0 +1,701 @@
+using System.Windows;
+using System.Windows.Controls;
+using Microsoft.Win32;
+using whisperMeOff.Services;
+
+namespace whisperMeOff.Views;
+
+public partial class MainWindow : Window
+{
+    public MainWindow()
+    {
+        InitializeComponent();
+        Loaded += MainWindow_Loaded;
+    }
+
+    private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        // Initialize hotkey
+        App.Hotkey.Initialize(this);
+
+        // Load audio devices
+        LoadAudioDevices();
+    
+        // Load settings to UI
+        LoadSettingsToUI();
+
+        // Load history
+        await LoadHistoryAsync();
+
+        // Subscribe to recording events to update button state
+        App.Audio.RecordingStarted += (s, ev) => Dispatcher.Invoke(() => RecordButton.Content = "Stop Recording");
+        App.Audio.RecordingStopped += (s, ev) => Dispatcher.Invoke(() => RecordButton.Content = "Start Recording");
+    }
+
+    private void LoadAudioDevices()
+    {
+        var devices = App.Audio.GetAvailableDevices();
+        MicrophoneComboBox.Items.Clear();
+        MicrophoneComboBox.Items.Add(new ComboBoxItem { Content = "Default Microphone", Tag = "" });
+
+        foreach (var device in devices)
+        {
+            MicrophoneComboBox.Items.Add(new ComboBoxItem { Content = device.Name, Tag = device.Id });
+        }
+
+        // Select current device
+        var currentDeviceId = App.Settings.Audio.DeviceId;
+        for (int i = 0; i < MicrophoneComboBox.Items.Count; i++)
+        {
+            var item = (ComboBoxItem)MicrophoneComboBox.Items[i];
+            if (item.Tag?.ToString() == currentDeviceId)
+            {
+                MicrophoneComboBox.SelectedIndex = i;
+                break;
+            }
+        }
+    }
+
+    private void LoadSettingsToUI()
+    {
+        // Language
+        var language = App.Settings.Whisper.Language;
+        foreach (ComboBoxItem item in LanguageComboBox.Items)
+        {
+            if (item.Tag?.ToString() == language)
+            {
+                LanguageComboBox.SelectedItem = item;
+                break;
+            }
+        }
+
+        // Translate
+        TranslateCheckbox.IsChecked = App.Settings.Whisper.Translate;
+
+        // Model Download Path
+        var downloadPath = App.Settings.General.ModelDownloadPath;
+        if (!string.IsNullOrEmpty(downloadPath))
+        {
+            ModelDownloadPathTextBox.Text = downloadPath;
+            DownloadPathStatusText.Text = $"Using: {downloadPath}";
+        }
+        else
+        {
+            DownloadPathStatusText.Text = $"Default: {App.WhisperModelsPath}";
+        }
+
+        // Llama Model Download Path
+        var llamaDownloadPath = App.Settings.General.LlamaDownloadPath;
+        if (!string.IsNullOrEmpty(llamaDownloadPath))
+        {
+            LlamaDownloadPathTextBox.Text = llamaDownloadPath;
+            LlamaDownloadPathStatusText.Text = $"Using: {llamaDownloadPath}";
+        }
+        else
+        {
+            LlamaDownloadPathStatusText.Text = $"Default: {App.LlamaModelsPath}";
+        }
+
+        // Model path
+        var modelPath = App.Whisper.GetModelPath();
+        if (!string.IsNullOrEmpty(modelPath))
+        {
+            ModelPathText.Text = System.IO.Path.GetFileName(modelPath);
+            WhisperStatusText.Text = "Ready";
+        }
+
+        // Check which Whisper models are already downloaded
+        var whisperPath = App.WhisperModelsPath;
+        if (System.IO.Directory.Exists(whisperPath))
+        {
+            var tinyPath = System.IO.Path.Combine(whisperPath, "ggml-tiny.bin");
+            var basePath = System.IO.Path.Combine(whisperPath, "ggml-base.bin");
+            var smallPath = System.IO.Path.Combine(whisperPath, "ggml-small.bin");
+            var mediumPath = System.IO.Path.Combine(whisperPath, "ggml-medium.bin");
+            var largePath = System.IO.Path.Combine(whisperPath, "ggml-large.bin");
+            var largeV3Path = System.IO.Path.Combine(whisperPath, "ggml-large-v3.bin");
+
+            if (System.IO.File.Exists(tinyPath))
+            {
+                DownloadTinyBtn.Content = "Downloaded";
+                DownloadTinyBtn.IsEnabled = false;
+            }
+            if (System.IO.File.Exists(basePath))
+            {
+                DownloadBaseBtn.Content = "Downloaded";
+                DownloadBaseBtn.IsEnabled = false;
+            }
+            if (System.IO.File.Exists(smallPath))
+            {
+                DownloadSmallBtn.Content = "Downloaded";
+                DownloadSmallBtn.IsEnabled = false;
+            }
+            if (System.IO.File.Exists(mediumPath))
+            {
+                DownloadMediumBtn.Content = "Downloaded";
+                DownloadMediumBtn.IsEnabled = false;
+            }
+            if (System.IO.File.Exists(largePath) || System.IO.File.Exists(largeV3Path))
+            {
+                DownloadLargeBtn.Content = "Downloaded";
+                DownloadLargeBtn.IsEnabled = false;
+            }
+        }
+
+        // Llama settings
+        LlamaEnableCheckbox.IsChecked = App.Settings.Llama.Enabled;
+        var llamaPath = App.Settings.Llama.ModelPath;
+        if (!string.IsNullOrEmpty(llamaPath))
+        {
+            LlamaModelPathText.Text = System.IO.Path.GetFileName(llamaPath);
+        }
+
+        // HuggingFace Model ID
+        var modelId = App.Settings.Llama.ModelId;
+        if (!string.IsNullOrEmpty(modelId))
+        {
+            HuggingFaceModelIdTextBox.Text = modelId;
+        }
+
+        // HuggingFace Token (load into PasswordBox)
+        var hfToken = App.Settings.Llama.HuggingFaceToken;
+        if (!string.IsNullOrEmpty(hfToken))
+        {
+            HuggingFaceTokenBox.Password = hfToken;
+        }
+
+        // Hotkey
+        HotkeyTriggerTextBox.Text = App.Settings.General.HotkeyTriggerKey;
+        HotkeyDisplay.Text = App.Settings.General.HotkeyTriggerKey.ToUpper();
+
+        // Launch at login
+        LaunchAtLoginCheckbox.IsChecked = App.Settings.General.LaunchAtLogin;
+    }
+
+    public void NavigateToSettings()
+    {
+        MainTabControl.SelectedIndex = 1; // Audio tab (or could be Settings tab index)
+    }
+
+    public void UpdateLastTranscription(string text)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                LastTranscriptionText.Text = "No transcriptions yet";
+            }
+            else
+            {
+                LastTranscriptionText.Text = text;
+            }
+        });
+    }
+
+    private async Task LoadHistoryAsync()
+    {
+        var records = await App.Database.GetTranscriptionsAsync();
+        var items = records.Select(r => new TranscriptionListItem
+        {
+            Id = r.Id,
+            Text = r.Text,
+            DisplayTime = DateTime.Parse(r.Timestamp).ToString("MMM d, yyyy 'at' h:mm tt"),
+            Duration = r.Duration
+        }).ToList();
+
+        HistoryListBox.ItemsSource = items;
+    }
+
+    private void OpenSettings_Click(object sender, RoutedEventArgs e)
+    {
+        MainTabControl.SelectedIndex = 1;
+    }
+
+    private void RecordButton_Click(object sender, RoutedEventArgs e)
+    {
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] RecordButton_Click called. IsRecording={App.Audio.IsRecording}");
+        if (App.Audio.IsRecording)
+        {
+            // Stop recording
+            System.Diagnostics.Debug.WriteLine("[DEBUG] Stopping recording via button click");
+            Task.Run(async () =>
+            {
+                var audioFile = await App.Audio.StopRecordingAsync();
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] StopRecordingAsync returned: {audioFile}");
+                if (!string.IsNullOrEmpty(audioFile))
+                {
+                    await ProcessTranscriptionAsync(audioFile);
+                }
+            });
+        }
+        else
+        {
+            // Start recording
+            System.Diagnostics.Debug.WriteLine("[DEBUG] Starting recording via button click");
+            App.Audio.StartRecording();
+        }
+    }
+
+    private async Task ProcessTranscriptionAsync(string audioFile)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine("[DEBUG] Starting Whisper transcription...");
+            var text = await App.Whisper.TranscribeAsync(audioFile);
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] Whisper transcription complete: {text?.Substring(0, Math.Min(50, text?.Length ?? 0))}...");
+
+            if (App.Settings.Llama.Enabled && App.Llama.IsLoaded)
+            {
+                System.Diagnostics.Debug.WriteLine("[DEBUG] Running Llama text formatting...");
+                text = await App.Llama.FormatTextAsync(text);
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] Llama formatting complete: {text?.Substring(0, Math.Min(50, text?.Length ?? 0))}...");
+            }
+
+            // Clipboard operations must run on the UI thread (STA mode)
+            await Dispatcher.InvokeAsync(async () =>
+            {
+                try
+                {
+                    var previousClipboard = App.Clipboard.GetText();
+                    var previousWindow = App.Hotkey.GetPreviousWindow();
+                    
+                    if (string.IsNullOrEmpty(text))
+                    {
+                        return;
+                    }
+                    
+                    // Set the transcribed text to clipboard
+                    App.Clipboard.SetText(text);
+
+                    // Paste to previous window
+                    await Task.Delay(100);
+                    await App.Clipboard.PasteToWindow(previousWindow);
+
+                    // Restore previous clipboard after a delay (so user can paste)
+                    await Task.Delay(500);
+                    if (!string.IsNullOrEmpty(previousClipboard))
+                    {
+                        App.Clipboard.SetText(previousClipboard);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[CLIPBOARD] Error: {ex.Message}");
+                }
+            });
+
+            await App.Database.AddTranscriptionAsync(text, App.Audio.LastRecordingDuration,
+                App.Settings.Whisper.ModelPath, App.Settings.Whisper.Language);
+
+            // UI updates must run on the UI thread
+            await Dispatcher.InvokeAsync(async () =>
+            {
+                UpdateLastTranscription(text);
+                await LoadHistoryAsync();
+            });
+
+            // Cleanup
+            if (System.IO.File.Exists(audioFile))
+            {
+                System.IO.File.Delete(audioFile);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Transcription error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void MicrophoneComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (MicrophoneComboBox.SelectedItem is ComboBoxItem item)
+        {
+            App.Settings.Audio.DeviceId = item.Tag?.ToString() ?? "";
+            App.Settings.Save();
+        }
+    }
+
+    private void LanguageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (LanguageComboBox.SelectedItem is ComboBoxItem item)
+        {
+            App.Settings.Whisper.Language = item.Tag?.ToString() ?? "auto";
+            App.Settings.Save();
+        }
+    }
+
+    private void TranslateCheckbox_Changed(object sender, RoutedEventArgs e)
+    {
+        App.Settings.Whisper.Translate = TranslateCheckbox.IsChecked ?? false;
+        App.Settings.Save();
+    }
+
+    private void SelectModel_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = "Whisper Models (*.bin)|*.bin|All Files (*.*)|*.*",
+            Title = "Select Whisper Model"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            App.Whisper.ReloadModel(dialog.FileName);
+            ModelPathText.Text = System.IO.Path.GetFileName(dialog.FileName);
+            WhisperStatusText.Text = "Ready";
+        }
+    }
+
+    private async void DownloadTiny_Click(object sender, RoutedEventArgs e) => await DownloadWhisperModelAsync("tiny");
+    private async void DownloadBase_Click(object sender, RoutedEventArgs e) => await DownloadWhisperModelAsync("base");
+    private async void DownloadSmall_Click(object sender, RoutedEventArgs e) => await DownloadWhisperModelAsync("small");
+    private async void DownloadMedium_Click(object sender, RoutedEventArgs e) => await DownloadWhisperModelAsync("medium");
+    private async void DownloadLarge_Click(object sender, RoutedEventArgs e) => await DownloadWhisperModelAsync("large");
+
+    private void BrowseDownloadPath_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new System.Windows.Forms.FolderBrowserDialog
+        {
+            Description = "Select folder for Whisper model downloads",
+            UseDescriptionForTitle = true,
+            ShowNewFolderButton = true
+        };
+
+        // Set initial directory to saved path, then default
+        var savedPath = App.Settings.General.ModelDownloadPath;
+        if (!string.IsNullOrEmpty(savedPath))
+        {
+            dialog.SelectedPath = savedPath;
+        }
+        else if (!string.IsNullOrEmpty(App.WhisperModelsPath))
+        {
+            dialog.SelectedPath = App.WhisperModelsPath;
+        }
+
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        {
+            ModelDownloadPathTextBox.Text = dialog.SelectedPath;
+            App.Settings.General.ModelDownloadPath = dialog.SelectedPath;
+            App.Settings.Save();
+            DownloadPathStatusText.Text = $"Using: {dialog.SelectedPath}";
+            WhisperStatusText.Text = "Download path changed - restart to apply";
+        }
+    }
+
+    private void BrowseLlamaDownloadPath_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new System.Windows.Forms.FolderBrowserDialog
+        {
+            Description = "Select folder for GGUF model downloads",
+            UseDescriptionForTitle = true,
+            ShowNewFolderButton = true
+        };
+
+        // Set initial directory to saved path, then default
+        var savedPath = App.Settings.General.LlamaDownloadPath;
+        if (!string.IsNullOrEmpty(savedPath))
+        {
+            dialog.SelectedPath = savedPath;
+        }
+        else if (!string.IsNullOrEmpty(App.LlamaModelsPath))
+        {
+            dialog.SelectedPath = App.LlamaModelsPath;
+        }
+
+        if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+        {
+            LlamaDownloadPathTextBox.Text = dialog.SelectedPath;
+            App.Settings.General.LlamaDownloadPath = dialog.SelectedPath;
+            App.Settings.Save();
+            LlamaDownloadPathStatusText.Text = $"Using: {dialog.SelectedPath}";
+            LlamaStatusText.Text = "Download path changed - restart to apply";
+        }
+    }
+
+    private void LlamaDownloadPathTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        // When path changes, update status text
+        var newPath = LlamaDownloadPathTextBox.Text;
+        if (!string.IsNullOrEmpty(newPath) && System.IO.Directory.Exists(newPath))
+        {
+            LlamaDownloadPathStatusText.Text = $"Using: {newPath}";
+        }
+        else if (!string.IsNullOrEmpty(newPath))
+        {
+            LlamaDownloadPathStatusText.Text = $"New path will be created: {newPath}";
+        }
+        else
+        {
+            LlamaDownloadPathStatusText.Text = $"Default: {App.LlamaModelsPath}";
+        }
+    }
+
+    private void ModelDownloadPathTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        // When path changes, re-enable all download buttons to allow checking/updating
+        DownloadTinyBtn.Content = "Download";
+        DownloadTinyBtn.IsEnabled = true;
+        DownloadBaseBtn.Content = "Download";
+        DownloadBaseBtn.IsEnabled = true;
+        DownloadSmallBtn.Content = "Download";
+        DownloadSmallBtn.IsEnabled = true;
+        DownloadMediumBtn.Content = "Download";
+        DownloadMediumBtn.IsEnabled = true;
+        DownloadLargeBtn.Content = "Download";
+        DownloadLargeBtn.IsEnabled = true;
+
+        // Update status text
+        var newPath = ModelDownloadPathTextBox.Text;
+        if (!string.IsNullOrEmpty(newPath) && System.IO.Directory.Exists(newPath))
+        {
+            DownloadPathStatusText.Text = $"Using: {newPath}";
+        }
+        else if (!string.IsNullOrEmpty(newPath))
+        {
+            DownloadPathStatusText.Text = $"New path will be created: {newPath}";
+        }
+        else
+        {
+            DownloadPathStatusText.Text = $"Default: {App.WhisperModelsPath}";
+        }
+    }
+
+    private async Task DownloadWhisperModelAsync(string size)
+    {
+        DownloadProgressBar.Visibility = Visibility.Visible;
+        DownloadStatusText.Visibility = Visibility.Visible;
+        var displayFileName = size.ToLowerInvariant() == "large" ? "ggml-large-v3.bin" : $"ggml-{size}.bin";
+        DownloadStatusText.Text = $"Downloading {displayFileName}...";
+        DownloadProgressBar.Value = 0;
+
+        var progress = new Progress<double>(p =>
+        {
+            DownloadProgressBar.Value = p;
+            var displayFileName = size.ToLowerInvariant() == "large" ? "ggml-large-v3.bin" : $"ggml-{size}.bin";
+            DownloadStatusText.Text = $"Downloading {displayFileName}... {p:F0}%";
+        });
+
+        var path = await App.ModelDownload.DownloadWhisperModelAsync(size, progress);
+
+        if (!string.IsNullOrEmpty(path))
+        {
+            DownloadStatusText.Text = $"Downloaded {System.IO.Path.GetFileName(path)} successfully!";
+            App.Whisper.ReloadModel(path);
+            ModelPathText.Text = System.IO.Path.GetFileName(path);
+            WhisperStatusText.Text = "Ready";
+
+            // Update button to show "Re-download" so user can re-download if needed
+            var buttonName = $"Download{char.ToUpper(size[0])}{size.Substring(1)}Btn";
+            var button = this.FindName(buttonName) as System.Windows.Controls.Button;
+            if (button != null)
+            {
+                button.Content = "Re-download";
+            }
+        }
+        else
+        {
+            DownloadStatusText.Text = "Download failed";
+        }
+
+        await Task.Delay(2000);
+        DownloadProgressBar.Visibility = Visibility.Collapsed;
+        DownloadStatusText.Visibility = Visibility.Collapsed;
+    }
+
+    private void LlamaEnableCheckbox_Changed(object sender, RoutedEventArgs e)
+    {
+        App.Settings.Llama.Enabled = LlamaEnableCheckbox.IsChecked ?? false;
+        App.Settings.Save();
+
+        if (App.Settings.Llama.Enabled && !string.IsNullOrEmpty(App.Settings.Llama.ModelPath))
+        {
+            Task.Run(async () => await App.Llama.InitializeAsync(App.Settings.Llama.ModelPath));
+        }
+        else
+        {
+            App.Llama.Unload();
+        }
+    }
+
+    private void SelectLlamaModel_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Filter = "GGUF Models (*.gguf)|*.gguf|All Files (*.*)|*.*",
+            Title = "Select Llama Model"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            App.Settings.Llama.ModelPath = dialog.FileName;
+            App.Settings.Save();
+            LlamaModelPathText.Text = System.IO.Path.GetFileName(dialog.FileName);
+
+            if (App.Settings.Llama.Enabled)
+            {
+                Task.Run(async () => await App.Llama.InitializeAsync(dialog.FileName));
+            }
+        }
+    }
+
+    private async void DownloadLlamaModel_Click(object sender, RoutedEventArgs e)
+    {
+        var modelId = HuggingFaceModelIdTextBox.Text.Trim();
+        if (string.IsNullOrEmpty(modelId))
+        {
+            System.Windows.MessageBox.Show("Please enter a model ID", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // Save the model ID to settings
+        App.Settings.Llama.ModelId = modelId;
+        App.Settings.Save();
+
+        System.Diagnostics.Debug.WriteLine("Model ID: " + modelId);
+        System.Diagnostics.Debug.WriteLine("Download path: " + App.Settings.General.LlamaDownloadPath);
+        System.Diagnostics.Debug.WriteLine("LlamaModelsPath: " + App.LlamaModelsPath);
+
+        // Use Llama-specific progress bar
+        LlamaDownloadProgressBar.Visibility = Visibility.Visible;
+        LlamaDownloadStatusText.Visibility = Visibility.Visible;
+        LlamaDownloadStatusText.Text = "Searching for model...";
+        LlamaDownloadProgressBar.Value = 0;
+
+        var progress = new Progress<double>(p =>
+        {
+            LlamaDownloadProgressBar.Value = p;
+            LlamaDownloadStatusText.Text = $"Downloading... {p:F0}%";
+        });
+
+        var path = await App.ModelDownload.DownloadLlamaModelAsync(modelId, progress);
+
+        if (!string.IsNullOrEmpty(path))
+        {
+            if (path.StartsWith("ERROR:"))
+            {
+                System.Windows.MessageBox.Show(path.Substring(6), "Download Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                LlamaDownloadStatusText.Text = "Download failed";
+                await Task.Delay(2000);
+                LlamaDownloadProgressBar.Visibility = Visibility.Collapsed;
+                LlamaDownloadStatusText.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            LlamaDownloadStatusText.Text = $"Downloaded {System.IO.Path.GetFileName(path)} successfully!";
+            App.Settings.Llama.ModelPath = path;
+            App.Settings.Save();
+            LlamaModelPathText.Text = System.IO.Path.GetFileName(path);
+
+            if (App.Settings.Llama.Enabled)
+            {
+                await App.Llama.InitializeAsync(path);
+            }
+        }
+        else
+        {
+            LlamaDownloadStatusText.Text = "Could not find a GGUF file for this model";
+            System.Windows.MessageBox.Show("Could not find a GGUF file for this model.\n\nMake sure the model ID is correct and the model has GGUF files available.", "Download Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        await Task.Delay(2000);
+        LlamaDownloadProgressBar.Visibility = Visibility.Collapsed;
+        LlamaDownloadStatusText.Visibility = Visibility.Collapsed;
+    }
+
+    private void HuggingFaceTokenBox_PasswordChanged(object sender, RoutedEventArgs e)
+    {
+        App.Settings.Llama.HuggingFaceToken = HuggingFaceTokenBox.Password;
+        App.Settings.Save();
+    }
+
+    private void HuggingFaceModelIdTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        App.Settings.Llama.ModelId = HuggingFaceModelIdTextBox.Text;
+        App.Settings.Save();
+    }
+
+    private void HotkeyTriggerTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var text = HotkeyTriggerTextBox.Text;
+        if (text.Length == 1 && char.IsLetterOrDigit(text[0]))
+        {
+            App.Hotkey.SetTriggerKey(text.ToLower());
+            HotkeyDisplay.Text = text.ToUpper();
+        }
+    }
+
+    private void LaunchAtLoginCheckbox_Changed(object sender, RoutedEventArgs e)
+    {
+        App.Settings.General.LaunchAtLogin = LaunchAtLoginCheckbox.IsChecked ?? false;
+        App.Settings.Save();
+    }
+
+    private async void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        var query = SearchTextBox.Text.Trim();
+        if (string.IsNullOrEmpty(query))
+        {
+            await LoadHistoryAsync();
+        }
+        else
+        {
+            var records = await App.Database.SearchTranscriptionsAsync(query);
+            var items = records.Select(r => new TranscriptionListItem
+            {
+                Id = r.Id,
+                Text = r.Text,
+                DisplayTime = DateTime.Parse(r.Timestamp).ToString("MMM d, yyyy 'at' h:mm tt"),
+                Duration = r.Duration
+            }).ToList();
+
+            HistoryListBox.ItemsSource = items;
+        }
+    }
+
+    private void CopyTranscription_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button button && button.Tag is long id)
+        {
+            Task.Run(async () =>
+            {
+                var record = await App.Database.GetTranscriptionAsync(id);
+                if (record != null)
+                {
+                    App.Clipboard.SetText(record.Text);
+                }
+            });
+        }
+    }
+
+    private async void DeleteTranscription_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button button && button.Tag is long id)
+        {
+            await App.Database.DeleteTranscriptionAsync(id);
+            await LoadHistoryAsync();
+        }
+    }
+
+    private async void ClearAllButton_Click(object sender, RoutedEventArgs e)
+    {
+        var result = System.Windows.MessageBox.Show(
+            "Delete all transcriptions? This cannot be undone.",
+            "Confirm",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            await App.Database.ClearAllTranscriptionsAsync();
+            await LoadHistoryAsync();
+        }
+    }
+}
+
+public class TranscriptionListItem
+{
+    public long Id { get; set; }
+    public string Text { get; set; } = "";
+    public string DisplayTime { get; set; } = "";
+    public double? Duration { get; set; }
+}

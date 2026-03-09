@@ -1,0 +1,71 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# .NET Core
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+
+# Local configuration (can contain secrets)
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+# Model files (large binaries)
+*.bin
+*.gguf
+Models/
+whisperModels/
+llamaModels/
+
+# Test results
+TestResults/
+
+# NuGet
+*.nupkg
+.nuget/
+packages/
+
+# Rider
+.idea/
+
+# ReSharper
+_ReSharper*/
+*.ReSharper.user
+*.ReSharper.cache
