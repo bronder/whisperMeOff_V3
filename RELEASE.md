@@ -2,6 +2,19 @@
 
 ## Latest Release
 
+### Version 1.2.0
+
+#### Features
+- **Custom Vocabulary**: Define word lists to improve recognition accuracy for domain-specific terminology, names, or frequently used phrases. These words are passed to Whisper as an initial prompt to boost recognition.
+- **Word Replacements**: Automatically replace spoken phrases with different text after transcription. Useful for expanding abbreviations, fixing misrecognized words, or creating voice shortcuts.
+  - Example: "yaba daba do" → "yum"
+  - Example: "API" → "A P I"
+
+#### Improvements
+- Added new Vocabulary tab to organize vocabulary and word replacement settings in one place
+
+---
+
 ### Version 1.1.1
 
 #### Bug Fixes
@@ -98,9 +111,6 @@ Simply replace the existing `whisperMeOff.exe` with the new version. Your settin
 ## Future Releases
 
 ### Planned Features
-
-#### Version 1.2.0
-- **Custom Vocabulary**: User-defined word lists for better recognition
 
 #### Version 1.3.0
 - **Audio Visualization**: Real-time waveform display and VU meter during recording

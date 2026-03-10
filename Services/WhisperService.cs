@@ -141,6 +141,25 @@ public class WhisperService : IDisposable
 
             var transcription = string.Join(" ", results).Trim();
             
+            // Apply word replacements
+            var replacements = App.Settings.Whisper.WordReplacements;
+            if (replacements.Any())
+            {
+                foreach (var replacement in replacements)
+                {
+                    if (!string.IsNullOrEmpty(replacement.Source) && !string.IsNullOrEmpty(replacement.Replacement))
+                    {
+                        // Case-insensitive replacement
+                        transcription = System.Text.RegularExpressions.Regex.Replace(
+                            transcription, 
+                            System.Text.RegularExpressions.Regex.Escape(replacement.Source), 
+                            replacement.Replacement, 
+                            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    }
+                }
+                System.Diagnostics.Debug.WriteLine($"[Whisper] Applied {replacements.Count} word replacements");
+            }
+            
             System.Diagnostics.Debug.WriteLine($"Transcription complete: {transcription.Substring(0, Math.Min(50, transcription.Length))}...");
             return transcription;
         }

@@ -103,6 +103,9 @@ public partial class MainWindow : Window
         // Custom Vocabulary
         CustomVocabularyTextBox.Text = App.Settings.Whisper.CustomVocabulary;
 
+        // Word Replacements
+        ReplacementsListBox.ItemsSource = App.Settings.Whisper.WordReplacements;
+
         // Model Download Path
         var downloadPath = App.Settings.General.ModelDownloadPath;
         if (!string.IsNullOrEmpty(downloadPath))
@@ -411,6 +414,49 @@ public partial class MainWindow : Window
     {
         App.Settings.Whisper.CustomVocabulary = CustomVocabularyTextBox.Text;
         App.Settings.Save();
+    }
+
+    private void AddReplacement_Click(object sender, RoutedEventArgs e)
+    {
+        var source = NewReplacementSourceBox.Text.Trim();
+        var replacement = NewReplacementTargetBox.Text.Trim();
+        
+        if (!string.IsNullOrEmpty(source) && !string.IsNullOrEmpty(replacement))
+        {
+            App.Settings.Whisper.WordReplacements.Add(new WordReplacement 
+            { 
+                Source = source, 
+                Replacement = replacement 
+            });
+            App.Settings.Save();
+            
+            // Clear input boxes
+            NewReplacementSourceBox.Text = "";
+            NewReplacementTargetBox.Text = "";
+            
+            // Refresh the list
+            ReplacementsListBox.ItemsSource = null;
+            ReplacementsListBox.ItemsSource = App.Settings.Whisper.WordReplacements;
+        }
+    }
+
+    private void RemoveReplacement_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button button && button.Tag is string source)
+        {
+            var itemToRemove = App.Settings.Whisper.WordReplacements
+                .FirstOrDefault(wr => wr.Source == source);
+            
+            if (itemToRemove != null)
+            {
+                App.Settings.Whisper.WordReplacements.Remove(itemToRemove);
+                App.Settings.Save();
+                
+                // Refresh the list
+                ReplacementsListBox.ItemsSource = null;
+                ReplacementsListBox.ItemsSource = App.Settings.Whisper.WordReplacements;
+            }
+        }
     }
 
     private void SelectModel_Click(object sender, RoutedEventArgs e)
