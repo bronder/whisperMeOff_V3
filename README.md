@@ -95,10 +95,11 @@ This project uses the following NuGet packages:
 | [Whisper.net.Runtime](https://github.com/sandrohanea/whisper.net) | 1.9.1-preview1 | Runtime components for Whisper |
 
 ### AI & ML
-| Package | Version | Description |
-|---------|---------|-------------|
-| [LLamaSharp](https://github.com/ggerganov/llama.cpp) | 0.11.1 | .NET binding for llama.cpp |
-| [LLamaSharp.Backend.Cpu](https://github.com/ggerganov/llama.cpp) | 0.11.1 | CPU backend for LLamaSharp |
+ | Package | Version | Description |
+ |---------|---------|-------------|
+ | [LLamaSharp](https://github.com/ggerganov/llama.cpp) | 0.26.0 | .NET binding for llama.cpp |
+ | [LLamaSharp.Backend.Cpu](https://github.com/ggerganov/llama.cpp) | 0.26.0 | CPU backend for LLamaSharp |
+ | [LLamaSharp.Backend.Vulkan](https://github.com/ggerganov/llama.cpp) | 0.26.0 | GPU (Vulkan) backend for LLamaSharp |
 
 ### UI & Desktop
 | Package | Version | Description |

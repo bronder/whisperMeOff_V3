@@ -83,14 +83,18 @@ public class LlamaService : IDisposable
         {
             System.Diagnostics.Debug.WriteLine($"[LLAMA] Formatting text: {rawText.Length} chars");
             
-            // Simple prompt - use very direct instructions
-            var prompt = $"Correct: {rawText}" + Environment.NewLine + Environment.NewLine;
+            // Simplified prompt format that most models understand better
+            var prompt = 
+                "Fix spelling and grammar errors in this text. " +
+                "Only correct errors, do not change meaning or wording.\n\n" +
+                "Input: " + rawText.Trim() + "\n\n" +
+                "Corrected:";
 
             var inferenceParams = new InferenceParams
             {
-                MaxTokens = 512,
-                AntiPrompts = new List<string> { "\newblock", "\bibitem", "#", "##", "*" },
-                SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.1f, RepeatPenalty = 1.2f }
+                MaxTokens = 256,
+                AntiPrompts = new List<string> { "\n\n", "Input:", "Human:", "AI:", "Assistant:", "Question:", "Answer:" },
+                SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.0f, RepeatPenalty = 1.0f }
             };
 
             System.Diagnostics.Debug.WriteLine("[LLAMA] Starting inference...");
@@ -182,20 +186,23 @@ public class LlamaService : IDisposable
         
         var result = string.Join("\n", cleanedLines).Trim();
         
-        // If the output is way too long, it probably includes garbage
-        if (result.Length > original.Length * 4)
+        // If output is significantly longer than input, it's probably adding unwanted content
+        // In that case, try to find where actual new content starts
+        if (result.Length > original.Length * 2)
         {
-            var idx = result.IndexOf(original, StringComparison.OrdinalIgnoreCase);
-            if (idx > 0)
+            // Look for common patterns where corrections might start
+            var lowerResult = result.ToLowerInvariant();
+            var patterns = new[] { "corrected:", "fixed:", "output:", "result:", "text:" };
+            
+            foreach (var pattern in patterns)
             {
-                result = result.Substring(0, idx).Trim();
+                var idx = lowerResult.IndexOf(pattern);
+                if (idx >= 0 && idx < result.Length / 2) // Found in first half
+                {
+                    result = result.Substring(idx + pattern.Length).Trim();
+                    break;
+                }
             }
-        }
-        
-        // Remove original text if present
-        if (!string.IsNullOrEmpty(original) && result.Contains(original))
-        {
-            result = result.Replace(original, "").Trim();
         }
         
         return result;

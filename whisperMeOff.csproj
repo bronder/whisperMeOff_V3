@@ -10,7 +10,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>whisperMeOff</AssemblyName>
     <RootNamespace>whisperMeOff</RootNamespace>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Company>whisperMeOff</Company>
     <Product>whisperMeOff</Product>
     <Description>Offline voice-to-text transcription with auto-paste</Description>

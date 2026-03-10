@@ -2,6 +2,20 @@
 
 ## Latest Release
 
+### Version 1.1.1
+
+#### Bug Fixes
+- **Llama Text Formatting**: Fixed critical bug where correct text was being discarded during cleanup
+- **Output Processing**: Improved cleanup logic to preserve valid model output
+- **Llama Version**: Updated to LLamaSharp 0.26.0 with Vulkan GPU support
+
+#### Improvements
+- Better prompt engineering for text proofreading tasks
+- Greedy sampling (temperature=0) for deterministic output
+- More robust anti-prompt handling
+
+---
+
 ### Version 1.1.0
 
 #### Features

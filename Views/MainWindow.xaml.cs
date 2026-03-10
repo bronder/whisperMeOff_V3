@@ -309,7 +309,8 @@ public partial class MainWindow : Window
         {
             System.Diagnostics.Debug.WriteLine("[DEBUG] Starting Whisper transcription...");
             var text = await App.Whisper.TranscribeAsync(audioFile) ?? string.Empty;
-            System.Diagnostics.Debug.WriteLine($"[DEBUG] Whisper transcription complete: {text?.Substring(0, Math.Min(50, text?.Length ?? 0))}...");
+            //System.Diagnostics.Debug.WriteLine($"[DEBUG] Whisper transcription complete: {text?.Substring(0, Math.Min(50, text?.Length ?? 0))}...");
+            System.Diagnostics.Debug.WriteLine("[Whisper] Whisper transcription complete: " + text);
 
             System.Diagnostics.Debug.WriteLine("[DEBUG] llama Enabled: " + App.Settings.Llama.Enabled + ", Llama Loaded: " + App.Llama.IsLoaded );
 
@@ -317,7 +318,7 @@ public partial class MainWindow : Window
             {
                 System.Diagnostics.Debug.WriteLine("[DEBUG] Running Llama text formatting...");
                 text = await App.Llama.FormatTextAsync(text);
-                System.Diagnostics.Debug.WriteLine($"[DEBUG] Llama formatting complete: {text?.Substring(0, Math.Min(50, text?.Length ?? 0))}...");
+                System.Diagnostics.Debug.WriteLine($"[LLAMA] Llama formatting complete: " + text);
             }
 
             // Clipboard operations must run on the UI thread (STA mode)
