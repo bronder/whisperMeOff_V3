@@ -100,6 +100,9 @@ public partial class MainWindow : Window
         // Translate
         TranslateCheckbox.IsChecked = App.Settings.Whisper.Translate;
 
+        // Custom Vocabulary
+        CustomVocabularyTextBox.Text = App.Settings.Whisper.CustomVocabulary;
+
         // Model Download Path
         var downloadPath = App.Settings.General.ModelDownloadPath;
         if (!string.IsNullOrEmpty(downloadPath))
@@ -401,6 +404,12 @@ public partial class MainWindow : Window
     private void TranslateCheckbox_Changed(object sender, RoutedEventArgs e)
     {
         App.Settings.Whisper.Translate = TranslateCheckbox.IsChecked ?? false;
+        App.Settings.Save();
+    }
+
+    private void CustomVocabularyTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        App.Settings.Whisper.CustomVocabulary = CustomVocabularyTextBox.Text;
         App.Settings.Save();
     }
 

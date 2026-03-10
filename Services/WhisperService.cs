@@ -101,9 +101,29 @@ public class WhisperService : IDisposable
             // Get language setting
             var language = App.Settings.Whisper.Language;
             
+            // Get custom vocabulary if set
+            var customVocabulary = App.Settings.Whisper.CustomVocabulary;
+            
             // Build processor with options
             var builder = _factory.CreateBuilder()
                 .WithLanguage(language);
+
+            // Apply custom vocabulary as initial prompt if set
+            // Using dynamic to support different Whisper.net versions
+            if (!string.IsNullOrWhiteSpace(customVocabulary))
+            {
+                try
+                {
+                    dynamic dynamicBuilder = builder;
+                    dynamicBuilder = dynamicBuilder.WithInitialPrompt(customVocabulary);
+                    builder = dynamicBuilder;
+                    System.Diagnostics.Debug.WriteLine($"[Whisper] Using custom vocabulary: {customVocabulary.Substring(0, Math.Min(50, customVocabulary.Length))}...");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Whisper] Custom vocabulary not supported in this version: {ex.Message}");
+                }
+            }
 
             using var processor = builder.Build();
 

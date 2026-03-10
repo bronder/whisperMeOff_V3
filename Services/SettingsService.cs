@@ -83,6 +83,7 @@ public class WhisperSettings
     public string ModelSize { get; set; } = "medium";
     public string Language { get; set; } = "auto";
     public bool Translate { get; set; } = false;
+    public string CustomVocabulary { get; set; } = "";
 }
 
 public class LlamaSettings
