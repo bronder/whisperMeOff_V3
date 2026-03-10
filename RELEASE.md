@@ -9,7 +9,7 @@
 
 ---
 
-### Version 1.2.0
+### Version 1.2.1
 
 #### Features
 - **Custom Vocabulary**: Define word lists to improve recognition accuracy for domain-specific terminology, names, or frequently used phrases. These words are passed to Whisper as an initial prompt to boost recognition.
@@ -91,10 +91,24 @@
 
 ## Installation
 
-1. Download `whisperMeOff.exe` from the latest release
-2. Run the application
-3. Download a Whisper model from the Whisper tab
-4. Start using!
+### Choose Your Build Type
+
+**Framework-Dependent (Smaller, ~few MB)**
+- Requires .NET 10.0 Runtime to be installed on your machine
+- Download the smaller package if you already have .NET
+
+**Self-Contained (Larger, ~150 MB)**
+- Includes the .NET runtime - works on any Windows machine
+- No .NET installation required
+- Recommended for most users
+
+### Installation Steps
+
+1. Download the appropriate `publish-1.2.2.zip` from the latest release
+2. Extract the zip to your desired location
+3. Run `whisperMeOff.exe`
+4. Download a Whisper model from the Whisper tab
+5. Start using!
 
 ## Upgrading
 
@@ -135,3 +149,4 @@ Simply replace the existing `whisperMeOff.exe` with the new version. Your settin
 ## Support
 
 For issues and feature requests, please open an issue on the project repository.
+
