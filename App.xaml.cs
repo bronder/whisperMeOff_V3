@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using Hardcodet.Wpf.TaskbarNotification;
+using Microsoft.Win32;
 using whisperMeOff.Services;
 using whisperMeOff.Views;
 
@@ -62,6 +63,28 @@ public partial class App : System.Windows.Application
 
         // Load settings
         Settings.Load();
+        
+        // Apply startup registration if enabled
+        if (Settings.General.LaunchAtLogin)
+        {
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+                if (key != null)
+                {
+                    var exePath = Environment.ProcessPath;
+                    if (!string.IsNullOrEmpty(exePath))
+                    {
+                        key.SetValue("whisperMeOff", $"\"{exePath}\"");
+                        System.Diagnostics.Debug.WriteLine("[Startup] Registered for launch at login on app start");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Startup] Error: {ex.Message}");
+            }
+        }
         
         // Apply saved theme
         Theme.ApplyTheme(Settings.General.Theme);

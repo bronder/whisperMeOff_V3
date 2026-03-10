@@ -813,8 +813,38 @@ public partial class MainWindow : Window
 
     private void LaunchAtLoginCheckbox_Changed(object sender, RoutedEventArgs e)
     {
-        App.Settings.General.LaunchAtLogin = LaunchAtLoginCheckbox.IsChecked ?? false;
+        var isEnabled = LaunchAtLoginCheckbox.IsChecked ?? false;
+        App.Settings.General.LaunchAtLogin = isEnabled;
         App.Settings.Save();
+        
+        // Update Windows startup registration
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+            if (key != null)
+            {
+                if (isEnabled)
+                {
+                    // Add to startup
+                    var exePath = Environment.ProcessPath;
+                    if (!string.IsNullOrEmpty(exePath))
+                    {
+                        key.SetValue("whisperMeOff", $"\"{exePath}\"");
+                        System.Diagnostics.Debug.WriteLine("[Startup] Registered for launch at login");
+                    }
+                }
+                else
+                {
+                    // Remove from startup
+                    key.DeleteValue("whisperMeOff", false);
+                    System.Diagnostics.Debug.WriteLine("[Startup] Unregistered from launch at login");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Startup] Error: {ex.Message}");
+        }
     }
 
     private void MinimizeToTrayCheckbox_Changed(object sender, RoutedEventArgs e)
