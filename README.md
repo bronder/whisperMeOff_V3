@@ -9,7 +9,7 @@ Hold a hotkey, speak your mind, and watch your words appear — automatically pa
 - **Voice Recording**: Hold `Ctrl+Shift+R` to start recording, release to transcribe
 - **Auto-Paste**: Automatically pastes transcribed text to the previously active window
 - **Whisper.cpp Powered**: State-of-the-art local speech recognition using OpenAI's Whisper models (tiny to large)
-- **Llama.cpp Text Formatting**: Optional (experimental) AI-powered formatting cleans up your transcription with proper punctuation and paragraphs
+- **Llama.cpp Text Formatting**: Optional AI-powered formatting cleans up your transcription with proper punctuation and paragraphs
 - **100% Offline**: Works completely offline - no internet required after model download
 - **HuggingFace Integration**: Download GGUF quantized models directly from HuggingFace
 - **7 Visual Themes**: Light, Dark, Nord, Dracula, Gruvbox, Monokai, and Synthwave themes
