@@ -139,8 +139,6 @@ This project uses the following NuGet packages:
 - **Model**: Select a Whisper model size (tiny, base, small, medium, large)
 
 #### Llama Settings (Optional)
-> **⚠️ Note:** Llama text formatting is currently experimental and may produce unpredictable results. For reliable transcription, it is recommended to leave Llama disabled.
-
 - Enable Llama text formatting for cleaner output
 - Download models from HuggingFace (search for GGUF quantized models)
 - Enter your HuggingFace token for private models
