@@ -15,6 +15,7 @@ Hold a hotkey, speak your mind, and watch your words appear — automatically pa
 - **7 Visual Themes**: Light, Dark, Nord, Dracula, Gruvbox, Monokai, and Synthwave themes
 - **System Tray**: Run in background - record without the app being active
 - **Minimize to Tray**: Option to minimize to system tray instead of taskbar
+- **Launch at Login**: Automatically start the app when Windows boots
 - **Custom Vocabulary**: Define word lists to improve recognition accuracy for domain-specific terminology
 - **Word Replacements**: Automatically replace spoken phrases with different text after transcription
 
@@ -145,9 +146,11 @@ This project uses the following NuGet packages:
 
 #### General Settings
 - **Hotkey**: Change the trigger key (default: R)
+- **Launch at Login**: Enable to automatically start the app when Windows boots
 - **Download Paths**: Customize where models are saved
 - **Recording Mode**: Choose Push-to-talk (hold to record) or Toggle (press to start/stop)
 - **Clipboard**: Configure clipboard restore behavior
+- **Minimize to Tray**: Minimize to system tray instead of taskbar
 - **Theme**: Choose from 6 visual themes (Light, Dark, Nord, Dracula, Gruvbox, Monokai)
 
 ## Model Sizes

@@ -2,6 +2,13 @@
 
 ## Latest Release
 
+### Version 1.2.2
+
+#### Features
+- **Launch at Login**: Automatically start whisperMeOff when Windows boots. Enable this option in General settings to have the app launch automatically on system startup.
+
+---
+
 ### Version 1.2.0
 
 #### Features

@@ -10,7 +10,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>whisperMeOff</AssemblyName>
     <RootNamespace>whisperMeOff</RootNamespace>
-    <Version>1.2.0</Version>
+    <Version>1.2.2</Version>
     <Company>whisperMeOff</Company>
     <Product>whisperMeOff</Product>
     <Description>Offline voice-to-text transcription with auto-paste</Description>
@@ -41,5 +41,16 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
+  <!-- Post-publish: Create zip file -->
+  <Target Name="ZipPublishOutput" AfterTargets="Publish">
+    <PropertyGroup>
+      <PublishDir>bin\Release\net10.0-windows\win-x64\publish\</PublishDir>
+      <ZipFileName>publish-$(Version)</ZipFileName>
+      <ZipOutputPath>$(MSBuildProjectDirectory)\$(ZipFileName).zip</ZipOutputPath>
+    </PropertyGroup>
+    <Message Text="Creating zip file: $(ZipOutputPath)" Importance="high" />
+    <Exec Command="powershell -Command &quot;Compress-Archive -Path '$(PublishDir)*' -DestinationPath '$(ZipOutputPath)' -Force&quot;" />
+  </Target>
 
 </Project>
