@@ -160,7 +160,14 @@ public class WhisperService : IDisposable
                 System.Diagnostics.Debug.WriteLine($"[Whisper] Applied {replacements.Count} word replacements");
             }
             
-            System.Diagnostics.Debug.WriteLine($"Transcription complete: {transcription.Substring(0, Math.Min(50, transcription.Length))}...");
+            if (!string.IsNullOrEmpty(transcription))
+            {
+                System.Diagnostics.Debug.WriteLine($"[Whisper] Transcription complete: {transcription.Substring(0, Math.Min(50, transcription.Length))}...");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[Whisper] Transcription complete (empty)");
+            }
             return transcription;
         }
         catch (Exception ex)

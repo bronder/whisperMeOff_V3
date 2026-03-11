@@ -39,6 +39,9 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
+        // Setup global exception handlers
+        SetupExceptionHandling();
+
         // Setup application data paths
         AppDataPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -156,6 +159,70 @@ public partial class App : System.Windows.Application
         });
     }
 
+    private void SetupExceptionHandling()
+    {
+        // Handle unhandled exceptions in AppDomain
+        AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+        {
+            LogException((Exception)e.ExceptionObject, "AppDomain.UnhandledException");
+            if (e.IsTerminating)
+            {
+                Environment.Exit(1);
+            }
+        };
+
+        // Handle unhandled exceptions in WPF dispatcher
+        DispatcherUnhandledException += (s, e) =>
+        {
+            LogException(e.Exception, "Dispatcher.UnhandledException");
+            e.Handled = true;
+            ShowErrorMessage("An unexpected error occurred. The application will continue running.");
+        };
+
+        // Handle unobserved task exceptions
+        TaskScheduler.UnobservedTaskException += (s, e) =>
+        {
+            LogException(e.Exception, "TaskScheduler.UnobservedTaskException");
+            e.SetObserved();
+        };
+    }
+
+    private void LogException(Exception ex, string source)
+    {
+        try
+        {
+            var logPath = Path.Combine(AppDataPath, "error.log");
+            var message = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{source}]\n{ex}\n\n";
+            File.AppendAllText(logPath, message);
+#if DEBUG
+            System.Diagnostics.Debug.WriteLine($"[ERROR] {source}: {ex.Message}");
+#endif
+        }
+        catch
+        {
+            // Ignore logging failures
+        }
+    }
+
+    private void ShowErrorMessage(string message)
+    {
+        try
+        {
+            Dispatcher.Invoke(() =>
+            {
+                System.Windows.MessageBox.Show(
+                    message,
+                    "whisperMeOff Error",
+                    System.Windows.MessageBoxButton.OK,
+                    System.Windows.MessageBoxImage.Warning);
+            });
+        }
+        catch
+        {
+            // Ignore UI failures
+        }
+    }
+
     private void SetupSystemTray()
     {
         // Use Windows Forms NotifyIcon for native context menu theming
@@ -244,27 +311,25 @@ public partial class App : System.Windows.Application
     {
         if (_notifyIcon == null) return;
 
-        // Create a simple icon based on state
-        var icon = CreateTrayIcon(isRecording);
-        _notifyIcon.Icon = icon;
+        // Use pre-built icons - no GDI handle leak
+        try
+        {
+            var iconUri = isRecording 
+                ? new Uri("pack://application:,,,/flatrobot_red.ico")
+                : new Uri("pack://application:,,,/flatrobot_blue.ico");
+            
+            var iconStream = System.Windows.Application.GetResourceStream(iconUri)?.Stream;
+            if (iconStream != null)
+            {
+                _notifyIcon.Icon = new System.Drawing.Icon(iconStream);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[TrayIcon] Error loading icon: {ex.Message}");
+        }
+        
         _notifyIcon.Text = isRecording ? "whisperMeOff - Recording..." : "whisperMeOff - Ready";
-    }
-
-    private System.Drawing.Icon CreateTrayIcon(bool isRecording)
-    {
-        // Create a simple 16x16 icon
-        using var bitmap = new System.Drawing.Bitmap(16, 16);
-        using var graphics = System.Drawing.Graphics.FromImage(bitmap);
-
-        graphics.Clear(isRecording ? System.Drawing.Color.Red : System.Drawing.Color.FromArgb(0, 80, 160));
-
-        // Draw a simple microphone shape
-        using var brush = new System.Drawing.SolidBrush(System.Drawing.Color.White);
-        graphics.FillEllipse(brush, 5, 2, 6, 8);
-        graphics.FillRectangle(brush, 6, 10, 4, 3);
-
-        var handle = bitmap.GetHicon();
-        return System.Drawing.Icon.FromHandle(handle);
     }
 
     private void OnRecordingStarted()
@@ -366,12 +431,11 @@ public partial class App : System.Windows.Application
             var previousClipboard = Clipboard.GetText();
             Clipboard.SetText(text);
 
-            // Auto-paste
-            await Task.Delay(50);
-            Clipboard.PasteToWindow(targetWindow);
+            // Auto-paste (now uses retry mechanism internally)
+            await Clipboard.PasteToWindow(targetWindow);
 
-            // Restore previous clipboard after delay
-            await Task.Delay(100);
+            // Restore previous clipboard after shorter delay
+            await Task.Delay(50);
             if (!string.IsNullOrEmpty(previousClipboard))
             {
                 Clipboard.SetText(previousClipboard);

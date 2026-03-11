@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net9.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
@@ -33,6 +33,12 @@
   </ItemGroup>
 
   <ItemGroup>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="flatrobot.ico" />
+    <Resource Include="flatrobot_red.ico" />
+    <Resource Include="flatrobot_blue.ico" />
   </ItemGroup>
 
   <ItemGroup>

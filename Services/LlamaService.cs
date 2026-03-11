@@ -205,11 +205,18 @@ public class LlamaService : IDisposable
             // Clean up any common artifacts
             formatted = CleanupLlamaOutput(formatted, rawText);
             
+            // Check for null/empty before using formatted
+            if (string.IsNullOrEmpty(formatted))
+            {
+                System.Diagnostics.Debug.WriteLine("[LLAMA] Result is empty, returning raw text");
+                return rawText;
+            }
+            
             System.Diagnostics.Debug.WriteLine($"[LLAMA] Cleaned output: {formatted}");
             System.Diagnostics.Debug.WriteLine($"[LLAMA] Inference complete: {formatted.Length} chars");
             
             // If result is empty or too different, fall back to raw text
-            if (string.IsNullOrWhiteSpace(formatted) || formatted.Length < rawText.Length * 0.5)
+            if (formatted.Length < rawText.Length * 0.5)
             {
                 System.Diagnostics.Debug.WriteLine("[LLAMA] Result too different, returning raw text");
                 return rawText;

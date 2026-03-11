@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using System.Windows;
+using System.Windows.Threading;
 
 namespace whisperMeOff.Services;
 
@@ -15,30 +15,82 @@ public class ClipboardService
 
     public string? GetText()
     {
-        try
+        string? result = null;
+        
+        // Clipboard requires STA thread - use Dispatcher
+        if (System.Windows.Application.Current?.Dispatcher?.CheckAccess() == true)
         {
-            if (System.Windows.Clipboard.ContainsText())
+            // Already on UI thread
+            try
             {
-                return System.Windows.Clipboard.GetText();
+                if (System.Windows.Clipboard.ContainsText())
+                {
+                    result = System.Windows.Clipboard.GetText();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Get clipboard error: {ex.Message}");
             }
         }
-        catch (Exception ex)
+        else
         {
-            System.Diagnostics.Debug.WriteLine($"Get clipboard error: {ex.Message}");
+            // Need to invoke on UI thread
+            try
+            {
+                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    if (System.Windows.Clipboard.ContainsText())
+                    {
+                        result = System.Windows.Clipboard.GetText();
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Get clipboard error (dispatcher): {ex.Message}");
+            }
         }
 
-        return null;
+        return result;
     }
 
     public void SetText(string text)
     {
-        try
+        // Clipboard requires STA thread - use Dispatcher
+        if (System.Windows.Application.Current?.Dispatcher?.CheckAccess() == true)
         {
-            System.Windows.Clipboard.SetText(text);
+            // Already on UI thread
+            try
+            {
+                System.Windows.Clipboard.SetText(text);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Set clipboard error: {ex.Message}");
+            }
         }
-        catch (Exception ex)
+        else
         {
-            System.Diagnostics.Debug.WriteLine($"Set clipboard error: {ex.Message}");
+            // Need to invoke on UI thread
+            try
+            {
+                System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    try
+                    {
+                        System.Windows.Clipboard.SetText(text);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Set clipboard error: {ex.Message}");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Set clipboard error (dispatcher): {ex.Message}");
+            }
         }
     }
 
@@ -56,15 +108,59 @@ public class ClipboardService
 
             // Bring the previous window to foreground
             SetForegroundWindow(windowHandle);
-            await Task.Delay(50);
 
-            // Simulate Ctrl+V
-            SimulatePaste();
+            // Wait for window to be ready with retry mechanism
+            await WaitForWindowAndPaste(windowHandle, 500);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Paste error: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Waits for window to be ready and then pastes using retry mechanism
+    /// </summary>
+    private async Task WaitForWindowAndPaste(IntPtr windowHandle, int timeoutMs = 500)
+    {
+        var startTime = DateTime.Now;
+        const int retryDelayMs = 10;
+        
+        while ((DateTime.Now - startTime).TotalMilliseconds < timeoutMs)
+        {
+            if (IsWindowReady(windowHandle))
+            {
+                // Window is ready, paste immediately
+                SimulatePaste();
+                return;
+            }
+            await Task.Delay(retryDelayMs);
+        }
+        
+        // Timeout reached, try paste anyway as fallback
+#if DEBUG
+        System.Diagnostics.Debug.WriteLine($"[Clipboard] Window ready timeout, attempting paste anyway");
+#endif
+        SimulatePaste();
+    }
+
+    /// <summary>
+    /// Checks if window is in a ready state for pasting
+    /// </summary>
+    private bool IsWindowReady(IntPtr hWnd)
+    {
+        if (hWnd == IntPtr.Zero) return false;
+        
+        // Check if window is visible
+        if (!IsWindowVisible(hWnd)) return false;
+        
+        // Check if window is not minimized
+        if (IsIconic(hWnd)) return false;
+        
+        // Check if window is responsive (not hung)
+        if (!IsWindowEnabled(hWnd)) return false;
+        
+        return true;
     }
 
     private void SimulatePaste()
@@ -80,4 +176,13 @@ public class ClipboardService
 
     [DllImport("user32.dll")]
     private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsWindowEnabled(IntPtr hWnd);
 }

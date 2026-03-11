@@ -363,8 +363,7 @@ public partial class MainWindow : Window
                     // Set the transcribed text to clipboard
                     App.Clipboard.SetText(text);
 
-                    // Paste to previous window
-                    await Task.Delay(100);
+                    // Paste to previous window (now uses retry mechanism internally)
                     await App.Clipboard.PasteToWindow(previousWindow);
 
                     // Restore previous clipboard after delay (if enabled)

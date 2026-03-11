@@ -2,6 +2,24 @@
 
 ## Latest Release
 
+### Version 1.3.1
+
+#### Bug Fixes
+- **.NET Version**: Updated to .NET 9.0
+- **GDI Handle Leak**: Fixed memory leak in tray icon creation
+- **Clipboard Thread Safety**: Fixed potential deadlocks when accessing clipboard from background threads
+- **Debug Logging**: Wrapped debug statements in `#if DEBUG` to improve production performance
+- **Hardcoded Delays**: Replaced magic number delays with retry-based window readiness detection
+- **Exception Handling**: Added global exception handlers with logging to error.log
+- **Null Safety**: Added null checks to prevent NullReferenceException in transcription pipeline
+- **Token Security**: HuggingFace tokens now encrypted using Windows DPAPI
+
+#### Improvements
+- Better error messages for unexpected errors
+- More robust paste functionality with window state detection
+
+---
+
 ### Version 1.3.0
 
 #### Features
@@ -113,7 +131,7 @@
 ### Choose Your Build Type
 
 **Framework-Dependent (Smaller, ~few MB)**
-- Requires .NET 10.0 Runtime to be installed on your machine
+- Requires .NET 9.0 Runtime to be installed on your machine
 - Download the smaller package if you already have .NET
 
 **Self-Contained (Larger, ~150 MB)**

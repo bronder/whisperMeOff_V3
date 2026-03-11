@@ -1,4 +1,6 @@
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 
 namespace whisperMeOff.Services;
@@ -24,6 +26,9 @@ public class SettingsService
                     Llama = settings.Llama ?? new LlamaSettings();
                     Audio = settings.Audio ?? new AudioSettings();
                     General = settings.General ?? new GeneralSettings();
+                    
+                    // Decrypt sensitive data
+                    Llama.HuggingFaceToken = Decrypt(Llama.HuggingFaceToken);
                     
                     System.Diagnostics.Debug.WriteLine($"[Settings] Loaded from {App.SettingsPath}");
                     System.Diagnostics.Debug.WriteLine($"[Settings] Llama ModelId: {Llama.ModelId}");
@@ -58,6 +63,9 @@ public class SettingsService
                 General = General
             };
 
+            // Encrypt sensitive data before saving
+            settings.Llama.HuggingFaceToken = Encrypt(settings.Llama.HuggingFaceToken);
+
             var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(App.SettingsPath, json);
             System.Diagnostics.Debug.WriteLine($"[Settings] Saved to {App.SettingsPath}");
@@ -65,6 +73,49 @@ public class SettingsService
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[Settings] Save error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Encrypts a string using Windows DPAPI (user-specific)
+    /// </summary>
+    private static string Encrypt(string plainText)
+    {
+        if (string.IsNullOrEmpty(plainText))
+            return string.Empty;
+
+        try
+        {
+            var plainBytes = Encoding.UTF8.GetBytes(plainText);
+            var encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
+            return Convert.ToBase64String(encryptedBytes);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Settings] Encryption error: {ex.Message}");
+            return plainText; // Return plain text if encryption fails
+        }
+    }
+
+    /// <summary>
+    /// Decrypts a string using Windows DPAPI
+    /// </summary>
+    private static string Decrypt(string encryptedText)
+    {
+        if (string.IsNullOrEmpty(encryptedText))
+            return string.Empty;
+
+        try
+        {
+            // Check if it's encrypted (starts with base64 indicator)
+            var plainBytes = Convert.FromBase64String(encryptedText);
+            var decryptedBytes = ProtectedData.Unprotect(plainBytes, null, DataProtectionScope.CurrentUser);
+            return Encoding.UTF8.GetString(decryptedBytes);
+        }
+        catch
+        {
+            // Not encrypted or decryption failed - return as-is for backward compatibility
+            return encryptedText;
         }
     }
 }

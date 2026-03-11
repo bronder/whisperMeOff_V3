@@ -106,14 +106,18 @@ public class AudioService : IDisposable
 
     private void OnDataAvailable(object? sender, WaveInEventArgs e)
     {
+#if DEBUG
         System.Diagnostics.Debug.WriteLine($"[DEBUG] OnDataAvailable called. BytesRecorded={e.BytesRecorded}, _isRecording={_isRecording}");
+#endif
         if (_audioBuffer != null && _isRecording)
         {
             try
             {
                 // Write raw PCM directly to our buffer (not through WaveFileWriter)
                 _audioBuffer.Write(e.Buffer, 0, e.BytesRecorded);
+#if DEBUG
                 System.Diagnostics.Debug.WriteLine($"[DEBUG] Wrote {e.BytesRecorded} bytes to buffer");
+#endif
 
                 // Calculate RMS level
                 float maxLevel = 0;
@@ -128,7 +132,9 @@ public class AudioService : IDisposable
             }
             catch (Exception ex)
             {
+#if DEBUG
                 System.Diagnostics.Debug.WriteLine($"[DEBUG] Error in OnDataAvailable: {ex.Message}");
+#endif
                 // Ignore errors during data capture
             }
         }
@@ -136,7 +142,9 @@ public class AudioService : IDisposable
 
     private void OnRecordingStoppedInternal(object? sender, StoppedEventArgs e)
     {
+#if DEBUG
         System.Diagnostics.Debug.WriteLine($"[DEBUG] OnRecordingStoppedInternal called. _isRecording={_isRecording}, _audioBuffer.Length={_audioBuffer?.Length}");
+#endif
         LastRecordingDuration = (DateTime.Now - _recordingStartTime).TotalSeconds;
         
         // Only invoke if we were actually recording
@@ -152,10 +160,14 @@ public class AudioService : IDisposable
 
     public async Task<string?> StopRecordingAsync()
     {
+#if DEBUG
         System.Diagnostics.Debug.WriteLine($"[DEBUG] StopRecordingAsync called. _isRecording={_isRecording}, _disposed={_disposed}");
+#endif
         if (!_isRecording || _disposed) 
         {
+#if DEBUG
             System.Diagnostics.Debug.WriteLine("[DEBUG] StopRecordingAsync returning null - not recording or disposed");
+#endif
             return null;
         }
 
@@ -166,19 +178,27 @@ public class AudioService : IDisposable
             {
                 try
                 {
+#if DEBUG
                     System.Diagnostics.Debug.WriteLine("[DEBUG] Calling _waveIn.StopRecording()");
+#endif
                     _waveIn.StopRecording();
+#if DEBUG
                     System.Diagnostics.Debug.WriteLine("[DEBUG] _waveIn.StopRecording() completed");
+#endif
                 }
                 catch (Exception ex)
                 {
+#if DEBUG
                     System.Diagnostics.Debug.WriteLine($"[DEBUG] Exception in StopRecording: {ex.Message}");
+#endif
                     // Ignore errors when stopping
                 }
             }
             else
             {
+#if DEBUG
                 System.Diagnostics.Debug.WriteLine("[DEBUG] _waveIn is null - cannot stop");
+#endif
             }
 
             // Wait for the recording to fully stop
@@ -191,7 +211,9 @@ public class AudioService : IDisposable
                 pcmData = new MemoryStream();
                 _audioBuffer.Seek(0, SeekOrigin.Begin);
                 _audioBuffer.CopyTo(pcmData);
+#if DEBUG
                 System.Diagnostics.Debug.WriteLine($"[DEBUG] Copied PCM data: {pcmData.Length} bytes");
+#endif
             }
 
             // Now save with proper WAV header
@@ -205,7 +227,9 @@ public class AudioService : IDisposable
                 pcmData.Seek(0, SeekOrigin.Begin);
                 pcmData.CopyTo(fileStream);
 
+#if DEBUG
                 System.Diagnostics.Debug.WriteLine($"[DEBUG] Saved audio to: {tempPath}");
+#endif
                 return tempPath;
             }
             else

@@ -86,7 +86,7 @@ Hold a hotkey, speak your mind, and watch your words appear — automatically pa
 ## Requirements
 
 - Windows 10/11
-- .NET 10.0 Runtime
+- .NET 9.0 Runtime
 
 ## Dependencies & NuGet Packages
 
@@ -110,12 +110,12 @@ This project uses the following NuGet packages:
 | Package | Version | Description |
 |---------|---------|-------------|
 | [Hardcodet.NotifyIcon.Wpf](https://github.com/hardcodet/wpf-notifyicon) | 1.1.0 | System tray icon support for WPF |
-| [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | 8.2.2 | MVVM toolkit for WPF apps |
+| [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet) | 8.4.0 | MVVM toolkit for WPF apps |
 
 ### Data & Utilities
 | Package | Version | Description |
 |---------|---------|-------------|
-| [Microsoft.Data.Sqlite](https://docs.microsoft.com/en-us/dotnet/standard/data/sqlite/) | 8.0.0 | SQLite database support |
+| [Microsoft.Data.Sqlite](https://docs.microsoft.com/en-us/dotnet/standard/data/sqlite/) | 10.0.3 | SQLite database support |
 | [MathNet.Numerics](https://numerics.mathdotnet.com/) | 5.0.0 | Numerical computing library |
 
 ## Installation
