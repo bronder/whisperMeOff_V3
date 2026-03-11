@@ -7,6 +7,8 @@ namespace whisperMeOff.Views;
 
 public partial class MainWindow : Window
 {
+    private bool _isProcessing = false;
+    
     public MainWindow()
     {
         InitializeComponent();
@@ -286,11 +288,21 @@ public partial class MainWindow : Window
 
     private void RecordButton_Click(object sender, RoutedEventArgs e)
     {
+        // Don't allow starting new recording while processing
+        if (_isProcessing)
+        {
+            System.Diagnostics.Debug.WriteLine("[DEBUG] RecordButton_Click ignored - already processing");
+            return;
+        }
+        
         System.Diagnostics.Debug.WriteLine($"[DEBUG] RecordButton_Click called. IsRecording={App.Audio.IsRecording}");
         if (App.Audio.IsRecording)
         {
             // Stop recording
             System.Diagnostics.Debug.WriteLine("[DEBUG] Stopping recording via button click");
+            _isProcessing = true;
+            RecordButton.IsEnabled = false;
+            RecordButton.Content = "Processing...";
             Task.Run(async () =>
             {
                 var audioFile = await App.Audio.StopRecordingAsync();
@@ -299,6 +311,12 @@ public partial class MainWindow : Window
                 {
                     await ProcessTranscriptionAsync(audioFile);
                 }
+                Dispatcher.Invoke(() =>
+                {
+                    _isProcessing = false;
+                    RecordButton.IsEnabled = true;
+                    RecordButton.Content = "Start Recording";
+                });
             });
         }
         else
@@ -311,6 +329,8 @@ public partial class MainWindow : Window
 
     private async Task ProcessTranscriptionAsync(string audioFile)
     {
+        App.IsTranscribing = true;
+        
         try
         {
             System.Diagnostics.Debug.WriteLine("[DEBUG] Starting Whisper transcription...");
@@ -383,6 +403,10 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             System.Windows.MessageBox.Show($"Transcription error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+        finally
+        {
+            App.IsTranscribing = false;
         }
     }
 

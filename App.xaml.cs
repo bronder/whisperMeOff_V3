@@ -31,6 +31,9 @@ public partial class App : System.Windows.Application
     public static HotkeyService Hotkey { get; private set; } = null!;
     public static ClipboardService Clipboard { get; private set; } = null!;
     public static ModelDownloadService ModelDownload { get; private set; } = null!;
+    
+    // Track whether a transcription is in progress
+    public static bool IsTranscribing { get; set; } = false;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -169,6 +172,13 @@ public partial class App : System.Windows.Application
         _recordToolStripItem = new ToolStripMenuItem("Start Recording");
         _recordToolStripItem.Click += async (s, e) =>
         {
+            // Don't allow starting new recording while processing
+            if (IsTranscribing)
+            {
+                System.Diagnostics.Debug.WriteLine("[DEBUG] Tray menu clicked but transcription in progress, ignoring");
+                return;
+            }
+            
             if (App.Audio.IsRecording)
             {
                 // Stop recording and transcribe
@@ -283,6 +293,13 @@ public partial class App : System.Windows.Application
     {
         Dispatcher.Invoke(() =>
         {
+            // Don't allow starting new recording while processing
+            if (IsTranscribing)
+            {
+                System.Diagnostics.Debug.WriteLine("[DEBUG] Hotkey pressed but transcription in progress, ignoring");
+                return;
+            }
+            
             if (Settings.General.PushToTalkMode)
             {
                 // Push-to-talk mode: Start recording when hotkey pressed
@@ -331,6 +348,8 @@ public partial class App : System.Windows.Application
     {
         try
         {
+            IsTranscribing = true;
+            
             // Get previous window for auto-paste
             var targetWindow = Hotkey.GetPreviousWindow();
 
@@ -376,6 +395,10 @@ public partial class App : System.Windows.Application
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"Transcription error: {ex.Message}");
+        }
+        finally
+        {
+            IsTranscribing = false;
         }
     }
 

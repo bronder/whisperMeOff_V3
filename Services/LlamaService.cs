@@ -33,6 +33,46 @@ public class LlamaService : IDisposable
         {
             _modelPath = modelPath;
             
+            // Check file size first
+            var fileInfo = new FileInfo(modelPath);
+            var fileSizeMb = fileInfo.Length / (1024 * 1024);
+            
+            if (fileSizeMb < 100)
+            {
+                throw new Exception($"Model file is too small ({fileSizeMb} MB). The file appears to be incomplete or corrupt.\n" +
+                    $"Expected size: At least 500 MB for a 2B parameter model.\n" +
+                    $"Please re-download the model.");
+            }
+            
+            // Validate GGUF file magic number
+            try
+            {
+                using var fs = new FileStream(modelPath, FileMode.Open, FileAccess.Read);
+                var header = new byte[4];
+                fs.Read(header, 0, 4);
+                // GGUF files start with "GGUF" (0x46554747 in little endian)
+                var magic = BitConverter.ToUInt32(header, 0);
+                if (magic != 0x46554747) // "GGUF" in little endian
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LLAMA] Invalid GGUF magic number: 0x{magic:X8}");
+                    throw new Exception($"Invalid model file format. The file is not a valid GGUF file.\n" +
+                        $"Expected magic number: 0x46554747 (GGUF)\n" +
+                        $"Found magic number: 0x{magic:X8}\n" +
+                        "This usually means the model was downloaded in the wrong format (e.g., safetensors, pytorch).\n" +
+                        "Please download a GGUF-formatted model.");
+                }
+                System.Diagnostics.Debug.WriteLine($"[LLAMA] GGUF magic number validated: 0x{magic:X8}");
+            }
+            catch (Exception ex) when (ex.Message.Contains("Invalid model file") || ex.Message.Contains("too small"))
+            {
+                throw; // Re-throw our validation errors
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LLAMA] File validation warning: {ex.Message}");
+                // Continue anyway - the main load will fail if truly invalid
+            }
+            
             // Load model parameters - use GPU (Vulkan) if available
             var parameters = new ModelParams(modelPath)
             {
@@ -42,15 +82,37 @@ public class LlamaService : IDisposable
             };
             
             System.Diagnostics.Debug.WriteLine($"[LLAMA] Loading model from: {modelPath}");
+            System.Diagnostics.Debug.WriteLine($"[LLAMA] File size: {fileSizeMb} MB");
             
-            // Load the model
-            _model = await Task.Run(() => LLamaWeights.LoadFromFile(parameters));
-            _context = await Task.Run(() => _model.CreateContext(parameters));
-            _executor = new StatelessExecutor(_model, parameters);
-            
-            _isLoaded = true;
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] Successfully initialized with model: {modelPath}");
-            ModelLoaded?.Invoke(this, true);
+            try
+            {
+                // Load the model
+                _model = await Task.Run(() => LLamaWeights.LoadFromFile(parameters));
+                _context = await Task.Run(() => _model.CreateContext(parameters));
+                _executor = new StatelessExecutor(_model, parameters);
+                
+                _isLoaded = true;
+                System.Diagnostics.Debug.WriteLine($"[LLAMA] Successfully initialized with model: {modelPath}");
+                ModelLoaded?.Invoke(this, true);
+            }
+            catch (LLama.Exceptions.LoadWeightsFailedException loadEx)
+            {
+                // More specific error handling for weight loading failures
+                System.Diagnostics.Debug.WriteLine($"[LLAMA] Weight loading failed: {loadEx.Message}");
+                
+                string detailedError = $"Failed to load model from: {modelPath}\n\n" +
+                    "This can happen if:\n" +
+                    "- The model architecture is not supported by this version of LLamaSharp\n" +
+                    "- Gemma models from Google are not compatible - use Llama or Mistral instead\n" +
+                    "- The model file is corrupted\n\n" +
+                    $"Technical error: {loadEx.Message}\n\n" +
+                    "Recommended models:\n" +
+                    "- llama-2-7b-chat-q4_0.gguf\n" +
+                    "- mistral-7b-instruct-v0.2-q4_0.gguf\n" +
+                    "- phi-2-q4_0.gguf";
+                
+                throw new Exception(detailedError, loadEx);
+            }
         }
         catch (Exception ex)
         {
@@ -59,12 +121,16 @@ public class LlamaService : IDisposable
             _isLoaded = false;
             Unload();
             
+            // Build error message - use the detailed one from our validation if available
+            string errorTitle = "Llama Model Error";
+            string errorMessage = ex.Message;
+            
             // Notify user of the error
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
                 System.Windows.MessageBox.Show(
-                    $"Failed to load Llama model: {ex.Message}\n\nMake sure you have a valid GGUF model file.",
-                    "Llama Error",
+                    errorMessage,
+                    errorTitle,
                     System.Windows.MessageBoxButton.OK,
                     System.Windows.MessageBoxImage.Warning);
             });
