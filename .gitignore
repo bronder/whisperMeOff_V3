@@ -59,6 +59,7 @@ llamaModels/
 
 # Allow whisper folder (user data)
 !whisper/
+!.vscode/whisper/
 
 # Allow gguf folder (user model files)
 !gguf/
