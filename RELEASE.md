@@ -2,6 +2,15 @@
 
 ## Latest Release
 
+### Version 1.3.3
+
+#### Bug Fixes
+- **Token Persistence**: Fixed issue where HuggingFace token was being cleared on app restart due to double-encryption bug
+- **Load Timing**: Added `_isLoading` flag to prevent settings saves during window initialization
+- **Re-encryption Prevention**: Save() now detects already-encrypted tokens and skips re-encryption
+
+---
+
 ### Version 1.3.2
 
 #### Features
@@ -15,7 +24,7 @@
 ### Version 1.3.1
 
 #### Bug Fixes
-- **.NET Version**: Updated to .NET 9.0
+- **.NET Version**: Updated to .NET 10.0
 - **GDI Handle Leak**: Fixed memory leak in tray icon creation
 - **Clipboard Thread Safety**: Fixed potential deadlocks when accessing clipboard from background threads
 - **Debug Logging**: Wrapped debug statements in `#if DEBUG` to improve production performance
@@ -141,7 +150,7 @@
 ### Choose Your Build Type
 
 **Framework-Dependent (Smaller, ~few MB)**
-- Requires .NET 9.0 Runtime to be installed on your machine
+- Requires .NET 10.0 Runtime to be installed on your machine
 - Download the smaller package if you already have .NET
 
 **Self-Contained (Larger, ~150 MB)**

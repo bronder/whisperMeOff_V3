@@ -18,14 +18,20 @@ public partial class MainWindow : Window
 
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        // Prevent saves during initialization
+        _isLoading = true;
+        
         // Initialize hotkey
         App.Hotkey.Initialize(this);
 
         // Load audio devices
         LoadAudioDevices();
-     
+      
         // Load settings to UI
         LoadSettingsToUI();
+        
+        // Done loading - now allow saves
+        _isLoading = false;
 
         // Subscribe to Llama model load/unload events
         App.Llama.ModelLoaded += (s, isLoaded) => Dispatcher.Invoke(() =>
@@ -212,6 +218,36 @@ public partial class MainWindow : Window
 
         // HuggingFace Token (load into PasswordBox)
         var hfToken = App.Settings.Llama.HuggingFaceToken;
+        
+        // If token looks encrypted (very long base64 string), try to decrypt it first
+        if (!string.IsNullOrEmpty(hfToken) && hfToken.Length > 128)
+        {
+            // Try to decrypt - the token might still be encrypted in settings
+            try
+            {
+                var decrypted = Services.SettingsService.Decrypt(hfToken);
+                if (decrypted.Length <= 128)
+                {
+                    hfToken = decrypted;
+                    App.Settings.Llama.HuggingFaceToken = decrypted; // Update settings with decrypted value
+                }
+                else
+                {
+                    // Still too long after decrypt attempt - clear it
+                    System.Diagnostics.Debug.WriteLine("[Settings] HuggingFaceToken still too long after decrypt (" + decrypted.Length + " chars), clearing");
+                    hfToken = "";
+                    App.Settings.Llama.HuggingFaceToken = "";
+                }
+            }
+            catch
+            {
+                // Decrypt failed - clear corrupted token
+                System.Diagnostics.Debug.WriteLine("[Settings] HuggingFaceToken decrypt failed, clearing");
+                hfToken = "";
+                App.Settings.Llama.HuggingFaceToken = "";
+            }
+        }
+        
         if (!string.IsNullOrEmpty(hfToken))
         {
             HuggingFaceTokenBox.Password = hfToken;
@@ -244,7 +280,7 @@ public partial class MainWindow : Window
         
         // Mark as initialized - now TextChanged will save settings
         _isInitialized = true;
-        System.Diagnostics.Debug.WriteLine("[UI] MainWindow initialized");
+        System.Diagnostics.Debug.WriteLine("[UI] MainWindow initialized, _isInitialized = true");
     }
 
     public void NavigateToSettings()
@@ -783,15 +819,20 @@ public partial class MainWindow : Window
 
     private void HuggingFaceTokenBox_PasswordChanged(object sender, RoutedEventArgs e)
     {
-        // Don't save during initialization
-        if (!_isInitialized) return;
+        // Don't save during initialization or loading
+        if (!_isInitialized || _isLoading) 
+        {
+            System.Diagnostics.Debug.WriteLine($"[UI] HuggingFaceTokenBox_PasswordChanged: _isInitialized={_isInitialized}, _isLoading={_isLoading}, skipping save");
+            return;
+        }
         
+        System.Diagnostics.Debug.WriteLine($"[UI] HuggingFaceTokenBox_PasswordChanged: Saving token, length={HuggingFaceTokenBox.Password?.Length ?? 0}");
         App.Settings.Llama.HuggingFaceToken = HuggingFaceTokenBox.Password;
         App.Settings.Save();
-        System.Diagnostics.Debug.WriteLine("[UI] Saved HuggingFaceToken");
     }
 
     private bool _isInitialized = false;
+    private bool _isLoading = false;
     
     private void HuggingFaceModelIdTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {

@@ -28,8 +28,11 @@ public class SettingsService
                     General = settings.General ?? new GeneralSettings();
                     
                     // Decrypt sensitive data
+                    var beforeDecrypt = Llama.HuggingFaceToken;
                     Llama.HuggingFaceToken = Decrypt(Llama.HuggingFaceToken);
                     
+                    System.Diagnostics.Debug.WriteLine($"[Settings] Llama Token before decrypt: {beforeDecrypt?.Length ?? 0} chars");
+                    System.Diagnostics.Debug.WriteLine($"[Settings] Llama Token after decrypt: {Llama.HuggingFaceToken?.Length ?? 0} chars");
                     System.Diagnostics.Debug.WriteLine($"[Settings] Loaded from {App.SettingsPath}");
                     System.Diagnostics.Debug.WriteLine($"[Settings] Llama ModelId: {Llama.ModelId}");
                     System.Diagnostics.Debug.WriteLine($"[Settings] Llama Token: {(string.IsNullOrEmpty(Llama.HuggingFaceToken) ? "(empty)" : "***")}");
@@ -63,8 +66,24 @@ public class SettingsService
                 General = General
             };
 
-            // Encrypt sensitive data before saving
-            settings.Llama.HuggingFaceToken = Encrypt(settings.Llama.HuggingFaceToken);
+            // Encrypt sensitive data before saving (but only if it looks like plain text, not already encrypted)
+            if (!string.IsNullOrEmpty(settings.Llama.HuggingFaceToken))
+            {
+                var token = settings.Llama.HuggingFaceToken;
+                
+                // If the token already looks like it's been encrypted (very long base64), don't re-encrypt
+                // This prevents the double-encryption bug
+                if (token.Length > 200 && IsBase64String(token))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Settings] Token already appears encrypted ({token.Length} chars), skipping encryption");
+                }
+                else
+                {
+                    var beforeEncrypt = token;
+                    settings.Llama.HuggingFaceToken = Encrypt(token);
+                    System.Diagnostics.Debug.WriteLine($"[Settings] Token encrypted: {beforeEncrypt?.Length ?? 0} -> {settings.Llama.HuggingFaceToken?.Length ?? 0} chars");
+                }
+            }
 
             var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(App.SettingsPath, json);
@@ -98,9 +117,9 @@ public class SettingsService
     }
 
     /// <summary>
-    /// Decrypts a string using Windows DPAPI
+    /// Decrypts a string using Windows DPAPI (public for external use)
     /// </summary>
-    private static string Decrypt(string encryptedText)
+    public static string Decrypt(string encryptedText)
     {
         if (string.IsNullOrEmpty(encryptedText))
             return string.Empty;
@@ -110,12 +129,38 @@ public class SettingsService
             // Check if it's encrypted (starts with base64 indicator)
             var plainBytes = Convert.FromBase64String(encryptedText);
             var decryptedBytes = ProtectedData.Unprotect(plainBytes, null, DataProtectionScope.CurrentUser);
-            return Encoding.UTF8.GetString(decryptedBytes);
+            var result = Encoding.UTF8.GetString(decryptedBytes);
+            System.Diagnostics.Debug.WriteLine($"[Decrypt] Success! {encryptedText.Length} -> {result.Length} chars");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[Decrypt] Failed: {ex.Message}, returning as-is ({encryptedText.Length} chars)");
+            return encryptedText;
+        }
+    }
+
+    /// <summary>
+    /// Checks if a string is valid Base64 (used to detect already-encrypted tokens)
+    /// </summary>
+    private static bool IsBase64String(string s)
+    {
+        if (string.IsNullOrEmpty(s))
+            return false;
+
+        // Base64 strings only contain A-Z, a-z, 0-9, +, /, and = for padding
+        // They also tend to be longer (encrypted tokens are much longer than plain text)
+        if (s.Length < 20)
+            return false;
+
+        try
+        {
+            Convert.FromBase64String(s);
+            return true;
         }
         catch
         {
-            // Not encrypted or decryption failed - return as-is for backward compatibility
-            return encryptedText;
+            return false;
         }
     }
 }

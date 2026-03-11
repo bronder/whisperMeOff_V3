@@ -86,7 +86,7 @@ Hold a hotkey, speak your mind, and watch your words appear — automatically pa
 ## Requirements
 
 - Windows 10/11
-- .NET 9.0 Runtime
+- .NET 10.0 Runtime
 
 ## Dependencies & NuGet Packages
 
