@@ -4,6 +4,8 @@
 [Ll]og/
 [Ll]ogs/
 publish-*.zip
+publish/
+*.msi
 
 # Visual Studio files
 .vs/

@@ -169,6 +169,27 @@ public class DatabaseService : IDisposable
         }
     }
 
+    public async Task<int> ClearTranscriptionsOlderThanAsync(TimeSpan olderThan)
+    {
+        if (_connection == null) return 0;
+
+        try
+        {
+            var cutoffTime = DateTime.Now.Subtract(olderThan);
+            var cmd = _connection.CreateCommand();
+            cmd.CommandText = "DELETE FROM transcriptions WHERE timestamp < $cutoff";
+            cmd.Parameters.AddWithValue("$cutoff", cutoffTime.ToString("o"));
+
+            var rowsDeleted = await cmd.ExecuteNonQueryAsync();
+            return rowsDeleted;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Clear older transcriptions error: {ex.Message}");
+            return 0;
+        }
+    }
+
     public async Task<List<TranscriptionRecord>> SearchTranscriptionsAsync(string query)
     {
         var records = new List<TranscriptionRecord>();

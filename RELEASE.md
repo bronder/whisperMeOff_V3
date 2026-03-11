@@ -2,6 +2,18 @@
 
 ## Latest Release
 
+### Version 1.3.0
+
+#### Features
+- **Spectrum Analyzer VU Meter**: Enhanced recording overlay now displays a real-time animated spectrum analyzer with:
+  - 16 capsule-shaped bars that respond to audio input
+  - Green → Yellow → Red color gradient based on volume
+  - Pulsing background glow that responds to audio levels
+  - Slower decay for smooth visual persistence
+- **Clear Older Than**: New option to clear transcription history older than a specified time period (1 hour, 6 hours, 24 hours, 7 days, 30 days, 90 days)
+
+---
+
 ### Version 1.2.3
 
 #### Improvements
@@ -111,7 +123,7 @@
 
 ### Installation Steps
 
-1. Download the appropriate `publish-1.2.3.zip` from the latest release
+1. Download the appropriate `publish-1.3.0.zip` from the latest release
 2. Extract the zip to your desired location
 3. Run `whisperMeOff.exe`
 4. Download a Whisper model from the Whisper tab
@@ -140,15 +152,12 @@ Simply replace the existing `whisperMeOff.exe` with the new version. Your settin
 
 ### Planned Features
 
-#### Version 1.3.0
-- **Audio Visualization**: Real-time waveform display and VU meter during recording
-- **Toggle Recording Mode**: Press-to-start/stop recording option (in addition to push-to-talk)
+#### Version 1.4.0
 - **History Export**: Export transcription history to JSON/CSV/TXT
 - **Extended Language Support**: Full language dropdown with 50+ languages
 - **Keyboard Navigation**: Full keyboard navigation for accessibility
 
 #### Version 2.0.0
-
 - **Advanced Settings**: More transcription parameters (temperature, beam size, etc.)
 
 ---

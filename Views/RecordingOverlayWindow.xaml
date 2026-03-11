@@ -8,27 +8,47 @@
         ShowInTaskbar="False"
         WindowState="Normal"
         ResizeMode="NoResize"
-        Width="216" Height="60">
+        Width="340" Height="60">
 
-    <Border Background="#B3000000" CornerRadius="30">
-        <Grid>
+    <Border CornerRadius="30">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                <GradientStop Color="#E61A1A1A" Offset="0"/>
+                <GradientStop Color="#CC2D2D2D" Offset="1"/>
+            </LinearGradientBrush>
+        </Border.Background>
+        
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="0" Opacity="0.6"/>
+        </Border.Effect>
+        
+        <Grid Margin="15,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Blinking Red Dot -->
-            <Ellipse Grid.Column="0" Width="14" Height="14" Fill="#EF4444" Margin="20,0,10,0"
+            <!-- Blinking Red Dot with Glow -->
+            <Ellipse Grid.Column="0" Width="14" Height="14" Margin="5,0,12,0"
                      VerticalAlignment="Center">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#FF6B6B" Offset="0"/>
+                        <GradientStop Color="#EF4444" Offset="0.7"/>
+                        <GradientStop Color="#DC2626" Offset="1"/>
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
                 <Ellipse.Effect>
-                    <DropShadowEffect Color="#EF4444" BlurRadius="10" ShadowDepth="0"/>
+                    <DropShadowEffect Color="#EF4444" BlurRadius="15" ShadowDepth="0" Opacity="0.9"/>
                 </Ellipse.Effect>
                 <Ellipse.Triggers>
                     <EventTrigger RoutedEvent="Loaded">
                         <BeginStoryboard>
                             <Storyboard RepeatBehavior="Forever">
                                 <DoubleAnimation Storyboard.TargetProperty="Opacity"
-                                               From="1" To="0.3" Duration="0:0:0.5"
+                                               From="1" To="0.4" Duration="0:0:0.5"
                                                AutoReverse="True"/>
                             </Storyboard>
                         </BeginStoryboard>
@@ -36,9 +56,25 @@
                 </Ellipse.Triggers>
             </Ellipse>
 
-            <!-- Recording Text -->
+            <!-- Recording Text with Glow -->
             <TextBlock Grid.Column="1" Text="Recording" FontSize="17" FontWeight="SemiBold"
-                       Foreground="White" VerticalAlignment="Center" Margin="0,0,25,0"/>
+                       Foreground="White" VerticalAlignment="Center" Margin="0,0,15,0">
+                <TextBlock.Effect>
+                    <DropShadowEffect Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.5"/>
+                </TextBlock.Effect>
+            </TextBlock>
+
+            <!-- Spectrum Analyzer - 16 vertical bars with glow -->
+            <Canvas Grid.Column="3" x:Name="SpectrumCanvas" Width="150" Height="36" 
+                    VerticalAlignment="Center" ClipToBounds="True">
+                <!-- Background glow that pulses with audio -->
+                <Ellipse x:Name="SpectrumGlow" Width="140" Height="36" 
+                         Fill="#2222C55E" Opacity="0.3" HorizontalAlignment="Center"/>
+                
+                <!-- Background for bars -->
+                <Border Background="#1A1A1A" CornerRadius="4" Width="150" Height="36" 
+                        Opacity="0.6"/>
+            </Canvas>
         </Grid>
     </Border>
 </Window>

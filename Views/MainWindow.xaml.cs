@@ -969,6 +969,33 @@ public partial class MainWindow : Window
             await LoadHistoryAsync();
         }
     }
+
+    private async void ClearOlderThanButton_Click(object sender, RoutedEventArgs e)
+    {
+        var selectedItem = ClearOlderThanComboBox.SelectedItem as System.Windows.Controls.ComboBoxItem;
+        if (selectedItem == null) return;
+
+        var hoursText = selectedItem.Tag?.ToString();
+        if (!int.TryParse(hoursText, out int hours)) return;
+
+        var olderThan = TimeSpan.FromHours(hours);
+        var result = System.Windows.MessageBox.Show(
+            $"Delete transcriptions older than {selectedItem.Content}? This cannot be undone.",
+            "Confirm",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (result == MessageBoxResult.Yes)
+        {
+            int deletedCount = await App.Database.ClearTranscriptionsOlderThanAsync(olderThan);
+            await LoadHistoryAsync();
+            System.Windows.MessageBox.Show(
+                $"Deleted {deletedCount} transcriptions.",
+                "Complete",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+    }
 }
 
 public class TranscriptionListItem

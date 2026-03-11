@@ -7,6 +7,7 @@ Hold a hotkey, speak your mind, and watch your words appear — automatically pa
 ## Features
 
 - **Voice Recording**: Hold `Ctrl+Shift+R` to start recording, release to transcribe
+- **Recording Overlay**: Visual spectrum analyzer VU meter shows real-time audio levels during recording with colorful animated bars
 - **Auto-Paste**: Automatically pastes transcribed text to the previously active window
 - **Whisper.cpp Powered**: State-of-the-art local speech recognition using OpenAI's Whisper models (tiny to large)
 - **Llama.cpp Text Formatting**: Optional AI-powered formatting cleans up your transcription with proper punctuation and paragraphs
@@ -18,6 +19,7 @@ Hold a hotkey, speak your mind, and watch your words appear — automatically pa
 - **Launch at Login**: Automatically start the app when Windows boots
 - **Custom Vocabulary**: Define word lists to improve recognition accuracy for domain-specific terminology
 - **Word Replacements**: Automatically replace spoken phrases with different text after transcription
+- **History Management**: Clear all transcriptions or filter by age (older than 1 hour/6 hours/24 hours/7 days/30 days/90 days)
 
 ## Top Benefits
 

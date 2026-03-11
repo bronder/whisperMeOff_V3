@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="whisperMeOff"
+           Version="1.2.3"
+           Manufacturer="whisperMeOff"
+           UpgradeCode="F8C3E4B2-1D56-4A98-9E3F-7C4D5E6F7A8B">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of whisperMeOff is already installed." />
+    <Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
+
+    <!-- Icon -->
+    <Icon Id="flatrobot.ico" SourceFile="flatrobot.ico" />
+    <Property Id="ARPPRODUCTICON" Value="flatrobot.ico" />
+
+    <!-- Shortcuts -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="ApplicationShortcut" Guid="*">
+        <Shortcut Id="ApplicationStartMenuShortcut"
+                  Name="whisperMeOff"
+                  Description="Offline voice-to-text transcription"
+                  Target="[INSTALLFOLDER]whisperMeOff.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="flatrobot.ico" />
+        <RemoveFolder Id="ProgramMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\whisperMeOff" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="*">
+        <Shortcut Id="DesktopShortcut"
+                  Name="whisperMeOff"
+                  Description="Offline voice-to-text transcription"
+                  Target="[INSTALLFOLDER]whisperMeOff.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="flatrobot.ico" />
+        <RegistryValue Root="HKCU" Key="Software\whisperMeOff" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+
+    <!-- Install directory structure -->
+    <StandardDirectory Id="ProgramFilesFolder">
+      <Directory Id="INSTALLFOLDER" Name="whisperMeOff">
+        <!-- Main executable -->
+        <Component Id="MainExecutable" Guid="11111111-1111-1111-1111-111111111111">
+          <File Source="publish\whisperMeOff.exe" KeyPath="yes" />
+        </Component>
+
+        <!-- DLLs from publish folder -->
+        <Component Id="DLLs" Guid="22222222-2222-2222-2222-222222222222">
+          <File Source="publish\CommunityToolkit.HighPerformance.dll" />
+          <File Source="publish\CommunityToolkit.Mvvm.dll" />
+          <File Source="publish\LLamaSharp.dll" />
+          <File Source="publish\MathNet.Numerics.dll" />
+          <File Source="publish\Microsoft.Bcl.AsyncInterfaces.dll" />
+          <File Source="publish\Microsoft.Data.Sqlite.dll" />
+          <File Source="publish\Microsoft.Extensions.AI.Abstractions.dll" />
+          <File Source="publish\Microsoft.Extensions.DependencyInjection.Abstractions.dll" />
+          <File Source="publish\Microsoft.Extensions.Logging.Abstractions.dll" />
+          <File Source="publish\NAudio.Asio.dll" />
+          <File Source="publish\NAudio.Core.dll" />
+          <File Source="publish\NAudio.dll" />
+          <File Source="publish\NAudio.Midi.dll" />
+          <File Source="publish\NAudio.Wasapi.dll" />
+          <File Source="publish\NAudio.WinForms.dll" />
+          <File Source="publish\NAudio.WinMM.dll" />
+          <File Source="publish\SQLitePCLRaw.batteries_v2.dll" />
+          <File Source="publish\SQLitePCLRaw.core.dll" />
+          <File Source="publish\SQLitePCLRaw.provider.e_sqlite3.dll" />
+          <File Source="publish\System.Numerics.Tensors.dll" />
+          <File Source="publish\Whisper.net.dll" />
+        </Component>
+
+        <!-- Config files -->
+        <Component Id="ConfigFiles" Guid="33333333-3333-3333-3333-333333333333">
+          <File Source="publish\whisperMeOff.deps.json" />
+          <File Source="publish\whisperMeOff.runtimeconfig.json" />
+        </Component>
+
+        <!-- Runtime base directory -->
+        <Directory Id="RuntimeBaseDir" Name="runtimes">
+          <!-- Windows x64 runtime files - base SQLite -->
+          <Directory Id="WinX64Dir" Name="win-x64">
+            <Directory Id="NativeDir" Name="native">
+              <Component Id="RuntimeBase" Guid="44444444-4444-4444-4444-444444444444">
+                <File Source="publish\runtimes\win-x64\native\e_sqlite3.dll" />
+              </Component>
+
+              <!-- noavx subdirectory -->
+              <Directory Id="NoAvxDir" Name="noavx">
+                <Component Id="RuntimeNoAvx" Guid="55555555-5555-5555-5555-555555555555">
+                  <File Source="publish\runtimes\win-x64\native\noavx\ggml-base.dll" />
+                  <File Source="publish\runtimes\win-x64\native\noavx\ggml-cpu.dll" />
+                  <File Source="publish\runtimes\win-x64\native\noavx\ggml.dll" />
+                  <File Source="publish\runtimes\win-x64\native\noavx\llama.dll" />
+                  <File Source="publish\runtimes\win-x64\native\noavx\mtmd.dll" />
+                </Component>
+              </Directory>
+
+              <!-- avx subdirectory -->
+              <Directory Id="AvxDir" Name="avx">
+                <Component Id="RuntimeAvx" Guid="66666666-6666-6666-6666-666666666666">
+                  <File Source="publish\runtimes\win-x64\native\avx\ggml-base.dll" />
+                  <File Source="publish\runtimes\win-x64\native\avx\ggml-cpu.dll" />
+                  <File Source="publish\runtimes\win-x64\native\avx\ggml.dll" />
+                  <File Source="publish\runtimes\win-x64\native\avx\llama.dll" />
+                  <File Source="publish\runtimes\win-x64\native\avx\mtmd.dll" />
+                </Component>
+              </Directory>
+
+              <!-- avx2 subdirectory -->
+              <Directory Id="Avx2Dir" Name="avx2">
+                <Component Id="RuntimeAvx2" Guid="77777777-7777-7777-7777-777777777777">
+                  <File Source="publish\runtimes\win-x64\native\avx2\ggml-base.dll" />
+                  <File Source="publish\runtimes\win-x64\native\avx2\ggml-cpu.dll" />
+                  <File Source="publish\runtimes\win-x64\native\avx2\ggml.dll" />
+                  <File Source="publish\runtimes\win-x64\native\avx2\llama.dll" />
+                  <File Source="publish\runtimes\win-x64\native\avx2\mtmd.dll" />
+                </Component>
+              </Directory>
+
+              <!-- avx512 subdirectory -->
+              <Directory Id="Avx512Dir" Name="avx512">
+                <Component Id="RuntimeAvx512" Guid="88888888-8888-8888-8888-888888888888">
+                  <File Source="publish\runtimes\win-x64\native\avx512\ggml-base.dll" />
+                  <File Source="publish\runtimes\win-x64\native\avx512\ggml-cpu.dll" />
+                  <File Source="publish\runtimes\win-x64\native\avx512\ggml.dll" />
+                  <File Source="publish\runtimes\win-x64\native\avx512\llama.dll" />
+                  <File Source="publish\runtimes\win-x64\native\avx512\mtmd.dll" />
+                </Component>
+              </Directory>
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <!-- Feature definition -->
+    <Feature Id="ProductFeature" Title="whisperMeOff" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="DLLs" />
+      <ComponentRef Id="ConfigFiles" />
+      <ComponentRef Id="RuntimeBase" />
+      <ComponentRef Id="RuntimeNoAvx" />
+      <ComponentRef Id="RuntimeAvx" />
+      <ComponentRef Id="RuntimeAvx2" />
+      <ComponentRef Id="RuntimeAvx512" />
+      <ComponentRef Id="ApplicationShortcut" />
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+
+  </Package>
+</Wix>
