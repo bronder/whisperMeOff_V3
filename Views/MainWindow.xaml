@@ -43,6 +43,47 @@
 
         <!-- Main Content -->
         <TabControl Grid.Row="1" x:Name="MainTabControl" Background="Transparent" BorderThickness="0">
+            <TabControl.Resources>
+                <!-- Tab Item Style with Fade Animation -->
+                <Style TargetType="TabItem">
+                    <Setter Property="Opacity" Value="0.6"/>
+                    <Setter Property="Padding" Value="12,8"/>
+                    <Setter Property="FontSize" Value="14"/>
+                    <Setter Property="Foreground" Value="{DynamicResource SecondaryTextBrush}"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="TabItem">
+                                <Border x:Name="Border" Padding="{TemplateBinding Padding}" CornerRadius="4" Margin="2">
+                                    <ContentPresenter x:Name="ContentSite" ContentSource="Header" HorizontalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Opacity" Value="1"/>
+                                        <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                                        <Setter TargetName="Border" Property="Background" Value="{DynamicResource CardBrush}"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Opacity" Value="0.8"/>
+                                    </Trigger>
+                                    <MultiTrigger>
+                                        <MultiTrigger.Conditions>
+                                            <Condition Property="IsSelected" Value="True"/>
+                                        </MultiTrigger.Conditions>
+                                        <MultiTrigger.EnterActions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                   From="0.6" To="1" Duration="0:0:0.2"/>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </MultiTrigger.EnterActions>
+                                    </MultiTrigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </TabControl.Resources>
             <!-- Home Tab -->
             <TabItem Header="Home">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">

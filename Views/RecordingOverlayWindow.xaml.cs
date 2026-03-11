@@ -10,6 +10,8 @@ public partial class RecordingOverlayWindow : Window
 {
     private readonly Random _random = new();
     private readonly DispatcherTimer _spectrumTimer;
+    private readonly DispatcherTimer _recordingTimer;
+    private DateTime _recordingStartTime;
     private double _currentLevel = 0;
     private double _targetLevel = 0;
     
@@ -17,6 +19,7 @@ public partial class RecordingOverlayWindow : Window
     private readonly List<double> _barLevels = new();
     private Canvas? _spectrumCanvas;
     private System.Windows.Shapes.Ellipse? _spectrumGlow;
+    private System.Windows.Controls.TextBlock? _timerText;
     private const int BarCount = 16;
     
     public RecordingOverlayWindow()
@@ -41,6 +44,13 @@ public partial class RecordingOverlayWindow : Window
         };
         _spectrumTimer.Tick += OnSpectrumTimerTick;
         
+        // Set up recording timer (1fps for elapsed time display)
+        _recordingTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(1)
+        };
+        _recordingTimer.Tick += OnRecordingTimerTick;
+        
         // Subscribe to audio level changes
         App.Audio.AudioLevelChanged += OnAudioLevelChanged;
         
@@ -52,6 +62,7 @@ public partial class RecordingOverlayWindow : Window
     {
         _spectrumCanvas = (Canvas)FindName("SpectrumCanvas");
         _spectrumGlow = (System.Windows.Shapes.Ellipse)FindName("SpectrumGlow");
+        _timerText = (System.Windows.Controls.TextBlock)FindName("TimerText");
         
         // Initialize bars - 16 bars in wider canvas
         double barWidth = 8;
@@ -168,9 +179,33 @@ public partial class RecordingOverlayWindow : Window
         }
     }
 
+    private void OnRecordingTimerTick(object? sender, EventArgs e)
+    {
+        if (_timerText == null) return;
+        
+        var elapsed = DateTime.Now - _recordingStartTime;
+        _timerText.Text = elapsed.ToString(@"mm\:ss");
+    }
+
+    public void StartRecordingTimer()
+    {
+        _recordingStartTime = DateTime.Now;
+        if (_timerText != null)
+        {
+            _timerText.Text = "00:00";
+        }
+        _recordingTimer.Start();
+    }
+
+    public void StopRecordingTimer()
+    {
+        _recordingTimer.Stop();
+    }
+
     private void OnWindowClosed(object? sender, EventArgs e)
     {
         _spectrumTimer.Stop();
+        _recordingTimer.Stop();
         App.Audio.AudioLevelChanged -= OnAudioLevelChanged;
     }
 }

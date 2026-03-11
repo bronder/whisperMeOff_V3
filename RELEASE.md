@@ -2,6 +2,16 @@
 
 ## Latest Release
 
+### Version 1.3.2
+
+#### Features
+- **Recording Timer**: Added elapsed time display (mm:ss) to the recording overlay so users can see how long they've been recording
+
+#### Improvements
+- **Tab Animations**: Added smooth fade animations when switching between tabs for a more polished feel
+
+---
+
 ### Version 1.3.1
 
 #### Bug Fixes

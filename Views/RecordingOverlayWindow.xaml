@@ -57,12 +57,21 @@
             </Ellipse>
 
             <!-- Recording Text with Glow -->
-            <TextBlock Grid.Column="1" Text="Recording" FontSize="17" FontWeight="SemiBold"
-                       Foreground="White" VerticalAlignment="Center" Margin="0,0,15,0">
-                <TextBlock.Effect>
-                    <DropShadowEffect Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.5"/>
-                </TextBlock.Effect>
-            </TextBlock>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,15,0">
+                <TextBlock Text="Recording" FontSize="17" FontWeight="SemiBold"
+                           Foreground="White">
+                    <TextBlock.Effect>
+                        <DropShadowEffect Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.5"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+                <!-- Recording Timer -->
+                <TextBlock x:Name="TimerText" Text="00:00" FontSize="17" FontWeight="SemiBold"
+                           Foreground="#AAAAAA" Margin="10,0,0,0">
+                    <TextBlock.Effect>
+                        <DropShadowEffect Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.5"/>
+                    </TextBlock.Effect>
+                </TextBlock>
+            </StackPanel>
 
             <!-- Spectrum Analyzer - 16 vertical bars with glow -->
             <Canvas Grid.Column="3" x:Name="SpectrumCanvas" Width="150" Height="36" 

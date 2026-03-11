@@ -337,6 +337,7 @@ public partial class App : System.Windows.Application
         Dispatcher.Invoke(() =>
         {
             _recordingOverlay?.Show();
+            _recordingOverlay?.StartRecordingTimer();
             UpdateTrayIcon(true);
             if (_recordMenuItem != null)
                 _recordMenuItem.Header = "Stop Recording";
@@ -347,6 +348,7 @@ public partial class App : System.Windows.Application
     {
         Dispatcher.Invoke(() =>
         {
+            _recordingOverlay?.StopRecordingTimer();
             _recordingOverlay?.Hide();
             UpdateTrayIcon(false);
             if (_recordMenuItem != null)
