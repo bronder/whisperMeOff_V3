@@ -2,6 +2,13 @@
 
 ## Latest Release
 
+### Version 1.2.3
+
+#### Improvements
+- **System Tray Menu**: Replaced WPF context menu with Windows Forms ContextMenuStrip for native theming. The tray icon menu now automatically matches Windows dark/light mode for better readability.
+
+---
+
 ### Version 1.2.2
 
 #### Features
@@ -104,7 +111,7 @@
 
 ### Installation Steps
 
-1. Download the appropriate `publish-1.2.2.zip` from the latest release
+1. Download the appropriate `publish-1.2.3.zip` from the latest release
 2. Extract the zip to your desired location
 3. Run `whisperMeOff.exe`
 4. Download a Whisper model from the Whisper tab

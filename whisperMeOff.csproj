@@ -10,7 +10,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>whisperMeOff</AssemblyName>
     <RootNamespace>whisperMeOff</RootNamespace>
-    <Version>1.2.2</Version>
+    <Version>1.2.3</Version>
     <Company>whisperMeOff</Company>
     <Product>whisperMeOff</Product>
     <Description>Offline voice-to-text transcription with auto-paste</Description>
@@ -28,7 +28,6 @@
     <PackageReference Include="Whisper.net" Version="1.9.1-preview1" />
     <PackageReference Include="Whisper.net.Runtime" Version="1.9.1-preview1" />
     <PackageReference Include="Whisper.net.Runtime.Vulkan" Version="1.9.1-preview1" />
-    <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
   </ItemGroup>

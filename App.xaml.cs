@@ -1,6 +1,6 @@
 using System.IO;
 using System.Windows;
-using Hardcodet.Wpf.TaskbarNotification;
+using System.Windows.Forms;
 using Microsoft.Win32;
 using whisperMeOff.Services;
 using whisperMeOff.Views;
@@ -9,10 +9,11 @@ namespace whisperMeOff;
 
 public partial class App : System.Windows.Application
 {
-    private TaskbarIcon? _notifyIcon;
+    private NotifyIcon? _notifyIcon;
     private MainWindow? _mainWindow;
     private RecordingOverlayWindow? _recordingOverlay;
     private System.Windows.Controls.MenuItem? _recordMenuItem;
+    private ToolStripMenuItem? _recordToolStripItem;
 
     public static string AppDataPath { get; private set; } = null!;
     public static string ModelsPath { get; private set; } = null!;
@@ -154,18 +155,19 @@ public partial class App : System.Windows.Application
 
     private void SetupSystemTray()
     {
-        _notifyIcon = new TaskbarIcon
+        // Use Windows Forms NotifyIcon for native context menu theming
+        _notifyIcon = new NotifyIcon
         {
-            ToolTipText = "whisperMeOff - Ready",
-            Visibility = Visibility.Visible
+            Text = "whisperMeOff - Ready",
+            Visible = true
         };
 
-        // Create context menu
-        var contextMenu = new System.Windows.Controls.ContextMenu();
+        // Create context menu using Windows Forms for native theming
+        var contextMenu = new ContextMenuStrip();
 
         // Recording controls
-        _recordMenuItem = new System.Windows.Controls.MenuItem { Header = "Start Recording" };
-        _recordMenuItem.Click += async (s, e) =>
+        _recordToolStripItem = new ToolStripMenuItem("Start Recording");
+        _recordToolStripItem.Click += async (s, e) =>
         {
             if (App.Audio.IsRecording)
             {
@@ -175,20 +177,20 @@ public partial class App : System.Windows.Application
                 {
                     _ = App.Whisper.TranscribeAsync(audioFile);
                 }
-                _recordMenuItem.Header = "Start Recording";
+                _recordToolStripItem.Text = "Start Recording";
             }
             else
             {
                 // Start recording
                 App.Audio.StartRecording();
-                _recordMenuItem.Header = "Stop Recording";
+                _recordToolStripItem.Text = "Stop Recording";
             }
         };
-        contextMenu.Items.Add(_recordMenuItem);
+        contextMenu.Items.Add(_recordToolStripItem);
 
-        contextMenu.Items.Add(new System.Windows.Controls.Separator());
+        contextMenu.Items.Add(new ToolStripSeparator());
 
-        var showItem = new System.Windows.Controls.MenuItem { Header = "Show whisperMeOff" };
+        var showItem = new ToolStripMenuItem("Show whisperMeOff");
         showItem.Click += (s, e) =>
         {
             _mainWindow?.Show();
@@ -196,7 +198,7 @@ public partial class App : System.Windows.Application
         };
         contextMenu.Items.Add(showItem);
 
-        var settingsItem = new System.Windows.Controls.MenuItem { Header = "Settings" };
+        var settingsItem = new ToolStripMenuItem("Settings");
         settingsItem.Click += (s, e) =>
         {
             _mainWindow?.Show();
@@ -205,14 +207,14 @@ public partial class App : System.Windows.Application
         };
         contextMenu.Items.Add(settingsItem);
 
-        contextMenu.Items.Add(new System.Windows.Controls.Separator());
+        contextMenu.Items.Add(new ToolStripSeparator());
 
-        var exitItem = new System.Windows.Controls.MenuItem { Header = "Exit" };
+        var exitItem = new ToolStripMenuItem("Exit");
         exitItem.Click += (s, e) => ExitApplication();
         contextMenu.Items.Add(exitItem);
 
-        _notifyIcon.ContextMenu = contextMenu;
-        _notifyIcon.TrayMouseDoubleClick += (s, e) =>
+        _notifyIcon.ContextMenuStrip = contextMenu;
+        _notifyIcon.DoubleClick += (s, e) =>
         {
             if (_mainWindow?.IsVisible == true)
                 _mainWindow.Hide();
@@ -235,7 +237,7 @@ public partial class App : System.Windows.Application
         // Create a simple icon based on state
         var icon = CreateTrayIcon(isRecording);
         _notifyIcon.Icon = icon;
-        _notifyIcon.ToolTipText = isRecording ? "whisperMeOff - Recording..." : "whisperMeOff - Ready";
+        _notifyIcon.Text = isRecording ? "whisperMeOff - Recording..." : "whisperMeOff - Ready";
     }
 
     private System.Drawing.Icon CreateTrayIcon(bool isRecording)
@@ -244,7 +246,7 @@ public partial class App : System.Windows.Application
         using var bitmap = new System.Drawing.Bitmap(16, 16);
         using var graphics = System.Drawing.Graphics.FromImage(bitmap);
 
-        graphics.Clear(isRecording ? System.Drawing.Color.Red : System.Drawing.Color.FromArgb(0, 212, 255));
+        graphics.Clear(isRecording ? System.Drawing.Color.Red : System.Drawing.Color.FromArgb(0, 80, 160));
 
         // Draw a simple microphone shape
         using var brush = new System.Drawing.SolidBrush(System.Drawing.Color.White);
