@@ -31,22 +31,19 @@ public class SettingsService
                     var beforeDecrypt = Llama.HuggingFaceToken;
                     Llama.HuggingFaceToken = Decrypt(Llama.HuggingFaceToken);
                     
-                    System.Diagnostics.Debug.WriteLine($"[Settings] Llama Token before decrypt: {beforeDecrypt?.Length ?? 0} chars");
-                    System.Diagnostics.Debug.WriteLine($"[Settings] Llama Token after decrypt: {Llama.HuggingFaceToken?.Length ?? 0} chars");
-                    System.Diagnostics.Debug.WriteLine($"[Settings] Loaded from {App.SettingsPath}");
-                    System.Diagnostics.Debug.WriteLine($"[Settings] Llama ModelId: {Llama.ModelId}");
-                    System.Diagnostics.Debug.WriteLine($"[Settings] Llama Token: {(string.IsNullOrEmpty(Llama.HuggingFaceToken) ? "(empty)" : "***")}");
+                    LoggingService.Debug($"Settings loaded - Llama Token length: {Llama.HuggingFaceToken?.Length ?? 0} chars");
+                    LoggingService.Debug($"Settings loaded from {App.SettingsPath}");
+                    LoggingService.Debug($"Llama ModelId: {Llama.ModelId}");
                 }
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"[Settings] No settings file at {App.SettingsPath}");
+                LoggingService.Info($"No settings file at {App.SettingsPath} - using defaults");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Settings] Load error: {ex.Message}");
-            // Use defaults on error
+            LoggingService.Error(ex, "Failed to load settings - using defaults");
         }
 
         // Set defaults
@@ -75,23 +72,23 @@ public class SettingsService
                 // This prevents the double-encryption bug
                 if (token.Length > 200 && IsBase64String(token))
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Settings] Token already appears encrypted ({token.Length} chars), skipping encryption");
+                    LoggingService.Debug("Token already encrypted, skipping encryption");
                 }
                 else
                 {
                     var beforeEncrypt = token;
                     settings.Llama.HuggingFaceToken = Encrypt(token);
-                    System.Diagnostics.Debug.WriteLine($"[Settings] Token encrypted: {beforeEncrypt?.Length ?? 0} -> {settings.Llama.HuggingFaceToken?.Length ?? 0} chars");
+                    LoggingService.Debug($"Token encrypted: {beforeEncrypt?.Length ?? 0} -> {settings.Llama.HuggingFaceToken?.Length ?? 0} chars");
                 }
             }
 
             var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(App.SettingsPath, json);
-            System.Diagnostics.Debug.WriteLine($"[Settings] Saved to {App.SettingsPath}");
+            LoggingService.Info($"Settings saved to {App.SettingsPath}");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Settings] Save error: {ex.Message}");
+            LoggingService.Error(ex, "Failed to save settings");
         }
     }
 
@@ -111,7 +108,7 @@ public class SettingsService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Settings] Encryption error: {ex.Message}");
+            LoggingService.Warn($"[Settings] Encryption error: {ex.Message}");
             return plainText; // Return plain text if encryption fails
         }
     }
@@ -130,12 +127,12 @@ public class SettingsService
             var plainBytes = Convert.FromBase64String(encryptedText);
             var decryptedBytes = ProtectedData.Unprotect(plainBytes, null, DataProtectionScope.CurrentUser);
             var result = Encoding.UTF8.GetString(decryptedBytes);
-            System.Diagnostics.Debug.WriteLine($"[Decrypt] Success! {encryptedText.Length} -> {result.Length} chars");
+            LoggingService.Debug($"[Decrypt] Success! {encryptedText.Length} -> {result.Length} chars");
             return result;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Decrypt] Failed: {ex.Message}, returning as-is ({encryptedText.Length} chars)");
+            LoggingService.Warn($"[Decrypt] Failed: {ex.Message}, returning as-is ({encryptedText.Length} chars)");
             return encryptedText;
         }
     }

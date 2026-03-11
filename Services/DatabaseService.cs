@@ -29,11 +29,11 @@ public class DatabaseService : IDisposable
             ";
             await createTableCmd.ExecuteNonQueryAsync();
 
-            System.Diagnostics.Debug.WriteLine("Database initialized");
+            LoggingService.Info("Database initialized");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Database initialization error: {ex.Message}");
+            LoggingService.Error(ex, "Database initialization error");
         }
     }
 
@@ -60,7 +60,7 @@ public class DatabaseService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Add transcription error: {ex.Message}");
+            LoggingService.Error(ex, "Add transcription error");
             return -1;
         }
     }
@@ -92,7 +92,7 @@ public class DatabaseService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Get transcriptions error: {ex.Message}");
+            LoggingService.Error(ex, "Get transcriptions error");
         }
 
         return records;
@@ -124,7 +124,7 @@ public class DatabaseService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Get transcription error: {ex.Message}");
+            LoggingService.Error(ex, "Get transcription error");
         }
 
         return null;
@@ -145,7 +145,7 @@ public class DatabaseService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Delete transcription error: {ex.Message}");
+            LoggingService.Error(ex, "Delete transcription error");
             return false;
         }
     }
@@ -164,7 +164,7 @@ public class DatabaseService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Clear transcriptions error: {ex.Message}");
+            LoggingService.Error(ex, "Clear transcriptions error");
             return false;
         }
     }
@@ -185,7 +185,7 @@ public class DatabaseService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Clear older transcriptions error: {ex.Message}");
+            LoggingService.Error(ex, "Clear older transcriptions error");
             return 0;
         }
     }
@@ -217,7 +217,7 @@ public class DatabaseService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Search transcriptions error: {ex.Message}");
+            LoggingService.Error(ex, "Search transcriptions error");
         }
 
         return records;

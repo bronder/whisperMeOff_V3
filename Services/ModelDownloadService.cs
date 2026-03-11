@@ -32,7 +32,7 @@ public class ModelDownloadService : IDisposable
             // Check if already exists (also check old large filename for backwards compatibility)
             if (File.Exists(destinationPath) && new FileInfo(destinationPath).Length > 1024 * 1024)
             {
-                System.Diagnostics.Debug.WriteLine($"Model already exists: {destinationPath}");
+                LoggingService.Debug($"Whisper model already exists: {destinationPath}");
                 return destinationPath;
             }
 
@@ -42,7 +42,7 @@ public class ModelDownloadService : IDisposable
                 var oldPath = Path.Combine(App.WhisperModelsPath, "ggml-large.bin");
                 if (File.Exists(oldPath) && new FileInfo(oldPath).Length > 1024 * 1024)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Model already exists (old filename): {oldPath}");
+                    LoggingService.Debug($"Model already exists (old filename): {oldPath}");
                     return oldPath;
                 }
             }
@@ -52,7 +52,7 @@ public class ModelDownloadService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Download error: {ex.Message}");
+            LoggingService.Error(ex, "Whisper model download failed");
             return null;
         }
     }
@@ -78,7 +78,7 @@ public class ModelDownloadService : IDisposable
             // Check if already exists
             if (File.Exists(destinationPath) && new FileInfo(destinationPath).Length > 1024 * 1024)
             {
-                System.Diagnostics.Debug.WriteLine($"Model already exists: {destinationPath}");
+                LoggingService.Debug($"Llama model already exists: {destinationPath}");
                 return destinationPath;
             }
 
@@ -95,7 +95,7 @@ public class ModelDownloadService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Download error: {ex.Message}");
+            LoggingService.Error(ex, "Llama model download failed");
             return null;
         }
     }
@@ -220,15 +220,15 @@ public class ModelDownloadService : IDisposable
             if (ggufFiles.Count == 0) 
             {
                 var fileList = string.Join(", ", files.Select(f => f.Path));
-                System.Diagnostics.Debug.WriteLine("No GGUF files found. Available files: " + fileList);
-                System.Diagnostics.Debug.WriteLine($"Total files in response: {files.Count}");
+                LoggingService.Warn("No GGUF files found. Available files: " + fileList);
+                LoggingService.Debug($"Total files in response: {files.Count}");
                 return "ERROR:No GGUF files found. Available: " + fileList;
             }
 
-            System.Diagnostics.Debug.WriteLine($"Found {ggufFiles.Count} GGUF files:");
+            LoggingService.Info($"Found {ggufFiles.Count} GGUF files:");
             foreach (var f in ggufFiles)
             {
-                System.Diagnostics.Debug.WriteLine($"  - {f.Path} ({f.Size} bytes)");
+                LoggingService.Debug($"  - {f.Path} ({f.Size} bytes)");
             }
 
             // If quantization specified, try to match it
@@ -252,12 +252,12 @@ public class ModelDownloadService : IDisposable
                 return "ERROR:No suitable GGUF file found";
             }
 
-            System.Diagnostics.Debug.WriteLine($"Selected GGUF file: {ggufFile.Path}");
+            LoggingService.Debug($"Selected GGUF file: {ggufFile.Path}");
             return $"https://huggingface.co/{ownerRepo}/resolve/{foundBranch}/{ggufFile.Path}";
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Discover Llama URL error: {ex.Message}");
+            LoggingService.Error(ex, "Discover Llama URL error");
             return $"ERROR:{ex.Message}";
         }
     }

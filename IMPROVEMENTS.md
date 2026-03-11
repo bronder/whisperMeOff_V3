@@ -65,16 +65,18 @@ Design friendly empty states for:
 
 ---
 
-## 4. Settings & Configuration
+## 4. Settings & Configuration ✅ (Recently Updated)
 
 ### Organized Settings
-- Group settings into collapsible sections
+- Group settings into collapsible sections ✅ (Implemented)
 - Add search/filter for settings
 - Show which settings require restart
 
-### Presets
-- **Quick presets**: "Fastest", "Balanced", "Most Accurate"
-- One-click configuration for common use cases
+### Presets ✅ (Recently Updated)
+- **Quick presets**: "Fastest", "Balanced", "Most Accurate" ✅ (Implemented)
+- One-click configuration for common use cases ✅ (Implemented)
+- Auto-download model if not present ✅ (Implemented)
+- Auto-load model when preset selected ✅ (Implemented)
 
 ### Advanced Settings
 - Hide advanced options behind "Show more" toggle
@@ -93,6 +95,11 @@ Design friendly empty states for:
 - Show notification when long operations complete
 - Allow cancellation of downloads
 - Show download progress with ETA
+
+### Model Loading
+- Show loading progress when switching models
+- Keep previously loaded model in memory for quick switching
+- Consider model preloading during idle time
 
 ---
 
@@ -154,16 +161,38 @@ Design friendly empty states for:
 
 ---
 
-## 10. Quick Wins (Low Effort)
+## 10. Technical Architecture Improvements
 
-| Feature | Impact | Effort |
-|---------|--------|--------|
-| Add recording duration display | High | Low |
-| Show model loading progress | High | Low |
-| Add keyboard shortcuts help (F1) | Medium | Low |
-| Improve error messages | High | Low |
-| Add dark/light toggle in tray | Medium | Low |
-| Animated success feedback | Medium | Low |
+### Code Organization
+- Consider MVVM pattern with proper ViewModels
+- Move business logic from code-behind to services
+- Add interface abstractions for testability
+
+### Error Handling
+- Centralized error logging
+- Graceful degradation when services fail
+- User-friendly error messages with troubleshooting steps
+
+### Data Persistence
+- Add data migration support for settings updates
+- Consider SQLite for larger data (history)
+- Implement data export/import
+
+---
+
+## 11. Quick Wins (Low Effort)
+
+| Feature | Impact | Effort | Status |
+|---------|--------|--------|--------|
+| Add recording duration display | High | Low | ✅ Done |
+| Show model loading progress | High | Low | Pending |
+| Add keyboard shortcuts help (F1) | Medium | Low | Pending |
+| Improve error messages | High | Low | Pending |
+| Add dark/light toggle in tray | Medium | Low | Pending |
+| Animated success feedback | Medium | Low | Pending |
+| Collapsible settings sections | High | Low | ✅ Done |
+| Preset buttons | High | Medium | ✅ Done |
+| Setting tooltips | High | Low | ✅ Done |
 
 ---
 
@@ -173,21 +202,21 @@ Design friendly empty states for:
 2. **Model download progress** - Large downloads need transparency  
 3. **Accessibility** - Reach more users
 4. **First-run experience** - Make a great first impression
-5. **Settings organization** - Reduce user confusion
+5. **Settings organization** - Reduce user confusion ✅ (Partially Done)
 
 ---
 
-# Visual Design Implementation Constraints
+## Visual Design Implementation Constraints
 
-## Current State Analysis
+### Current State Analysis
 
-### MainWindow.xaml
+#### MainWindow.xaml
 - Uses standard WPF Window (no WindowChrome)
 - No AllowsTransparency
 - Standard window frame with native controls
 - Fixed size: 800x800, min 500x400
 
-### RecordingOverlayWindow.xaml
+#### RecordingOverlayWindow.xaml
 - Already has `WindowStyle="None"`, `AllowsTransparency="True"`, `Background="Transparent"`
 - This is the overlay shown during recording
 
@@ -202,56 +231,6 @@ Design friendly empty states for:
 | **Tab Transitions** | Current TabControl has no animations | Add `ControlTemplate` with `Storyboard` animations on `Selected` event |
 | **Recording Timer** | Not currently tracked in UI | Already available in `AudioService.LastRecordingDuration` - just needs UI binding |
 | **Waveform Visualization** | Requires raw audio data streaming | NAudio can provide `SampleProviders` for real-time waveform |
-
----
-
-## Specific Implementation Paths
-
-### 1. Rounded Corners (MainWindow)
-
-```xml
-<Window ... AllowsTransparency="True" WindowStyle="None">
-    <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="40" CornerRadius="8"/>
-    </WindowChrome.WindowChrome>
-    <!-- Need custom title bar with Close/Min/Max buttons -->
-</Window>
-```
-
-⚠️ **Constraint**: Requires custom title bar buttons since native controls don't render with transparency
-
-### 2. Tab Animations
-
-```xml
-<TabControl>
-    <TabControl.Resources>
-        <Style TargetType="TabItem">
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Trigger.EnterActions>
-                        <BeginStoryboard>
-                            <Storyboard>
-                                <DoubleAnimation Storyboard.TargetProperty="Opacity" 
-                                               From="0" To="1" Duration="0:0:0.2"/>
-                            </Storyboard>
-                        </BeginStoryboard>
-                    </Trigger.EnterActions>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-    </TabControl.Resources>
-</TabControl>
-```
-
-### 3. Recording Timer Display
-
-Already possible - bind to `AudioService.LastRecordingDuration` in MainWindow.
-Add TextBlock in RecordingOverlayWindow:
-
-```xml
-<TextBlock Text="{Binding RecordingTime, StringFormat='{}{0:mm\\:ss}'}" 
-           FontSize="24" Foreground="White"/>
-```
 
 ---
 
@@ -271,13 +250,20 @@ To add Mica/Acrylic backdrop (Windows 11):
 
 ---
 
-## Recommendation
+## Recently Completed (v1.4)
 
-**Low-effort improvements first:**
-1. ✅ Recording timer - just needs UI binding (already works!) - **IMPLEMENTED**
-2. ✅ Add fade animations to tabs (XAML only) - **IMPLEMENTED**
-3. Update status indicator with pulsing animation
+- ✅ Collapsible settings sections (General tab)
+- ✅ Quick presets with auto-download
+- ✅ Visual feedback on preset selection
+- ✅ Tooltips on all settings
+- ✅ Model auto-loading when preset selected
 
-**Higher-effort:**
-4. Add WindowChrome for rounded corners (requires custom title bar)
-5. Add Mica backdrop (requires WinRT or third-party library)
+---
+
+## Next Steps (Recommended)
+
+1. Add search/filter to settings
+2. Show "restart required" indicator
+3. Add "Show Advanced" toggle
+4. Improve error handling with better messages
+5. Add keyboard shortcuts help (F1)

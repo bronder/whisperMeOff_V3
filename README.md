@@ -117,6 +117,7 @@ This project uses the following NuGet packages:
 |---------|---------|-------------|
 | [Microsoft.Data.Sqlite](https://docs.microsoft.com/en-us/dotnet/standard/data/sqlite/) | 10.0.3 | SQLite database support |
 | [MathNet.Numerics](https://numerics.mathdotnet.com/) | 5.0.0 | Numerical computing library |
+| [NLog](https://nlog-project.org/) | 5.2.8 | Structured logging framework |
 
 ## Installation
 

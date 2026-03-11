@@ -2,6 +2,22 @@
 
 ## Latest Release
 
+### Version 1.4.0
+
+#### Features
+- **NLog Logging System**: Added comprehensive logging using NLog framework for better debugging and production support
+  - Log files written to `%LOCALAPPDATA%\whisperMeOff\logs\`
+  - Daily log rotation with 7-day retention
+  - Separate error log file for critical errors
+  - Structured logging across all services and main application
+
+#### Improvements
+- Replaced all `System.Diagnostics.Debug.WriteLine` calls with proper NLog logging
+- Added logging to: SettingsService, AudioService, ClipboardService, DatabaseService, HotkeyService, ThemeService, LlamaService, ModelDownloadService, WhisperService, and MainWindow
+- App.xaml.cs now includes startup/shutdown logging and global exception handling
+
+---
+
 ### Version 1.3.3
 
 #### Bug Fixes

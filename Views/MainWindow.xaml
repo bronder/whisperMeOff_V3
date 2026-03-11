@@ -178,133 +178,196 @@
                         <TextBlock Text="General Settings" FontSize="20" FontWeight="Bold"
                                    Foreground="{DynamicResource TextBrush}"/>
 
-                        <!-- Hotkey Configuration -->
+                        <!-- Quick Presets -->
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
-                                <TextBlock Text="Push-to-Talk Hotkey" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                    <TextBlock Text="Ctrl+Shift+" Foreground="{DynamicResource TextBrush}"
-                                               VerticalAlignment="Center"/>
-                                    <TextBox x:Name="HotkeyTriggerTextBox" Width="40" MaxLength="1"
-                                             TextAlignment="Center" TextChanged="HotkeyTriggerTextBox_TextChanged"
-                                             VerticalAlignment="Center"/>
+                                <TextBlock Text="Quick Presets" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextBrush}"
+                                           ToolTipService.ToolTip="One-click configuration for common use cases"/>
+                                <TextBlock Text="Choose a preset to quickly configure optimal settings"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"
+                                           ToolTipService.ToolTip="Each preset configures model size and other settings for a specific use case"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="PresetFastestBtn" Content="⚡ Fastest" 
+                                            Click="PresetFastest_Click"
+                                            Margin="0,0,10,0"
+                                            ToolTipService.ToolTip="Tiny model (~75MB) - Fastest transcription, lower accuracy. Best for quick dictation."/>
+                                    <Button x:Name="PresetBalancedBtn" Content="⚖️ Balanced" 
+                                            Click="PresetBalanced_Click"
+                                            Margin="0,0,10,0"
+                                            ToolTipService.ToolTip="Base model (~150MB) - Good balance of speed and accuracy for everyday use."/>
+                                    <Button x:Name="PresetAccurateBtn" Content="🎯 Most Accurate" 
+                                            Click="PresetAccurate_Click"
+                                            ToolTipService.ToolTip="Medium model (~1.5GB) - Highest accuracy, slower transcription. Best for important transcriptions."/>
                                 </StackPanel>
-                                <TextBlock Text="Type a single letter or number. The Ctrl+Shift modifiers are fixed."
-                                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"/>
                             </StackPanel>
                         </Border>
+
+                        <!-- Hotkey Configuration -->
+                        <Expander Header="Push-to-Talk Hotkey" IsExpanded="True" Margin="0,20,0,0"
+                                  Background="{DynamicResource CardBrush}" Padding="0">
+                            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0">
+                                <StackPanel>
+                                    <TextBlock Text="Push-to-Talk Hotkey" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               ToolTipService.ToolTip="The keyboard shortcut used to start/stop voice recording"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                        <TextBlock Text="Ctrl+Shift+" Foreground="{DynamicResource TextBrush}"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBox x:Name="HotkeyTriggerTextBox" Width="40" MaxLength="1"
+                                                 TextAlignment="Center" TextChanged="HotkeyTriggerTextBox_TextChanged"
+                                                 VerticalAlignment="Center"
+                                                 ToolTipService.ToolTip="Press a letter or number key to set the hotkey"/>
+                                    </StackPanel>
+                                    <TextBlock Text="Type a single letter or number. The Ctrl+Shift modifiers are fixed."
+                                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"/>
+                                </StackPanel>
+                            </Border>
+                        </Expander>
 
                         <!-- Theme Configuration -->
-                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
-                            <StackPanel>
-                                <TextBlock Text="Application Theme" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
-                                <TextBlock Text="Choose between light and dark visual themes"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
-                                <ComboBox x:Name="ThemeComboBox" Width="200" HorizontalAlignment="Left"
-                                          SelectionChanged="ThemeComboBox_SelectionChanged"
-                                          Background="{DynamicResource CardBrush}"
-                                          Foreground="{DynamicResource TextBrush}">
-                                    <ComboBoxItem Content="Light"/>
-                                    <ComboBoxItem Content="Dark"/>
-                                    <ComboBoxItem Content="Nord"/>
-                                    <ComboBoxItem Content="Dracula"/>
-                                    <ComboBoxItem Content="Gruvbox"/>
-                                    <ComboBoxItem Content="Monokai"/>
-                                    <ComboBoxItem Content="Synthwave"/>
-                                </ComboBox>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Whisper Model Download Path -->
-                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
-                            <StackPanel>
-                                <TextBlock Text="Whisper Model Download Path" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
-                                <TextBlock Text="Custom folder for Whisper models (.bin files)"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="ModelDownloadPathTextBox" Grid.Column="0" 
-                                             VerticalContentAlignment="Center" Padding="5"
-                                             TextChanged="ModelDownloadPathTextBox_TextChanged"/>
-                                    <Button x:Name="BrowseDownloadPathBtn" Content="Browse..." Grid.Column="1" 
-                                            Click="BrowseDownloadPath_Click" Margin="10,0,0,0"
-                                            Style="{DynamicResource SecondaryButtonStyle}"/>
-                                </Grid>
-                                <TextBlock x:Name="DownloadPathStatusText" Margin="0,10,0,0"
-                                           Foreground="{DynamicResource SecondaryTextBrush}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Llama Model Download Path -->
-                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
-                            <StackPanel>
-                                <TextBlock Text="Llama Model Download Path" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
-                                <TextBlock Text="Custom folder for GGUF models (.gguf files)"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="LlamaDownloadPathTextBox" Grid.Column="0" 
-                                             VerticalContentAlignment="Center" Padding="5"
-                                             TextChanged="LlamaDownloadPathTextBox_TextChanged"/>
-                                    <Button x:Name="BrowseLlamaDownloadPathBtn" Content="Browse..." Grid.Column="1" 
-                                            Click="BrowseLlamaDownloadPath_Click" Margin="10,0,0,0"
-                                            Style="{DynamicResource SecondaryButtonStyle}"/>
-                                </Grid>
-                                <TextBlock x:Name="LlamaDownloadPathStatusText" Margin="0,10,0,0"
-                                           Foreground="{DynamicResource SecondaryTextBrush}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Launch at Login -->
-                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
-                            <StackPanel>
-                                <CheckBox x:Name="LaunchAtLoginCheckbox" Content="Launch at login"
-                                          Checked="LaunchAtLoginCheckbox_Changed" Unchecked="LaunchAtLoginCheckbox_Changed"/>
-                                <CheckBox x:Name="MinimizeToTrayCheckbox" Content="Minimize to system tray"
-                                          Margin="0,10,0,0"
-                                          Checked="MinimizeToTrayCheckbox_Changed" Unchecked="MinimizeToTrayCheckbox_Changed"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Clipboard Restore -->
-                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
-                            <StackPanel>
-                                <TextBlock Text="Clipboard Settings" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
-                                <CheckBox x:Name="RestoreClipboardCheckbox" Content="Restore previous clipboard after paste"
-                                          Margin="0,10,0,0"
-                                          Checked="RestoreClipboardCheckbox_Changed" Unchecked="RestoreClipboardCheckbox_Changed"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                    <TextBlock Text="Restore delay (ms):" Foreground="{DynamicResource TextBrush}" 
-                                               VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <TextBox x:Name="ClipboardDelayTextBox" Width="80" TextAlignment="Center"
-                                             TextChanged="ClipboardDelayTextBox_TextChanged"/>
+                        <Expander Header="Application Theme" IsExpanded="True" Margin="0,10,0,0"
+                                  Background="{DynamicResource CardBrush}" Padding="0">
+                            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0">
+                                <StackPanel>
+                                    <TextBlock Text="Application Theme" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               ToolTipService.ToolTip="Choose your preferred color scheme for the application"/>
+                                    <TextBlock Text="Choose between light and dark visual themes"
+                                               Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
+                                    <ComboBox x:Name="ThemeComboBox" Width="200" HorizontalAlignment="Left"
+                                              SelectionChanged="ThemeComboBox_SelectionChanged"
+                                              Background="{DynamicResource CardBrush}"
+                                              Foreground="{DynamicResource TextBrush}"
+                                              ToolTipService.ToolTip="Select Light, Dark, or one of the colorful themes">
+                                        <ComboBoxItem Content="Light"/>
+                                        <ComboBoxItem Content="Dark"/>
+                                        <ComboBoxItem Content="Nord"/>
+                                        <ComboBoxItem Content="Dracula"/>
+                                        <ComboBoxItem Content="Gruvbox"/>
+                                        <ComboBoxItem Content="Monokai"/>
+                                        <ComboBoxItem Content="Synthwave"/>
+                                    </ComboBox>
                                 </StackPanel>
+                            </Border>
+                        </Expander>
+
+                        <!-- Download Paths -->
+                        <Expander Header="Model Download Paths" IsExpanded="False" Margin="0,10,0,0"
+                                  Background="{DynamicResource CardBrush}" Padding="0">
+                            <StackPanel>
+                                <!-- Whisper Model Download Path -->
+                                <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0">
+                                    <StackPanel>
+                                        <TextBlock Text="Whisper Model Download Path" FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   ToolTipService.ToolTip="Where Whisper AI models are stored. Restart required for changes to take effect."/>
+                                        <TextBlock Text="Custom folder for Whisper models (.bin files)"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="ModelDownloadPathTextBox" Grid.Column="0" 
+                                                     VerticalContentAlignment="Center" Padding="5"
+                                                     TextChanged="ModelDownloadPathTextBox_TextChanged"
+                                                     ToolTipService.ToolTip="Click Browse to select a folder"/>
+                                            <Button x:Name="BrowseDownloadPathBtn" Content="Browse..." Grid.Column="1" 
+                                                    Click="BrowseDownloadPath_Click" Margin="10,0,0,0"
+                                                    Style="{DynamicResource SecondaryButtonStyle}"/>
+                                        </Grid>
+                                        <TextBlock x:Name="DownloadPathStatusText" Margin="0,10,0,0"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Llama Model Download Path -->
+                                <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,10,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Llama Model Download Path" FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   ToolTipService.ToolTip="Where Llama text formatting models are stored. Restart required for changes to take effect."/>
+                                        <TextBlock Text="Custom folder for GGUF models (.gguf files)"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="LlamaDownloadPathTextBox" Grid.Column="0" 
+                                                     VerticalContentAlignment="Center" Padding="5"
+                                                     TextChanged="LlamaDownloadPathTextBox_TextChanged"
+                                                     ToolTipService.ToolTip="Click Browse to select a folder"/>
+                                            <Button x:Name="BrowseLlamaDownloadPathBtn" Content="Browse..." Grid.Column="1" 
+                                                    Click="BrowseLlamaDownloadPath_Click" Margin="10,0,0,0"
+                                                    Style="{DynamicResource SecondaryButtonStyle}"/>
+                                        </Grid>
+                                        <TextBlock x:Name="LlamaDownloadPathStatusText" Margin="0,10,0,0"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
-                        </Border>
+                        </Expander>
+
+                        <!-- System Integration -->
+                        <Expander Header="System Integration" IsExpanded="True" Margin="0,10,0,0"
+                                  Background="{DynamicResource CardBrush}" Padding="0">
+                            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0">
+                                <StackPanel>
+                                    <CheckBox x:Name="LaunchAtLoginCheckbox" Content="Launch at login"
+                                              Checked="LaunchAtLoginCheckbox_Changed" Unchecked="LaunchAtLoginCheckbox_Changed"
+                                              ToolTipService.ToolTip="Automatically start whisperMeOff when you log in to Windows"/>
+                                    <CheckBox x:Name="MinimizeToTrayCheckbox" Content="Minimize to system tray"
+                                              Margin="0,10,0,0"
+                                              Checked="MinimizeToTrayCheckbox_Changed" Unchecked="MinimizeToTrayCheckbox_Changed"
+                                              ToolTipService.ToolTip="Keep the app running in the system tray instead of the taskbar"/>
+                                </StackPanel>
+                            </Border>
+                        </Expander>
+
+                        <!-- Clipboard Settings -->
+                        <Expander Header="Clipboard Settings" IsExpanded="False" Margin="0,10,0,0"
+                                  Background="{DynamicResource CardBrush}" Padding="0">
+                            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0">
+                                <StackPanel>
+                                    <TextBlock Text="Clipboard Settings" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               ToolTipService.ToolTip="Configure how clipboard content is handled after transcription"/>
+                                    <CheckBox x:Name="RestoreClipboardCheckbox" Content="Restore previous clipboard after paste"
+                                              Margin="0,10,0,0"
+                                              Checked="RestoreClipboardCheckbox_Changed" Unchecked="RestoreClipboardCheckbox_Changed"
+                                              ToolTipService.ToolTip="Automatically restore your previous clipboard content after the transcribed text is pasted"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                        <TextBlock Text="Restore delay (ms):" Foreground="{DynamicResource TextBrush}" 
+                                                   VerticalAlignment="Center" Margin="0,0,10,0"
+                                                   ToolTipService.ToolTip="How long to wait before restoring the clipboard (in milliseconds)"/>
+                                        <TextBox x:Name="ClipboardDelayTextBox" Width="80" TextAlignment="Center"
+                                                 TextChanged="ClipboardDelayTextBox_TextChanged"
+                                                 ToolTipService.ToolTip="Delay in milliseconds before restoring clipboard"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </Expander>
 
                         <!-- Recording Mode -->
-                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
-                            <StackPanel>
-                                <TextBlock Text="Recording Mode" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
-                                <CheckBox x:Name="PushToTalkCheckbox" Content="Push-to-talk (hold hotkey to record)"
-                                          Margin="0,10,0,0"
-                                          Checked="PushToTalkCheckbox_Changed" Unchecked="PushToTalkCheckbox_Changed"/>
-                                <TextBlock Text="When off: Press hotkey to start/stop recording (toggle mode)"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"/>
-                            </StackPanel>
-                        </Border>
+                        <Expander Header="Recording Mode" IsExpanded="False" Margin="0,10,0,0"
+                                  Background="{DynamicResource CardBrush}" Padding="0">
+                            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0">
+                                <StackPanel>
+                                    <TextBlock Text="Recording Mode" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               ToolTipService.ToolTip="Choose how the recording hotkey behaves"/>
+                                    <CheckBox x:Name="PushToTalkCheckbox" Content="Push-to-talk (hold hotkey to record)"
+                                              Margin="0,10,0,0"
+                                              Checked="PushToTalkCheckbox_Changed" Unchecked="PushToTalkCheckbox_Changed"
+                                              ToolTipService.ToolTip="Hold the hotkey to record, release to transcribe. Best for privacy."/>
+                                    <TextBlock Text="When off: Press hotkey to start/stop recording (toggle mode)"
+                                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"
+                                               ToolTipService.ToolTip="Toggle mode: Press once to start recording, press again to stop"/>
+                                </StackPanel>
+                            </Border>
+                        </Expander>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -320,9 +383,11 @@
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
                                 <TextBlock Text="Microphone" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
+                                           Foreground="{DynamicResource TextBrush}"
+                                           ToolTipService.ToolTip="Select which microphone to use for recording"/>
                                 <ComboBox x:Name="MicrophoneComboBox" Margin="0,10,0,0"
-                                          SelectionChanged="MicrophoneComboBox_SelectionChanged"/>
+                                          SelectionChanged="MicrophoneComboBox_SelectionChanged"
+                                          ToolTipService.ToolTip="Choose your preferred recording device"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -340,9 +405,11 @@
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
                                 <TextBlock Text="Language" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
+                                           Foreground="{DynamicResource TextBrush}"
+                                           ToolTipService.ToolTip="Select the language you'll be speaking. Auto Detect will identify the language automatically."/>
                                 <ComboBox x:Name="LanguageComboBox" Margin="0,10,0,0"
-                                          SelectionChanged="LanguageComboBox_SelectionChanged">
+                                          SelectionChanged="LanguageComboBox_SelectionChanged"
+                                          ToolTipService.ToolTip="Choose your language or use Auto Detect">
                                     <ComboBoxItem Content="Auto Detect" Tag="auto"/>
                                     <ComboBoxItem Content="English" Tag="en"/>
                                     <ComboBoxItem Content="Spanish" Tag="es"/>
@@ -362,7 +429,8 @@
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
                                 <CheckBox x:Name="TranslateCheckbox" Content="Translate to English"
-                                          Checked="TranslateCheckbox_Changed" Unchecked="TranslateCheckbox_Changed"/>
+                                          Checked="TranslateCheckbox_Changed" Unchecked="TranslateCheckbox_Changed"
+                                          ToolTipService.ToolTip="Automatically translate non-English speech to English"/>
                             </StackPanel>
                         </Border>
 
@@ -370,12 +438,15 @@
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
                                 <TextBlock Text="Model" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
+                                           Foreground="{DynamicResource TextBrush}"
+                                           ToolTipService.ToolTip="Select which Whisper AI model to use for transcription"/>
                                 <TextBlock x:Name="ModelPathText" Text="No model selected"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0"/>
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0"
+                                           ToolTipService.ToolTip="Path to the currently selected model file"/>
                                 <Button Content="Select Model File..." Click="SelectModel_Click"
                                         Style="{DynamicResource SecondaryButtonStyle}" Margin="0,10,0,0"
-                                        HorizontalAlignment="Left"/>
+                                        HorizontalAlignment="Left"
+                                        ToolTipService.ToolTip="Browse for a .bin model file"/>
                             </StackPanel>
                         </Border>
 
@@ -383,9 +454,11 @@
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
                                 <TextBlock Text="Download Models" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
+                                           Foreground="{DynamicResource TextBrush}"
+                                           ToolTipService.ToolTip="Download different Whisper model sizes. Larger models are more accurate but slower."/>
                                 <TextBlock Text="Download different Whisper model sizes"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"
+                                           ToolTipService.ToolTip="Tiny: fastest, least accurate. Large: slowest, most accurate."/>
 
                                 <StackPanel x:Name="DownloadModelsPanel">
                                     <!-- Tiny -->
@@ -396,7 +469,8 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Tiny" Grid.Column="0" Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Text="Tiny" Grid.Column="0" Foreground="{DynamicResource TextBrush}"
+                                                   ToolTipService.ToolTip="~75MB - Fastest but least accurate. Good for quick dictation."/>
                                         <TextBlock Text="~75MB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}"/>
                                         <Button x:Name="DownloadTinyBtn" Content="Download" Grid.Column="3" Click="DownloadTiny_Click"
                                                 Style="{DynamicResource SecondaryButtonStyle}"/>
@@ -409,7 +483,8 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Base" Grid.Column="0" Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Text="Base" Grid.Column="0" Foreground="{DynamicResource TextBrush}"
+                                                   ToolTipService.ToolTip="~150MB - Good balance of speed and accuracy for most use cases."/>
                                         <TextBlock Text="~150MB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}"/>
                                         <Button x:Name="DownloadBaseBtn" Content="Download" Grid.Column="3" Click="DownloadBase_Click"
                                                 Style="{DynamicResource SecondaryButtonStyle}"/>
@@ -422,7 +497,8 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Small" Grid.Column="0" Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Text="Small" Grid.Column="0" Foreground="{DynamicResource TextBrush}"
+                                                   ToolTipService.ToolTip="~500MB - Better accuracy than Base, still relatively fast."/>
                                         <TextBlock Text="~500MB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}"/>
                                         <Button x:Name="DownloadSmallBtn" Content="Download" Grid.Column="3" Click="DownloadSmall_Click"
                                                 Style="{DynamicResource SecondaryButtonStyle}"/>
@@ -435,7 +511,8 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Medium" Grid.Column="0" Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Text="Medium" Grid.Column="0" Foreground="{DynamicResource TextBrush}"
+                                                   ToolTipService.ToolTip="~1.5GB - High accuracy, slower processing. Recommended for important transcriptions."/>
                                         <TextBlock Text="~1.5GB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}"/>
                                         <Button x:Name="DownloadMediumBtn" Content="Download" Grid.Column="3" Click="DownloadMedium_Click"
                                                 Style="{DynamicResource SecondaryButtonStyle}"/>
@@ -448,7 +525,8 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="Large" Grid.Column="0" Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Text="Large" Grid.Column="0" Foreground="{DynamicResource TextBrush}"
+                                                   ToolTipService.ToolTip="~3GB - Highest accuracy, slowest processing. Requires powerful hardware."/>
                                         <TextBlock Text="~3GB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}"/>
                                         <Button x:Name="DownloadLargeBtn" Content="Download" Grid.Column="3" Click="DownloadLarge_Click"
                                                 Style="{DynamicResource SecondaryButtonStyle}"/>
@@ -478,9 +556,11 @@
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
                                 <CheckBox x:Name="LlamaEnableCheckbox" Content="Enable Llama text formatting"
-                                          Checked="LlamaEnableCheckbox_Changed" Unchecked="LlamaEnableCheckbox_Changed"/>
+                                          Checked="LlamaEnableCheckbox_Changed" Unchecked="LlamaEnableCheckbox_Changed"
+                                          ToolTipService.ToolTip="Use AI to automatically format and improve transcribed text (capitalization, punctuation, etc.)"/>
                                 <TextBlock Text="Automatically format transcribed text with Llama"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"/>
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"
+                                           ToolTipService.ToolTip="When enabled, Llama will process your transcriptions to add proper capitalization, punctuation, and formatting"/>
                             </StackPanel>
                         </Border>
 
@@ -501,12 +581,15 @@
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
                                 <TextBlock Text="Download from HuggingFace" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
+                                           Foreground="{DynamicResource TextBrush}"
+                                           ToolTipService.ToolTip="Download Llama models from HuggingFace model hub"/>
                                 <TextBox x:Name="HuggingFaceModelIdTextBox" Margin="0,10,0,0"
-                                         TextChanged="HuggingFaceModelIdTextBox_TextChanged"/>
+                                         TextChanged="HuggingFaceModelIdTextBox_TextChanged"
+                                         ToolTipService.ToolTip="Enter the model ID from huggingface.co (e.g., TheBloke/Llama-2-7B-Chat-GGUF)"/>
                                 <TextBlock Text="Find models at huggingface.co/models — search for GGUF quantized models"
                                            Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"
-                                           TextWrapping="Wrap"/>
+                                           TextWrapping="Wrap"
+                                           ToolTipService.ToolTip="Look for GGUF format models for best compatibility"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                                     <Button Click="DownloadLlamaModel_Click"
                                             Style="{DynamicResource PrimaryButtonStyle}">
@@ -533,7 +616,8 @@
 
                                 <!-- HuggingFace Token -->
                                 <TextBlock Text="HuggingFace Token (for private models)" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}" Margin="0,20,0,0"/>
+                                           Foreground="{DynamicResource TextBrush}" Margin="0,20,0,0"
+                                           ToolTipService.ToolTip="Required to access private or gated models on HuggingFace"/>
                                 <PasswordBox x:Name="HuggingFaceTokenBox" Margin="0,10,0,0"
                                             PasswordChanged="HuggingFaceTokenBox_PasswordChanged"
                                             Background="{DynamicResource CardBrush}"
@@ -541,7 +625,8 @@
                                             BorderBrush="{DynamicResource BorderBrush}"
                                             BorderThickness="1"
                                             Padding="10,8"
-                                            CaretBrush="{DynamicResource TextBrush}"/>
+                                            CaretBrush="{DynamicResource TextBrush}"
+                                            ToolTipService.ToolTip="Your HuggingFace access token. Get it from huggingface.co/settings/tokens"/>
                                 <TextBlock Text="Required for gated/private models. Get yours at huggingface.co/settings/tokens"
                                            Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"/>
                             </StackPanel>
@@ -557,22 +642,26 @@
                         <TextBlock Text="Custom Vocabulary" FontSize="20" FontWeight="Bold"
                                    Foreground="{DynamicResource TextBrush}"/>
                         <TextBlock Text="Add words or phrases to improve recognition accuracy"
-                                   Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,20"/>
+                                   Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,20"
+                                   ToolTipService.ToolTip="Improve transcription accuracy by adding domain-specific words"/>
 
                         <!-- Custom Vocabulary Input -->
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20">
                             <StackPanel>
                                 <TextBlock Text="Word List" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
+                                           Foreground="{DynamicResource TextBrush}"
+                                           ToolTipService.ToolTip="Enter words or phrases that Whisper should recognize"/>
                                 <TextBlock Text="Enter words or phrases (one per line) to improve recognition"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"
+                                           ToolTipService.ToolTip="Whisper will be more likely to correctly recognize these words"/>
                                 <TextBox x:Name="CustomVocabularyTextBox" 
                                          AcceptsReturn="True" 
                                          TextWrapping="Wrap"
                                          Height="150"
                                          VerticalScrollBarVisibility="Auto"
                                          TextChanged="CustomVocabularyTextBox_TextChanged"
-                                         Padding="5"/>
+                                         Padding="5"
+                                         ToolTipService.ToolTip="Add one word or phrase per line"/>
                                 <TextBlock Text="These words will be more likely to be recognized correctly. Each word or phrase should be on a separate line."
                                            Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,10,0,0"
                                            TextWrapping="Wrap"/>
@@ -600,9 +689,11 @@
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
                                 <TextBlock Text="Word Replacements" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
+                                           Foreground="{DynamicResource TextBrush}"
+                                           ToolTipService.ToolTip="Automatically replace spoken words with different text after transcription"/>
                                 <TextBlock Text="Replace spoken words with different text after transcription"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"
+                                           ToolTipService.ToolTip="Useful for fixing common mishearings or customizing output"/>
 
                                 <!-- Add new replacement row -->
                                 <Grid Margin="0,0,0,10">
@@ -613,10 +704,10 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBox x:Name="NewReplacementSourceBox" Grid.Column="0" 
                                              VerticalContentAlignment="Center" Padding="5" Margin="0,0,5,0"
-                                             ToolTip="When you say..."/>
+                                             ToolTipService.ToolTip="When you say..."/>
                                     <TextBox x:Name="NewReplacementTargetBox" Grid.Column="1" 
                                              VerticalContentAlignment="Center" Padding="5" Margin="5,0,5,0"
-                                             ToolTip="Replace with..."/>
+                                             ToolTipService.ToolTip="Replace with..."/>
                                     <Button x:Name="AddReplacementBtn" Grid.Column="2" Content="Add" 
                                             Click="AddReplacement_Click"
                                             Style="{DynamicResource PrimaryButtonStyle}" Padding="15,5"/>

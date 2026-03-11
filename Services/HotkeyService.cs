@@ -84,11 +84,11 @@ public class HotkeyService : IDisposable
         // Register Ctrl+Shift + trigger key
         if (!RegisterHotKey(_windowHandle, HOTKEY_ID, MOD_CONTROL | MOD_SHIFT, vk))
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to register hotkey: Ctrl+Shift+{_triggerKey}");
+            LoggingService.Error($"Failed to register hotkey: Ctrl+Shift+{_triggerKey}");
         }
         else
         {
-            System.Diagnostics.Debug.WriteLine($"Registered hotkey: Ctrl+Shift+{_triggerKey}");
+            LoggingService.Info($"Registered hotkey: Ctrl+Shift+{_triggerKey}");
         }
     }
 
@@ -121,7 +121,7 @@ public class HotkeyService : IDisposable
             {
                 if (_isHotkeyPressed)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Hotkey released");
+                    LoggingService.Debug("Hotkey released");
                     _isHotkeyPressed = false;
                     HotkeyReleased?.Invoke(this, EventArgs.Empty);
                 }

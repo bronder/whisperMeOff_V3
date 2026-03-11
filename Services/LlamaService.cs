@@ -24,7 +24,7 @@ public class LlamaService : IDisposable
     {
         if (string.IsNullOrEmpty(modelPath) || !File.Exists(modelPath))
         {
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] Model file not found: {modelPath}");
+            LoggingService.Warn($"[LLAMA] Model file not found: {modelPath}");
             _isLoaded = false;
             return;
         }
@@ -54,14 +54,14 @@ public class LlamaService : IDisposable
                 var magic = BitConverter.ToUInt32(header, 0);
                 if (magic != 0x46554747) // "GGUF" in little endian
                 {
-                    System.Diagnostics.Debug.WriteLine($"[LLAMA] Invalid GGUF magic number: 0x{magic:X8}");
+                    LoggingService.Error($"[LLAMA] Invalid GGUF magic number: 0x{magic:X8}");
                     throw new Exception($"Invalid model file format. The file is not a valid GGUF file.\n" +
                         $"Expected magic number: 0x46554747 (GGUF)\n" +
                         $"Found magic number: 0x{magic:X8}\n" +
                         "This usually means the model was downloaded in the wrong format (e.g., safetensors, pytorch).\n" +
                         "Please download a GGUF-formatted model.");
                 }
-                System.Diagnostics.Debug.WriteLine($"[LLAMA] GGUF magic number validated: 0x{magic:X8}");
+                LoggingService.Debug($"[LLAMA] GGUF magic number validated: 0x{magic:X8}");
             }
             catch (Exception ex) when (ex.Message.Contains("Invalid model file") || ex.Message.Contains("too small"))
             {
@@ -69,7 +69,7 @@ public class LlamaService : IDisposable
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[LLAMA] File validation warning: {ex.Message}");
+                LoggingService.Warn($"[LLAMA] File validation warning: {ex.Message}");
                 // Continue anyway - the main load will fail if truly invalid
             }
             
@@ -81,8 +81,8 @@ public class LlamaService : IDisposable
                 UseMemorymap = true,
             };
             
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] Loading model from: {modelPath}");
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] File size: {fileSizeMb} MB");
+            LoggingService.Info($"[LLAMA] Loading model from: {modelPath}");
+            LoggingService.Info($"[LLAMA] File size: {fileSizeMb} MB");
             
             try
             {
@@ -92,13 +92,13 @@ public class LlamaService : IDisposable
                 _executor = new StatelessExecutor(_model, parameters);
                 
                 _isLoaded = true;
-                System.Diagnostics.Debug.WriteLine($"[LLAMA] Successfully initialized with model: {modelPath}");
+                LoggingService.Info($"[LLAMA] Successfully initialized with model: {modelPath}");
                 ModelLoaded?.Invoke(this, true);
             }
             catch (LLama.Exceptions.LoadWeightsFailedException loadEx)
             {
                 // More specific error handling for weight loading failures
-                System.Diagnostics.Debug.WriteLine($"[LLAMA] Weight loading failed: {loadEx.Message}");
+                LoggingService.Warn($"[LLAMA] Weight loading failed: {loadEx.Message}");
                 
                 string detailedError = $"Failed to load model from: {modelPath}\n\n" +
                     "This can happen if:\n" +
@@ -116,9 +116,8 @@ public class LlamaService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] Initialization error: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] Stack trace: {ex.StackTrace}");
-            _isLoaded = false;
+            LoggingService.Error(ex, "[LLAMA] Initialization error");
+            LoggingService.Error(ex, "[LLAMA] Initialization error - stack trace logged");
             Unload();
             
             // Build error message - use the detailed one from our validation if available
@@ -141,13 +140,13 @@ public class LlamaService : IDisposable
     {
         if (!_isLoaded || _executor == null)
         {
-            System.Diagnostics.Debug.WriteLine("[LLAMA] Not loaded, returning raw text");
+            LoggingService.Debug("[LLAMA] Not loaded, returning raw text");
             return rawText;
         }
 
         try
         {
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] Formatting text: {rawText.Length} chars");
+            LoggingService.Debug($"[LLAMA] Formatting text: {rawText.Length} chars");
             
             // Simplified prompt format that most models understand better
             var prompt = 
@@ -163,8 +162,8 @@ public class LlamaService : IDisposable
                 SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.0f, RepeatPenalty = 1.0f }
             };
 
-            System.Diagnostics.Debug.WriteLine("[LLAMA] Starting inference...");
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] Executor is null: {_executor == null}");
+            LoggingService.Debug("[LLAMA] Starting inference...");
+            LoggingService.Debug($"[LLAMA] Executor is null: {_executor == null}");
             
             // Run inference on background thread to avoid UI thread issues when minimized
             var result = await Task.Run(async () =>
@@ -173,11 +172,11 @@ public class LlamaService : IDisposable
                 
                 try
                 {
-                    System.Diagnostics.Debug.WriteLine("[LLAMA] Starting background inference...");
+                    LoggingService.Debug("[LLAMA] Starting background inference...");
                     
                     await foreach (var text in _executor!.InferAsync(prompt, inferenceParams))
                     {
-                        System.Diagnostics.Debug.WriteLine($"[LLAMA] Got token: {text}");
+                        LoggingService.Trace($"[LLAMA] Got token: {text}");
                         response.Append(text);
                         
                         // Stop if we hit a reasonable length
@@ -185,22 +184,21 @@ public class LlamaService : IDisposable
                             break;
                     }
                     
-                    System.Diagnostics.Debug.WriteLine($"[LLAMA] Background inference complete, got {response.Length} chars");
+                    LoggingService.Debug($"[LLAMA] Background inference complete, got {response.Length} chars");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[LLAMA] Inference error: {ex.Message}");
-                    System.Diagnostics.Debug.WriteLine($"[LLAMA] Stack trace: {ex.StackTrace}");
+                    LoggingService.Error(ex, "[LLAMA] Inference error - stack trace logged");
                 }
                 
                 return response.ToString();
             });
             
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] Task.Run completed, got {result.Length} chars");
+            LoggingService.Debug($"[LLAMA] Task.Run completed, got {result.Length} chars");
             
             var formatted = result.Trim();
             
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] Raw output: {formatted}");
+            LoggingService.Trace($"[LLAMA] Raw output: {formatted}");
             
             // Clean up any common artifacts
             formatted = CleanupLlamaOutput(formatted, rawText);
@@ -208,17 +206,17 @@ public class LlamaService : IDisposable
             // Check for null/empty before using formatted
             if (string.IsNullOrEmpty(formatted))
             {
-                System.Diagnostics.Debug.WriteLine("[LLAMA] Result is empty, returning raw text");
+                LoggingService.Debug("[LLAMA] Result is empty, returning raw text");
                 return rawText;
             }
             
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] Cleaned output: {formatted}");
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] Inference complete: {formatted.Length} chars");
+            LoggingService.Debug($"[LLAMA] Cleaned output: {formatted}");
+            LoggingService.Info($"[LLAMA] Inference complete: {formatted.Length} chars");
             
             // If result is empty or too different, fall back to raw text
             if (formatted.Length < rawText.Length * 0.5)
             {
-                System.Diagnostics.Debug.WriteLine("[LLAMA] Result too different, returning raw text");
+                LoggingService.Debug("[LLAMA] Result too different, returning raw text");
                 return rawText;
             }
             
@@ -226,7 +224,7 @@ public class LlamaService : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[LLAMA] Formatting error: {ex.Message}");
+            LoggingService.Error(ex, "[LLAMA] Formatting error");
             return rawText;
         }
     }

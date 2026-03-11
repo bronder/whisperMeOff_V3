@@ -39,6 +39,9 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
+        // Initialize logging FIRST before anything else
+        LoggingService.Initialize();
+
         // Setup global exception handlers
         SetupExceptionHandling();
 
@@ -83,13 +86,13 @@ public partial class App : System.Windows.Application
                     if (!string.IsNullOrEmpty(exePath))
                     {
                         key.SetValue("whisperMeOff", $"\"{exePath}\"");
-                        System.Diagnostics.Debug.WriteLine("[Startup] Registered for launch at login on app start");
+                        LoggingService.Info("[Startup] Registered for launch at login on app start");
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[Startup] Error: {ex.Message}");
+                LoggingService.Error(ex, "[Startup] Error");
             }
         }
         
@@ -191,16 +194,15 @@ public partial class App : System.Windows.Application
     {
         try
         {
-            var logPath = Path.Combine(AppDataPath, "error.log");
-            var message = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{source}]\n{ex}\n\n";
-            File.AppendAllText(logPath, message);
-#if DEBUG
-            System.Diagnostics.Debug.WriteLine($"[ERROR] {source}: {ex.Message}");
-#endif
+            // Use NLog for structured logging
+            LoggingService.Fatal(ex, $"Unhandled exception from {source}");
         }
         catch
         {
-            // Ignore logging failures
+            // Fallback to basic file logging if NLog fails
+            var logPath = Path.Combine(AppDataPath, "error.log");
+            var message = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{source}]\n{ex}\n\n";
+            File.AppendAllText(logPath, message);
         }
     }
 
@@ -242,7 +244,7 @@ public partial class App : System.Windows.Application
             // Don't allow starting new recording while processing
             if (IsTranscribing)
             {
-                System.Diagnostics.Debug.WriteLine("[DEBUG] Tray menu clicked but transcription in progress, ignoring");
+                LoggingService.Debug("[DEBUG] Tray menu clicked but transcription in progress, ignoring");
                 return;
             }
             
@@ -326,7 +328,7 @@ public partial class App : System.Windows.Application
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[TrayIcon] Error loading icon: {ex.Message}");
+            LoggingService.Error(ex, "[TrayIcon] Error loading icon");
         }
         
         _notifyIcon.Text = isRecording ? "whisperMeOff - Recording..." : "whisperMeOff - Ready";
@@ -363,7 +365,7 @@ public partial class App : System.Windows.Application
             // Don't allow starting new recording while processing
             if (IsTranscribing)
             {
-                System.Diagnostics.Debug.WriteLine("[DEBUG] Hotkey pressed but transcription in progress, ignoring");
+                LoggingService.Debug("[DEBUG] Hotkey pressed but transcription in progress, ignoring");
                 return;
             }
             
@@ -460,7 +462,7 @@ public partial class App : System.Windows.Application
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Transcription error: {ex.Message}");
+            LoggingService.Error(ex, "Transcription error");
         }
         finally
         {
@@ -484,6 +486,9 @@ public partial class App : System.Windows.Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // Shutdown logging
+        LoggingService.Shutdown();
+        
         ExitApplication();
         base.OnExit(e);
     }

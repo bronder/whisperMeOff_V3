@@ -30,7 +30,7 @@ public class ClipboardService
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Get clipboard error: {ex.Message}");
+                LoggingService.Error(ex, "Get clipboard error");
             }
         }
         else
@@ -48,7 +48,7 @@ public class ClipboardService
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Get clipboard error (dispatcher): {ex.Message}");
+                LoggingService.Error(ex, "Get clipboard error (dispatcher)");
             }
         }
 
@@ -67,7 +67,7 @@ public class ClipboardService
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Set clipboard error: {ex.Message}");
+                LoggingService.Error(ex, "Set clipboard error");
             }
         }
         else
@@ -83,13 +83,13 @@ public class ClipboardService
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Set clipboard error: {ex.Message}");
+                        LoggingService.Error(ex, "Set clipboard error (dispatcher)");
                     }
                 });
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"Set clipboard error (dispatcher): {ex.Message}");
+                LoggingService.Error(ex, "Set clipboard error (dispatcher)");
             }
         }
     }
@@ -114,7 +114,7 @@ public class ClipboardService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Paste error: {ex.Message}");
+            LoggingService.Error(ex, "Paste error");
         }
     }
 
@@ -138,9 +138,7 @@ public class ClipboardService
         }
         
         // Timeout reached, try paste anyway as fallback
-#if DEBUG
-        System.Diagnostics.Debug.WriteLine($"[Clipboard] Window ready timeout, attempting paste anyway");
-#endif
+LoggingService.Debug("Window ready timeout, attempting paste anyway");
         SimulatePaste();
     }
 

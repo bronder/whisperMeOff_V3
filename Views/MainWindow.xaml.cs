@@ -30,6 +30,12 @@ public partial class MainWindow : Window
         // Load settings to UI
         LoadSettingsToUI();
         
+        // Update preset button visual state based on current settings
+        if (App.Settings?.Whisper?.ModelSize != null)
+        {
+            UpdatePresetButtons(App.Settings.Whisper.ModelSize);
+        }
+        
         // Done loading - now allow saves
         _isLoading = false;
 
@@ -234,7 +240,7 @@ public partial class MainWindow : Window
                 else
                 {
                     // Still too long after decrypt attempt - clear it
-                    System.Diagnostics.Debug.WriteLine("[Settings] HuggingFaceToken still too long after decrypt (" + decrypted.Length + " chars), clearing");
+                    LoggingService.Warn("[Settings] HuggingFaceToken still too long after decrypt, clearing");
                     hfToken = "";
                     App.Settings.Llama.HuggingFaceToken = "";
                 }
@@ -242,7 +248,7 @@ public partial class MainWindow : Window
             catch
             {
                 // Decrypt failed - clear corrupted token
-                System.Diagnostics.Debug.WriteLine("[Settings] HuggingFaceToken decrypt failed, clearing");
+                LoggingService.Warn("[Settings] HuggingFaceToken decrypt failed, clearing");
                 hfToken = "";
                 App.Settings.Llama.HuggingFaceToken = "";
             }
@@ -280,7 +286,7 @@ public partial class MainWindow : Window
         
         // Mark as initialized - now TextChanged will save settings
         _isInitialized = true;
-        System.Diagnostics.Debug.WriteLine("[UI] MainWindow initialized, _isInitialized = true");
+        LoggingService.Info("[UI] MainWindow initialized, _isInitialized = true");
     }
 
     public void NavigateToSettings()
@@ -322,27 +328,186 @@ public partial class MainWindow : Window
         MainTabControl.SelectedIndex = 1;
     }
 
+    private async void PresetFastest_Click(object sender, RoutedEventArgs e)
+    {
+        var modelSize = "tiny";
+        var modelFileName = $"ggml-{modelSize}.bin";
+        var modelPath = System.IO.Path.Combine(App.WhisperModelsPath, modelFileName);
+        
+        // Check if model already exists
+        if (!System.IO.File.Exists(modelPath) || new System.IO.FileInfo(modelPath).Length < 1024 * 1024)
+        {
+            // Model not found, ask to download
+            var result = System.Windows.MessageBox.Show(
+                "The Tiny model (~75MB) is not downloaded.\n\nWould you like to download it now?",
+                "Download Required",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            
+            if (result == MessageBoxResult.Yes)
+            {
+                // Download the model
+                App.Settings.Whisper.ModelSize = modelSize;
+                App.Settings.Save();
+                UpdatePresetButtons(modelSize);
+                
+                await DownloadWhisperModelAsync(modelSize);
+                return;
+            }
+        }
+        else
+        {
+            // Model exists, update settings and load the model
+            App.Settings.Whisper.ModelSize = modelSize;
+            App.Settings.Whisper.ModelPath = modelPath;
+            App.Settings.Save();
+            
+            // Reload the model
+            App.Whisper.ReloadModel(modelPath);
+            ModelPathText.Text = System.IO.Path.GetFileName(modelPath);
+            WhisperStatusText.Text = "Ready";
+            
+            UpdatePresetButtons(modelSize);
+        }
+        
+        LoggingService.Debug("[Presets] Applied Fastest preset - Tiny model");
+    }
+
+    private async void PresetBalanced_Click(object sender, RoutedEventArgs e)
+    {
+        var modelSize = "base";
+        var modelFileName = $"ggml-{modelSize}.bin";
+        var modelPath = System.IO.Path.Combine(App.WhisperModelsPath, modelFileName);
+        
+        // Check if model already exists
+        if (!System.IO.File.Exists(modelPath) || new System.IO.FileInfo(modelPath).Length < 1024 * 1024)
+        {
+            // Model not found, ask to download
+            var result = System.Windows.MessageBox.Show(
+                "The Base model (~150MB) is not downloaded.\n\nWould you like to download it now?",
+                "Download Required",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            
+            if (result == MessageBoxResult.Yes)
+            {
+                // Download the model
+                App.Settings.Whisper.ModelSize = modelSize;
+                App.Settings.Save();
+                UpdatePresetButtons(modelSize);
+                
+                await DownloadWhisperModelAsync(modelSize);
+                return;
+            }
+        }
+        else
+        {
+            // Model exists, update settings and load the model
+            App.Settings.Whisper.ModelSize = modelSize;
+            App.Settings.Whisper.ModelPath = modelPath;
+            App.Settings.Save();
+            
+            // Reload the model
+            App.Whisper.ReloadModel(modelPath);
+            ModelPathText.Text = System.IO.Path.GetFileName(modelPath);
+            WhisperStatusText.Text = "Ready";
+            
+            UpdatePresetButtons(modelSize);
+        }
+        
+        LoggingService.Debug("[Presets] Applied Balanced preset - Base model");
+    }
+
+    private async void PresetAccurate_Click(object sender, RoutedEventArgs e)
+    {
+        var modelSize = "medium";
+        var modelFileName = $"ggml-{modelSize}.bin";
+        var modelPath = System.IO.Path.Combine(App.WhisperModelsPath, modelFileName);
+        
+        // Check if model already exists
+        if (!System.IO.File.Exists(modelPath) || new System.IO.FileInfo(modelPath).Length < 1024 * 1024)
+        {
+            // Model not found, ask to download
+            var result = System.Windows.MessageBox.Show(
+                "The Medium model (~1.5GB) is not downloaded.\n\nWould you like to download it now?\n\nThis may take a while depending on your internet connection.",
+                "Download Required",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+            
+            if (result == MessageBoxResult.Yes)
+            {
+                // Download the model
+                App.Settings.Whisper.ModelSize = modelSize;
+                App.Settings.Save();
+                UpdatePresetButtons(modelSize);
+                
+                await DownloadWhisperModelAsync(modelSize);
+                return;
+            }
+        }
+        else
+        {
+            // Model exists, update settings and load the model
+            App.Settings.Whisper.ModelSize = modelSize;
+            App.Settings.Whisper.ModelPath = modelPath;
+            App.Settings.Save();
+            
+            // Reload the model
+            App.Whisper.ReloadModel(modelPath);
+            ModelPathText.Text = System.IO.Path.GetFileName(modelPath);
+            WhisperStatusText.Text = "Ready";
+            
+            UpdatePresetButtons(modelSize);
+        }
+        
+        LoggingService.Debug("[Presets] Applied Most Accurate preset - Medium model");
+    }
+
+    private void UpdatePresetButtons(string selectedSize)
+    {
+        // Reset all buttons to secondary style
+        PresetFastestBtn.Style = (Style)FindResource("SecondaryButtonStyle");
+        PresetBalancedBtn.Style = (Style)FindResource("SecondaryButtonStyle");
+        PresetAccurateBtn.Style = (Style)FindResource("SecondaryButtonStyle");
+        
+        // Highlight the selected preset
+        switch (selectedSize.ToLower())
+        {
+            case "tiny":
+                PresetFastestBtn.Style = (Style)FindResource("PrimaryButtonStyle");
+                break;
+            case "base":
+                PresetBalancedBtn.Style = (Style)FindResource("PrimaryButtonStyle");
+                break;
+            case "small":
+            case "medium":
+            case "large":
+                PresetAccurateBtn.Style = (Style)FindResource("PrimaryButtonStyle");
+                break;
+        }
+    }
+
     private void RecordButton_Click(object sender, RoutedEventArgs e)
     {
         // Don't allow starting new recording while processing
         if (_isProcessing)
         {
-            System.Diagnostics.Debug.WriteLine("[DEBUG] RecordButton_Click ignored - already processing");
+            LoggingService.Debug("[DEBUG] RecordButton_Click ignored - already processing");
             return;
         }
         
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] RecordButton_Click called. IsRecording={App.Audio.IsRecording}");
+        LoggingService.Debug($"[DEBUG] RecordButton_Click called. IsRecording={App.Audio.IsRecording}");
         if (App.Audio.IsRecording)
         {
             // Stop recording
-            System.Diagnostics.Debug.WriteLine("[DEBUG] Stopping recording via button click");
+            LoggingService.Debug("[DEBUG] Stopping recording via button click");
             _isProcessing = true;
             RecordButton.IsEnabled = false;
             RecordButton.Content = "Processing...";
             Task.Run(async () =>
             {
                 var audioFile = await App.Audio.StopRecordingAsync();
-                System.Diagnostics.Debug.WriteLine($"[DEBUG] StopRecordingAsync returned: {audioFile}");
+                LoggingService.Debug($"[DEBUG] StopRecordingAsync returned: {audioFile}");
                 if (!string.IsNullOrEmpty(audioFile))
                 {
                     await ProcessTranscriptionAsync(audioFile);
@@ -358,7 +523,7 @@ public partial class MainWindow : Window
         else
         {
             // Start recording
-            System.Diagnostics.Debug.WriteLine("[DEBUG] Starting recording via button click");
+            LoggingService.Debug("[DEBUG] Starting recording via button click");
             App.Audio.StartRecording();
         }
     }
@@ -369,18 +534,18 @@ public partial class MainWindow : Window
         
         try
         {
-            System.Diagnostics.Debug.WriteLine("[DEBUG] Starting Whisper transcription...");
+            LoggingService.Debug("[DEBUG] Starting Whisper transcription...");
             var text = await App.Whisper.TranscribeAsync(audioFile) ?? string.Empty;
             //System.Diagnostics.Debug.WriteLine($"[DEBUG] Whisper transcription complete: {text?.Substring(0, Math.Min(50, text?.Length ?? 0))}...");
-            System.Diagnostics.Debug.WriteLine("[Whisper] Whisper transcription complete: " + text);
+            LoggingService.Info("[Whisper] Whisper transcription complete: " + text);
 
-            System.Diagnostics.Debug.WriteLine("[DEBUG] llama Enabled: " + App.Settings.Llama.Enabled + ", Llama Loaded: " + App.Llama.IsLoaded );
+            LoggingService.Debug($"[DEBUG] llama Enabled: {App.Settings.Llama.Enabled}, Llama Loaded: {App.Llama.IsLoaded}");
 
             if (App.Settings.Llama.Enabled && App.Llama.IsLoaded && !string.IsNullOrEmpty(text))
             {
-                System.Diagnostics.Debug.WriteLine("[DEBUG] Running Llama text formatting...");
+                LoggingService.Debug("[DEBUG] Running Llama text formatting...");
                 text = await App.Llama.FormatTextAsync(text);
-                System.Diagnostics.Debug.WriteLine($"[LLAMA] Llama formatting complete: " + text);
+                LoggingService.Debug($"[LLAMA] Llama formatting complete: {text}");
             }
 
             // Clipboard operations must run on the UI thread (STA mode)
@@ -415,7 +580,7 @@ public partial class MainWindow : Window
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[CLIPBOARD] Error: {ex.Message}");
+                    LoggingService.Error(ex, "[CLIPBOARD] Error");
                 }
             });
 
@@ -749,7 +914,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ERROR] Could not open URL: {ex.Message}");
+            LoggingService.Error(ex, "[ERROR] Could not open URL");
         }
     }
 
@@ -766,9 +931,9 @@ public partial class MainWindow : Window
         App.Settings.Llama.ModelId = modelId;
         App.Settings.Save();
 
-        System.Diagnostics.Debug.WriteLine("Model ID: " + modelId);
-        System.Diagnostics.Debug.WriteLine("Download path: " + App.Settings.General.LlamaDownloadPath);
-        System.Diagnostics.Debug.WriteLine("LlamaModelsPath: " + App.LlamaModelsPath);
+        LoggingService.Info("Model ID: " + modelId);
+        LoggingService.Info("Download path: " + App.Settings.General.LlamaDownloadPath);
+        LoggingService.Info("LlamaModelsPath: " + App.LlamaModelsPath);
 
         // Use Llama-specific progress bar
         LlamaDownloadProgressBar.Visibility = Visibility.Visible;
@@ -822,11 +987,11 @@ public partial class MainWindow : Window
         // Don't save during initialization or loading
         if (!_isInitialized || _isLoading) 
         {
-            System.Diagnostics.Debug.WriteLine($"[UI] HuggingFaceTokenBox_PasswordChanged: _isInitialized={_isInitialized}, _isLoading={_isLoading}, skipping save");
+            LoggingService.Debug($"[UI] HuggingFaceTokenBox_PasswordChanged: _isInitialized={_isInitialized}, _isLoading={_isLoading}, skipping save");
             return;
         }
         
-        System.Diagnostics.Debug.WriteLine($"[UI] HuggingFaceTokenBox_PasswordChanged: Saving token, length={HuggingFaceTokenBox.Password?.Length ?? 0}");
+        LoggingService.Debug($"[UI] HuggingFaceTokenBox_PasswordChanged: Saving token, length={HuggingFaceTokenBox.Password?.Length ?? 0}");
         App.Settings.Llama.HuggingFaceToken = HuggingFaceTokenBox.Password;
         App.Settings.Save();
     }
@@ -841,7 +1006,7 @@ public partial class MainWindow : Window
         
         App.Settings.Llama.ModelId = HuggingFaceModelIdTextBox.Text;
         App.Settings.Save();
-        System.Diagnostics.Debug.WriteLine($"[UI] Saved ModelId: {HuggingFaceModelIdTextBox.Text}");
+        LoggingService.Debug($"[UI] Saved ModelId: {HuggingFaceModelIdTextBox.Text}");
     }
 
     private void HotkeyTriggerTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -871,7 +1036,7 @@ public partial class MainWindow : Window
             App.Theme.ApplyTheme(theme);
             App.Settings.General.Theme = theme;
             App.Settings.Save();
-            System.Diagnostics.Debug.WriteLine($"[UI] Theme changed to: {theme}");
+            LoggingService.Info($"[UI] Theme changed to: {theme}");
         }
     }
 
@@ -894,20 +1059,20 @@ public partial class MainWindow : Window
                     if (!string.IsNullOrEmpty(exePath))
                     {
                         key.SetValue("whisperMeOff", $"\"{exePath}\"");
-                        System.Diagnostics.Debug.WriteLine("[Startup] Registered for launch at login");
+                        LoggingService.Info("[Startup] Registered for launch at login");
                     }
                 }
                 else
                 {
                     // Remove from startup
                     key.DeleteValue("whisperMeOff", false);
-                    System.Diagnostics.Debug.WriteLine("[Startup] Unregistered from launch at login");
+                    LoggingService.Info("[Startup] Unregistered from launch at login");
                 }
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Startup] Error: {ex.Message}");
+            LoggingService.Error(ex, "[Startup] Error");
         }
     }
 

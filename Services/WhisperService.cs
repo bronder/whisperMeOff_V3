@@ -31,30 +31,30 @@ public class WhisperService : IDisposable
                 
                 // Set runtime order: try Vulkan first (GPU), then CUDA, then CPU
                 RuntimeOptions.RuntimeLibraryOrder = [RuntimeLibrary.Vulkan, RuntimeLibrary.Cuda, RuntimeLibrary.Cuda12, RuntimeLibrary.Cpu];
-                System.Diagnostics.Debug.WriteLine("[Whisper] ========== MODEL LOADING ==========");
-                System.Diagnostics.Debug.WriteLine($"[Whisper] Model file: {Path.GetFullPath(_modelPath)}");
-                System.Diagnostics.Debug.WriteLine($"[Whisper] Model size: {new FileInfo(_modelPath).Length / 1024 / 1024} MB");
-                System.Diagnostics.Debug.WriteLine("[Whisper] Runtime order: Vulkan -> CUDA -> CPU");
+                LoggingService.Info("[Whisper] ========== MODEL LOADING ==========");
+                LoggingService.Info($"[Whisper] Model file: {Path.GetFullPath(_modelPath)}");
+                LoggingService.Info($"[Whisper] Model size: {new FileInfo(_modelPath).Length / 1024 / 1024} MB");
+                LoggingService.Debug("[Whisper] Runtime order: Vulkan -> CUDA -> CPU");
                 
                 // Add logger to capture Whisper.net library loading messages
                 using var whisperLogger = Whisper.net.Logger.LogProvider.AddLogger((level, message) =>
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Whisper Lib] {level}: {message}");
+                    LoggingService.Debug($"[Whisper Lib] {level}: {message}");
                 });
 
                 _factory = WhisperFactory.FromPath(modelPath);
-                System.Diagnostics.Debug.WriteLine("[Whisper] Factory loaded successfully");
+                LoggingService.Info("[Whisper] Factory loaded successfully");
                 
                 _isInitialized = true;
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("Whisper model not found");
+                LoggingService.Warn("Whisper model not found");
             }
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Whisper initialization error: {ex.Message}");
+            LoggingService.Error(ex, "Whisper initialization error");
             _isInitialized = false;
         }
     }
@@ -96,7 +96,7 @@ public class WhisperService : IDisposable
                 throw new FileNotFoundException($"Audio file not found: {audioPath}");
             }
 
-            System.Diagnostics.Debug.WriteLine($"Starting transcription of: {audioPath}");
+            LoggingService.Info($"Starting transcription of: {audioPath}");
 
             // Get language setting
             var language = App.Settings.Whisper.Language;
@@ -117,11 +117,11 @@ public class WhisperService : IDisposable
                     dynamic dynamicBuilder = builder;
                     dynamicBuilder = dynamicBuilder.WithInitialPrompt(customVocabulary);
                     builder = dynamicBuilder;
-                    System.Diagnostics.Debug.WriteLine($"[Whisper] Using custom vocabulary: {customVocabulary.Substring(0, Math.Min(50, customVocabulary.Length))}...");
+                    LoggingService.Debug($"[Whisper] Using custom vocabulary: {customVocabulary.Substring(0, Math.Min(50, customVocabulary.Length))}...");
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Whisper] Custom vocabulary not supported in this version: {ex.Message}");
+                    LoggingService.Warn($"[Whisper] Custom vocabulary not supported in this version: {ex.Message}");
                 }
             }
 
@@ -157,22 +157,22 @@ public class WhisperService : IDisposable
                             System.Text.RegularExpressions.RegexOptions.IgnoreCase);
                     }
                 }
-                System.Diagnostics.Debug.WriteLine($"[Whisper] Applied {replacements.Count} word replacements");
+                LoggingService.Info($"[Whisper] Applied {replacements.Count} word replacements");
             }
             
             if (!string.IsNullOrEmpty(transcription))
             {
-                System.Diagnostics.Debug.WriteLine($"[Whisper] Transcription complete: {transcription.Substring(0, Math.Min(50, transcription.Length))}...");
+                LoggingService.Info($"[Whisper] Transcription complete: {transcription.Substring(0, Math.Min(50, transcription.Length))}...");
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine("[Whisper] Transcription complete (empty)");
+                LoggingService.Debug("[Whisper] Transcription complete (empty)");
             }
             return transcription;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Transcription error: {ex.Message}");
+            LoggingService.Error(ex, "Transcription error");
             throw;
         }
     }

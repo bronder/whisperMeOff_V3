@@ -40,11 +40,11 @@ public class ThemeService
             };
             resources.Add(newTheme);
             CurrentTheme = themeName;
-            System.Diagnostics.Debug.WriteLine($"[Theme] Applied: {themeName}");
+            LoggingService.Info($"[Theme] Applied: {themeName}");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[Theme] Failed to load theme '{themeName}': {ex.Message}");
+            LoggingService.Error(ex, $"[Theme] Failed to load theme '{themeName}'");
             // If we failed to load the requested theme, try to fall back to Light
             if (themeName != "Light")
             {
@@ -56,11 +56,11 @@ public class ThemeService
                     };
                     resources.Add(fallbackTheme);
                     CurrentTheme = "Light";
-                    System.Diagnostics.Debug.WriteLine("[Theme] Fallback to Light theme successful");
+                    LoggingService.Info("[Theme] Fallback to Light theme successful");
                 }
                 catch (Exception fallbackEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Theme] Critical failure - could not load fallback theme: {fallbackEx.Message}");
+                    LoggingService.Fatal(fallbackEx, "[Theme] Critical failure - could not load fallback theme");
                 }
             }
         }
