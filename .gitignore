@@ -57,6 +57,12 @@ Models/
 whisperModels/
 llamaModels/
 
+# Allow whisper folder (user data)
+!whisper/
+
+# Allow gguf folder (user model files)
+!gguf/
+
 # Test results
 TestResults/
 
