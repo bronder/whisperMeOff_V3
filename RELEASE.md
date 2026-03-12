@@ -2,6 +2,29 @@
 
 ## Latest Release
 
+### Version 1.5.0
+
+#### Features
+- **Whisper Translation**: Added support for translating non-English speech to English using Whisper's built-in translation feature
+  - Enable "Translate to English" checkbox in Whisper settings
+  - Works best with medium and large Whisper models
+  - Uses reflection to support both new and older Whisper.net versions
+
+- **Llama Translation**: Added AI-powered translation using Llama models
+  - New "Enable Llama translation" option in Llama settings
+  - Support for 27+ target languages (English, Spanish, French, German, Italian, Portuguese, Russian, Chinese, Japanese, Korean, Arabic, Hindi, Dutch, Polish, Turkish, Vietnamese, Thai, Swedish, Danish, Finnish, Greek, Hebrew, Indonesian, Malay, Ukrainian, Czech, Romanian, Hungarian)
+  - Select target language from dropdown in Llama settings
+  - Runs translation after Whisper transcription for best results
+  - Useful when Whisper's built-in translation doesn't work well for your language pair
+
+- **Keyboard Shortcuts Help**: Added F1 keyboard shortcut to show help overlay with all keyboard shortcuts
+
+#### Improvements
+- Better error handling for Whisper translation when using unsupported models
+- Optimized Llama translation prompts for accurate results
+
+---
+
 ### Version 1.4.0
 
 #### Features

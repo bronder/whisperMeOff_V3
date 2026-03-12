@@ -10,7 +10,9 @@ Hold a hotkey, speak your mind, and watch your words appear — automatically pa
 - **Recording Overlay**: Visual spectrum analyzer VU meter shows real-time audio levels during recording with colorful animated bars
 - **Auto-Paste**: Automatically pastes transcribed text to the previously active window
 - **Whisper.cpp Powered**: State-of-the-art local speech recognition using OpenAI's Whisper models (tiny to large)
+- **Whisper Translation**: Translate non-English speech to English directly with Whisper (for supported languages)
 - **Llama.cpp Text Formatting**: Optional AI-powered formatting cleans up your transcription with proper punctuation and paragraphs
+- **Llama Translation**: Translate transcribed text to 27+ languages using Llama AI
 - **100% Offline**: Works completely offline - no internet required after model download
 - **HuggingFace Integration**: Download GGUF quantized models directly from HuggingFace
 - **7 Visual Themes**: Light, Dark, Nord, Dracula, Gruvbox, Monokai, and Synthwave themes
@@ -144,6 +146,7 @@ This project uses the following NuGet packages:
 
 #### Llama Settings (Optional)
 - Enable Llama text formatting for cleaner output
+- **Translation**: Enable Llama translation to translate transcribed text to 27+ languages (English, Spanish, French, German, Italian, Portuguese, Russian, Chinese, Japanese, Korean, Arabic, Hindi, and more)
 - Download models from HuggingFace (search for GGUF quantized models)
 - Enter your HuggingFace token for private models
 
@@ -171,6 +174,7 @@ This project uses the following NuGet packages:
 | Shortcut | Action |
 |----------|--------|
 | Ctrl+Shift+R | Start/Stop recording |
+| F1 | Show keyboard shortcuts help |
 
 ## Building from Source
 
