@@ -8,7 +8,8 @@
         Height="800" Width="800"
         MinHeight="400" MinWidth="500"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource BackgroundBrush}">
+        Background="{DynamicResource BackgroundBrush}"
+        PreviewKeyDown="Window_PreviewKeyDown">
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="56" ResizeBorderThickness="5" CornerRadius="8" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
@@ -150,7 +151,8 @@
                         <!-- Recording Button (Fallback) -->
                         <Button Content="Start Recording" x:Name="RecordButton" Click="RecordButton_Click"
                                 Style="{DynamicResource PrimaryButtonStyle}" Margin="0,20,0,0"
-                                HorizontalAlignment="Left" Padding="30,10"/>
+                                HorizontalAlignment="Left" Padding="30,10"
+                                AutomationProperties.Name="Start Recording button"/>
 
                         <!-- Audio Level Meter -->
                         <ProgressBar x:Name="AudioLevelMeter" Height="8" Margin="0,10,0,0"
@@ -215,14 +217,17 @@
                                 <StackPanel Orientation="Horizontal">
                                     <Button x:Name="PresetFastestBtn" Content="⚡ Fastest" 
                                             Click="PresetFastest_Click"
+                                            Style="{DynamicResource SecondaryButtonStyle}"
                                             Margin="0,0,10,0"
                                             ToolTipService.ToolTip="Tiny model (~75MB) - Fastest transcription, lower accuracy. Best for quick dictation."/>
                                     <Button x:Name="PresetBalancedBtn" Content="⚖️ Balanced" 
                                             Click="PresetBalanced_Click"
+                                            Style="{DynamicResource SecondaryButtonStyle}"
                                             Margin="0,0,10,0"
                                             ToolTipService.ToolTip="Base model (~150MB) - Good balance of speed and accuracy for everyday use."/>
                                     <Button x:Name="PresetAccurateBtn" Content="🎯 Most Accurate" 
                                             Click="PresetAccurate_Click"
+                                            Style="{DynamicResource SecondaryButtonStyle}"
                                             ToolTipService.ToolTip="Medium model (~1.5GB) - Highest accuracy, slower transcription. Best for important transcriptions."/>
                                 </StackPanel>
                             </StackPanel>
@@ -586,6 +591,46 @@
                                 <TextBlock Text="Automatically format transcribed text with Llama"
                                            Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"
                                            ToolTipService.ToolTip="When enabled, Llama will process your transcriptions to add proper capitalization, punctuation, and formatting"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Llama Translation -->
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
+                            <StackPanel>
+                                <CheckBox x:Name="LlamaTranslateCheckbox" Content="Enable Llama translation"
+                                          Checked="LlamaTranslateCheckbox_Changed" Unchecked="LlamaTranslateCheckbox_Changed"
+                                          ToolTipService.ToolTip="Use AI to translate transcribed text to a different language"/>
+                                <TextBlock Text="Translate transcribed text using Llama (after Whisper transcription)"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"
+                                           ToolTipService.ToolTip="When enabled, Llama will translate the transcribed text. Useful when Whisper's built-in translation doesn't work well for your language pair."/>
+                                
+                                <!-- Language Selection -->
+                                <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
+                                    <TextBlock Text="Translate to:" VerticalAlignment="Center" 
+                                               Foreground="{DynamicResource TextBrush}" Margin="0,0,10,0"/>
+                                    <ComboBox x:Name="LlamaTargetLanguageComboBox" Width="150"
+                                              SelectionChanged="LlamaTargetLanguageComboBox_Changed">
+                                        <ComboBoxItem Content="English (en)" Tag="en"/>
+                                        <ComboBoxItem Content="Spanish (es)" Tag="es"/>
+                                        <ComboBoxItem Content="French (fr)" Tag="fr"/>
+                                        <ComboBoxItem Content="German (de)" Tag="de"/>
+                                        <ComboBoxItem Content="Italian (it)" Tag="it"/>
+                                        <ComboBoxItem Content="Portuguese (pt)" Tag="pt"/>
+                                        <ComboBoxItem Content="Russian (ru)" Tag="ru"/>
+                                        <ComboBoxItem Content="Chinese (zh)" Tag="zh"/>
+                                        <ComboBoxItem Content="Japanese (ja)" Tag="ja"/>
+                                        <ComboBoxItem Content="Korean (ko)" Tag="ko"/>
+                                        <ComboBoxItem Content="Arabic (ar)" Tag="ar"/>
+                                        <ComboBoxItem Content="Hindi (hi)" Tag="hi"/>
+                                        <ComboBoxItem Content="Dutch (nl)" Tag="nl"/>
+                                        <ComboBoxItem Content="Polish (pl)" Tag="pl"/>
+                                        <ComboBoxItem Content="Turkish (tr)" Tag="tr"/>
+                                        <ComboBoxItem Content="Vietnamese (vi)" Tag="vi"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <TextBlock Text="Select the target language for translation"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0" FontSize="11"
+                                           ToolTipService.ToolTip="Choose the language to translate transcribed text to"/>
                             </StackPanel>
                         </Border>
 

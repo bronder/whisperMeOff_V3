@@ -228,6 +228,134 @@ public class LlamaService : IDisposable
             return rawText;
         }
     }
+
+    public async Task<string> TranslateTextAsync(string rawText, string targetLanguage = "en")
+    {
+        if (!_isLoaded || _executor == null)
+        {
+            LoggingService.Debug("[LLAMA] Not loaded, returning raw text");
+            return rawText;
+        }
+
+        try
+        {
+            LoggingService.Debug($"[LLAMA] Translating text to {targetLanguage}: {rawText.Length} chars");
+            
+            // Language name mapping for common languages
+            var languageNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "en", "English" },
+                { "es", "Spanish" },
+                { "fr", "French" },
+                { "de", "German" },
+                { "it", "Italian" },
+                { "pt", "Portuguese" },
+                { "ru", "Russian" },
+                { "zh", "Chinese" },
+                { "ja", "Japanese" },
+                { "ko", "Korean" },
+                { "ar", "Arabic" },
+                { "hi", "Hindi" },
+                { "nl", "Dutch" },
+                { "pl", "Polish" },
+                { "tr", "Turkish" },
+                { "vi", "Vietnamese" },
+                { "th", "Thai" },
+                { "sv", "Swedish" },
+                { "da", "Danish" },
+                { "no", "Norwegian" },
+                { "fi", "Finnish" },
+                { "el", "Greek" },
+                { "he", "Hebrew" },
+                { "id", "Indonesian" },
+                { "ms", "Malay" },
+                { "uk", "Ukrainian" },
+                { "cs", "Czech" },
+                { "ro", "Romanian" },
+                { "hu", "Hungarian" }
+            };
+            
+            var targetLangName = languageNames.TryGetValue(targetLanguage, out var name) ? name : targetLanguage;
+            
+            // Translation prompt - clear and direct
+            var prompt = 
+                $"Translate the following text to {targetLangName}. " +
+                "Provide only the translation, nothing else.\n\n" +
+                "Input: " + rawText.Trim() + "\n\n" +
+                $"Translation in {targetLangName}:";
+
+            var inferenceParams = new InferenceParams
+            {
+                MaxTokens = 512,
+                AntiPrompts = new List<string> { "\n\n", "Input:", "Human:", "AI:", "Assistant:", "Question:", "Answer:" },
+                SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.1f, RepeatPenalty = 1.0f }
+            };
+
+            LoggingService.Debug("[LLAMA] Starting translation inference...");
+            
+            // Run inference on background thread to avoid UI thread issues when minimized
+            var result = await Task.Run(async () =>
+            {
+                var response = new System.Text.StringBuilder();
+                
+                try
+                {
+                    LoggingService.Debug("[LLAMA] Starting background translation inference...");
+                    
+                    await foreach (var text in _executor!.InferAsync(prompt, inferenceParams))
+                    {
+                        LoggingService.Trace($"[LLAMA] Got token: {text}");
+                        response.Append(text);
+                        
+                        // Stop if we hit a reasonable length
+                        if (response.Length > rawText.Length * 4)
+                            break;
+                    }
+                    
+                    LoggingService.Debug($"[LLAMA] Background translation complete, got {response.Length} chars");
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Error(ex, "[LLAMA] Translation inference error - stack trace logged");
+                }
+                
+                return response.ToString();
+            });
+            
+            LoggingService.Debug($"[LLAMA] Translation Task.Run completed, got {result.Length} chars");
+            
+            var translated = result.Trim();
+            
+            LoggingService.Trace($"[LLAMA] Raw translation output: {translated}");
+            
+            // Clean up any common artifacts
+            translated = CleanupLlamaOutput(translated, rawText);
+            
+            // Check for null/empty before using translated
+            if (string.IsNullOrEmpty(translated))
+            {
+                LoggingService.Debug("[LLAMA] Translation result is empty, returning raw text");
+                return rawText;
+            }
+            
+            LoggingService.Debug($"[LLAMA] Cleaned translation output: {translated}");
+            LoggingService.Info($"[LLAMA] Translation complete: {translated.Length} chars");
+            
+            // If result is empty or too short, fall back to raw text
+            if (translated.Length < 3)
+            {
+                LoggingService.Debug("[LLAMA] Translation result too short, returning raw text");
+                return rawText;
+            }
+            
+            return translated;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error(ex, "[LLAMA] Translation error");
+            return rawText;
+        }
+    }
     
     private string CleanupLlamaOutput(string output, string original)
     {

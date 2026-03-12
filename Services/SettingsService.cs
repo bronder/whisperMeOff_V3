@@ -189,6 +189,8 @@ public class WordReplacement
 public class LlamaSettings
 {
     public bool Enabled { get; set; } = false;
+    public bool Translate { get; set; } = false;
+    public string TranslateTo { get; set; } = "en";
     public string ModelPath { get; set; } = "";
     public string ModelId { get; set; } = "";
     public string HuggingFaceToken { get; set; } = "";

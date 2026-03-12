@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using Whisper.net;
 using Whisper.net.LibraryLoader;
 
+// TODO: Check if WhisperTask enum exists for translation
+
 namespace whisperMeOff.Services;
 
 public class WhisperService : IDisposable
@@ -107,6 +109,45 @@ public class WhisperService : IDisposable
             // Build processor with options
             var builder = _factory.CreateBuilder()
                 .WithLanguage(language);
+            
+            // Try to enable translation if requested - use reflection to find the method
+            if (App.Settings.Whisper.Translate)
+            {
+                try
+                {
+                    // Try to find and invoke WithTask method
+                    var builderType = builder.GetType();
+                    var withTaskMethod = builderType.GetMethod("WithTask");
+                    if (withTaskMethod != null)
+                    {
+                        // Look for WhisperTask enum
+                        var whisperTaskType = AppDomain.CurrentDomain.GetAssemblies()
+                            .SelectMany(a => a.GetTypes())
+                            .FirstOrDefault(t => t.Name == "WhisperTask");
+                        
+                        if (whisperTaskType != null)
+                        {
+                            var translateValue = Enum.GetValues(whisperTaskType)
+                                .Cast<object>()
+                                .FirstOrDefault(v => v.ToString() == "Translate");
+                            
+                            if (translateValue != null)
+                            {
+                                withTaskMethod.Invoke(builder, new[] { translateValue });
+                                LoggingService.Info("[Whisper] Translation enabled via WithTask");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        LoggingService.Warn("[Whisper] WithTask method not found - translation not available");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Warn($"[Whisper] Translation setup failed: {ex.Message}");
+                }
+            }
 
             // Apply custom vocabulary as initial prompt if set
             // Using dynamic to support different Whisper.net versions

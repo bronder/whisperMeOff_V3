@@ -43,6 +43,48 @@ public partial class MainWindow : Window
         }
     }
 
+    private void Window_PreviewKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        // Escape to close popups or minimize window
+        if (e.Key == System.Windows.Input.Key.Escape)
+        {
+            // Close any open context menus or popups
+            if (ContextMenuService.GetContextMenu(this)?.IsOpen == true)
+            {
+                ContextMenuService.GetContextMenu(this).IsOpen = false;
+                e.Handled = true;
+            }
+            else if (WindowState == WindowState.Maximized)
+            {
+                // Optional: Escape minimizes when maximized
+                // WindowState = WindowState.Normal;
+                // e.Handled = true;
+            }
+        }
+        
+        // F1 for keyboard shortcuts help
+        if (e.Key == System.Windows.Input.Key.F1)
+        {
+            ShowKeyboardShortcuts();
+            e.Handled = true;
+        }
+    }
+
+    private void ShowKeyboardShortcuts()
+    {
+        System.Windows.MessageBox.Show(
+            "Keyboard Shortcuts:\n\n" +
+            "Ctrl+Shift+R - Start/Stop Recording\n" +
+            "Tab - Navigate between controls\n" +
+            "Arrow Keys - Navigate lists\n" +
+            "Space/Enter - Activate buttons\n" +
+            "Escape - Close popups\n" +
+            "F1 - Show this help",
+            "Keyboard Shortcuts",
+            System.Windows.MessageBoxButton.OK,
+            System.Windows.MessageBoxImage.Information);
+    }
+
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         // Prevent saves during initialization
@@ -240,6 +282,19 @@ public partial class MainWindow : Window
         if (!string.IsNullOrEmpty(llamaPath))
         {
             LlamaModelPathText.Text = System.IO.Path.GetFileName(llamaPath);
+        }
+
+        // Llama translation settings
+        LlamaTranslateCheckbox.IsChecked = App.Settings.Llama.Translate;
+        var targetLang = App.Settings.Llama.TranslateTo ?? "en";
+        // Set the combo box selection based on saved setting
+        for (int i = 0; i < LlamaTargetLanguageComboBox.Items.Count; i++)
+        {
+            if (LlamaTargetLanguageComboBox.Items[i] is ComboBoxItem item && item.Tag?.ToString() == targetLang)
+            {
+                LlamaTargetLanguageComboBox.SelectedIndex = i;
+                break;
+            }
         }
 
         // HuggingFace Model ID
@@ -570,9 +625,20 @@ public partial class MainWindow : Window
 
             if (App.Settings.Llama.Enabled && App.Llama.IsLoaded && !string.IsNullOrEmpty(text))
             {
-                LoggingService.Debug("[DEBUG] Running Llama text formatting...");
-                text = await App.Llama.FormatTextAsync(text);
-                LoggingService.Debug($"[LLAMA] Llama formatting complete: {text}");
+                // Check if translation is enabled
+                if (App.Settings.Llama.Translate)
+                {
+                    LoggingService.Debug("[DEBUG] Running Llama translation...");
+                    var targetLang = App.Settings.Llama.TranslateTo ?? "en";
+                    text = await App.Llama.TranslateTextAsync(text, targetLang);
+                    LoggingService.Debug($"[LLAMA] Llama translation complete to {targetLang}: {text}");
+                }
+                else
+                {
+                    LoggingService.Debug("[DEBUG] Running Llama text formatting...");
+                    text = await App.Llama.FormatTextAsync(text);
+                    LoggingService.Debug($"[LLAMA] Llama formatting complete: {text}");
+                }
             }
 
             // Clipboard operations must run on the UI thread (STA mode)
@@ -897,6 +963,23 @@ public partial class MainWindow : Window
         }
     }
 
+    private void LlamaTranslateCheckbox_Changed(object sender, RoutedEventArgs e)
+    {
+        App.Settings.Llama.Translate = LlamaTranslateCheckbox.IsChecked ?? false;
+        App.Settings.Save();
+        LoggingService.Debug($"[LLAMA] Translation enabled: {App.Settings.Llama.Translate}");
+    }
+
+    private void LlamaTargetLanguageComboBox_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (LlamaTargetLanguageComboBox.SelectedItem is ComboBoxItem item && item.Tag is string langCode)
+        {
+            App.Settings.Llama.TranslateTo = langCode;
+            App.Settings.Save();
+            LoggingService.Debug($"[LLAMA] Translation target language set to: {langCode}");
+        }
+    }
+
     private void SelectLlamaModel_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
@@ -1063,7 +1146,29 @@ public partial class MainWindow : Window
             App.Theme.ApplyTheme(theme);
             App.Settings.General.Theme = theme;
             App.Settings.Save();
+            
+            // Force style refresh on preset buttons
+            RefreshButtonStyles();
+            
             LoggingService.Info($"[UI] Theme changed to: {theme}");
+        }
+    }
+    
+    private void RefreshButtonStyles()
+    {
+        // Re-fetch the style from resources (will get the new theme's style)
+        var style = FindResource("SecondaryButtonStyle") as System.Windows.Style;
+        if (style != null)
+        {
+            PresetFastestBtn.Style = style;
+            PresetBalancedBtn.Style = style;
+            PresetAccurateBtn.Style = style;
+        }
+        
+        // Also update the selected preset button to show as selected
+        if (App.Settings?.Whisper?.ModelSize != null)
+        {
+            UpdatePresetButtons(App.Settings.Whisper.ModelSize);
         }
     }
 
