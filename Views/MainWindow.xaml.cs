@@ -16,6 +16,33 @@ public partial class MainWindow : Window
         StateChanged += MainWindow_StateChanged;
     }
 
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void MaximizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+    }
+
+    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private void Header_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2)
+        {
+            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        }
+        else
+        {
+            DragMove();
+        }
+    }
+
     private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
         // Prevent saves during initialization

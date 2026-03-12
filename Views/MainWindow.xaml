@@ -9,6 +9,9 @@
         MinHeight="400" MinWidth="500"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource BackgroundBrush}">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="56" ResizeBorderThickness="5" CornerRadius="8" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -17,10 +20,13 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" Padding="20,15">
-            <Grid>
+        <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" Padding="20,15"
+                WindowChrome.IsHitTestVisibleInChrome="True"
+                MouseLeftButtonDown="Header_MouseLeftButtonDown">
+            <Grid WindowChrome.IsHitTestVisibleInChrome="True">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
@@ -37,6 +43,25 @@
                                FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,20,0"/>
                     <Button Content="Settings" Click="OpenSettings_Click"
                             Style="{DynamicResource SecondaryButtonStyle}"/>
+                </StackPanel>
+
+                <!-- Window Controls -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button Content="&#xE949;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                            WindowChrome.IsHitTestVisibleInChrome="True"
+                            Click="MinimizeButton_Click" 
+                            Background="Transparent" BorderThickness="0" Padding="10,8"
+                            Foreground="{DynamicResource TextBrush}" ToolTip="Minimize"/>
+                    <Button Content="&#xE739;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                            WindowChrome.IsHitTestVisibleInChrome="True"
+                            Click="MaximizeButton_Click" 
+                            Background="Transparent" BorderThickness="0" Padding="10,8"
+                            Foreground="{DynamicResource TextBrush}" ToolTip="Maximize"/>
+                    <Button Content="&#xE8BB;" FontFamily="Segoe MDL2 Assets" FontSize="10"
+                            WindowChrome.IsHitTestVisibleInChrome="True"
+                            Click="CloseButton_Click" 
+                            Background="Transparent" BorderThickness="0" Padding="10,8"
+                            Foreground="{DynamicResource TextBrush}" ToolTip="Close"/>
                 </StackPanel>
             </Grid>
         </Border>
