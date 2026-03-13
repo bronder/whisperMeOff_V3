@@ -2,6 +2,13 @@
 
 ## Latest Release
 
+### Version 1.5.1
+
+#### Bug Fixes
+- **Hotkey Transcription Display**: Fixed issue where using the hotkey to transcribe didn't update the "Last Transcription" text on the main page. Now automatically switches to the Home tab when transcription completes so users can see the result.
+
+---
+
 ### Version 1.5.0
 
 #### Features
