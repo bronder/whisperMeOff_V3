@@ -6,6 +6,14 @@ using LLama.Sampling;
 
 namespace whisperMeOff.Services;
 
+/// <summary>
+/// Service for text processing using LLama (LLM) models.
+/// Provides text formatting, grammar correction, and translation capabilities.
+/// </summary>
+/// <remarks>
+/// Supports GGUF-formatted models. Uses Vulkan GPU acceleration when available.
+/// The service runs inference on background threads to avoid blocking the UI.
+/// </remarks>
 public class LlamaService : IDisposable
 {
     private LLamaWeights? _model;
@@ -15,11 +23,32 @@ public class LlamaService : IDisposable
     private string? _modelPath;
     private readonly object _lock = new();
 
+    /// <summary>
+    /// Gets whether a model is currently loaded and ready for inference.
+    /// </summary>
     public bool IsLoaded => _isLoaded;
+
+    /// <summary>
+    /// Gets the path to the currently loaded model, or null if no model is loaded.
+    /// </summary>
     public string? ModelPath => _modelPath;
     
+    /// <summary>
+    /// Raised when the model loading state changes.
+    /// </summary>
+    /// <param name="sender">The LlamaService instance.</param>
+    /// <param name="isLoaded">True if model is now loaded, false if unloaded.</param>
     public event EventHandler<bool>? ModelLoaded;
 
+    /// <summary>
+    /// Initializes and loads a GGUF-formatted LLama model.
+    /// </summary>
+    /// <param name="modelPath">Path to the GGUF model file.</param>
+    /// <remarks>
+    /// Validates the model file (size check, GGUF magic number) before loading.
+    /// Uses Vulkan GPU acceleration with 35 layers by default.
+    /// Shows error dialog to user if loading fails.
+    /// </remarks>
     public async Task InitializeAsync(string modelPath)
     {
         if (string.IsNullOrEmpty(modelPath) || !File.Exists(modelPath))
@@ -88,8 +117,22 @@ public class LlamaService : IDisposable
             {
                 // Load the model
                 _model = await Task.Run(() => LLamaWeights.LoadFromFile(parameters));
+                if (_model == null)
+                {
+                    throw new Exception("Failed to load model weights - returned null");
+                }
+                
                 _context = await Task.Run(() => _model.CreateContext(parameters));
+                if (_context == null)
+                {
+                    throw new Exception("Failed to create model context - returned null");
+                }
+                
                 _executor = new StatelessExecutor(_model, parameters);
+                if (_executor == null)
+                {
+                    throw new Exception("Failed to create executor - returned null");
+                }
                 
                 _isLoaded = true;
                 LoggingService.Info($"[LLAMA] Successfully initialized with model: {modelPath}");
@@ -117,7 +160,6 @@ public class LlamaService : IDisposable
         catch (Exception ex)
         {
             LoggingService.Error(ex, "[LLAMA] Initialization error");
-            LoggingService.Error(ex, "[LLAMA] Initialization error - stack trace logged");
             Unload();
             
             // Build error message - use the detailed one from our validation if available
@@ -136,6 +178,15 @@ public class LlamaService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Formats and corrects text using the LLama model.
+    /// </summary>
+    /// <param name="rawText">The raw transcribed text to format.</param>
+    /// <returns>Formatted text with corrected spelling and grammar, or original if processing fails.</returns>
+    /// <remarks>
+    /// Uses a grammar correction prompt with temperature=0 for deterministic results.
+    /// Falls back to original text if the result is significantly different or empty.
+    /// </remarks>
     public async Task<string> FormatTextAsync(string rawText)
     {
         if (!_isLoaded || _executor == null)
@@ -229,6 +280,16 @@ public class LlamaService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Translates text to the specified target language.
+    /// </summary>
+    /// <param name="rawText">The text to translate.</param>
+    /// <param name="targetLanguage">Target language code (e.g., "en", "es", "fr").</param>
+    /// <returns>Translated text, or original if processing fails.</returns>
+    /// <remarks>
+    /// Supports 26+ languages with built-in name mapping.
+    /// Falls back to original text if result is too short or empty.
+    /// </remarks>
     public async Task<string> TranslateTextAsync(string rawText, string targetLanguage = "en")
     {
         if (!_isLoaded || _executor == null)
@@ -407,6 +468,12 @@ public class LlamaService : IDisposable
         return result;
     }
 
+    /// <summary>
+    /// Cleans up model resources and unloads the model from memory.
+    /// </summary>
+    /// <remarks>
+    /// Thread-safe operation that disposes the context, executor, and model weights.
+    /// </remarks>
     public void Unload()
     {
         lock (_lock)

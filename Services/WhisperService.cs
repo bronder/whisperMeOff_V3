@@ -5,18 +5,38 @@ using System.Threading.Tasks;
 using Whisper.net;
 using Whisper.net.LibraryLoader;
 
-// TODO: Check if WhisperTask enum exists for translation
-
 namespace whisperMeOff.Services;
 
+/// <summary>
+/// Service for speech-to-text transcription using Whisper.net library.
+/// Supports multiple runtime backends (Vulkan, CUDA, CPU) and various transcription options.
+/// </summary>
+/// <remarks>
+/// The service supports:
+/// - Multiple Whisper model sizes (tiny, base, small, medium, large)
+/// - Custom vocabulary prompts
+/// - Word replacement rules
+/// - Multiple language support with auto-detection
+/// - Translation mode (when supported by the model)
+/// </remarks>
 public class WhisperService : IDisposable
 {
     private bool _isInitialized;
     private string? _modelPath;
     private WhisperFactory? _factory;
 
+    /// <summary>
+    /// Gets whether the Whisper service has been initialized with a model.
+    /// </summary>
     public bool IsInitialized => _isInitialized;
 
+    /// <summary>
+    /// Initializes the Whisper service and loads the configured model.
+    /// </summary>
+    /// <remarks>
+    /// Attempts to load models in order of preference: Vulkan (GPU) > CUDA > CPU.
+    /// Falls back to CPU if GPU acceleration is unavailable.
+    /// </remarks>
     public async Task InitializeAsync()
     {
         try
@@ -61,6 +81,13 @@ public class WhisperService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Gets the path to the currently configured Whisper model.
+    /// </summary>
+    /// <returns>Path to the model file, or empty string if no model is configured.</returns>
+    /// <remarks>
+    /// Checks custom path from settings first, then falls back to default location.
+    /// </remarks>
     public string GetModelPath()
     {
         if (!string.IsNullOrEmpty(App.Settings.Whisper.ModelPath) && File.Exists(App.Settings.Whisper.ModelPath))
@@ -78,6 +105,18 @@ public class WhisperService : IDisposable
         return "";
     }
 
+    /// <summary>
+    /// Transcribes an audio file to text using Whisper.
+    /// </summary>
+    /// <param name="audioPath">Path to the audio file to transcribe (WAV format).</param>
+    /// <returns>Transcribed text, or empty string if no speech was detected.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when service is not initialized.</exception>
+    /// <exception cref="FileNotFoundException">Thrown when model or audio file is not found.</exception>
+    /// <remarks>
+    /// Applies the following post-processing:
+    /// - Custom vocabulary from settings (used as initial prompt)
+    /// - Word replacement rules from settings
+    /// </remarks>
     public async Task<string> TranscribeAsync(string audioPath)
     {
         if (!_isInitialized || _factory == null)
@@ -218,6 +257,14 @@ public class WhisperService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Reloads the Whisper model from a new path.
+    /// </summary>
+    /// <param name="modelPath">Path to the new model file.</param>
+    /// <remarks>
+    /// This is an asynchronous operation that disposes the current model
+    /// and loads the new one in the background.
+    /// </remarks>
     public void ReloadModel(string modelPath)
     {
         _isInitialized = false;

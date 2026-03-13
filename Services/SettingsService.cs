@@ -5,13 +5,42 @@ using System.Text.Json;
 
 namespace whisperMeOff.Services;
 
+/// <summary>
+/// Service for managing application settings with persistence to JSON.
+/// Handles loading, saving, and encryption of sensitive data.
+/// </summary>
+/// <remarks>
+/// Settings are stored in %APPDATA%/whisperMeOff/settings.json.
+/// Sensitive data like API tokens are encrypted using Windows DPAPI.
+/// </remarks>
 public class SettingsService
 {
+    /// <summary>
+    /// Whisper transcription settings.
+    /// </summary>
     public WhisperSettings Whisper { get; set; } = new();
+
+    /// <summary>
+    /// LLama model settings.
+    /// </summary>
     public LlamaSettings Llama { get; set; } = new();
+
+    /// <summary>
+    /// Audio input settings.
+    /// </summary>
     public AudioSettings Audio { get; set; } = new();
+
+    /// <summary>
+    /// General application settings.
+    /// </summary>
     public GeneralSettings General { get; set; } = new();
 
+    /// <summary>
+    /// Loads settings from the JSON file, or creates default settings if file doesn't exist.
+    /// </summary>
+    /// <remarks>
+    /// Decrypts sensitive data (HuggingFace tokens) after loading.
+    /// </remarks>
     public void Load()
     {
         try
@@ -51,6 +80,13 @@ public class SettingsService
             General.HotkeyTriggerKey = "r";
     }
 
+    /// <summary>
+    /// Saves current settings to the JSON file.
+    /// </summary>
+    /// <remarks>
+    /// Encrypts sensitive data (HuggingFace tokens) before saving.
+    /// Skips re-encryption if token already appears to be encrypted.
+    /// </remarks>
     public void Save()
     {
         try

@@ -111,7 +111,7 @@ public partial class MainWindow : Window
         // Subscribe to Llama model load/unload events
         App.Llama.ModelLoaded += (s, isLoaded) => Dispatcher.Invoke(() =>
         {
-            if (App.Settings.Llama.Enabled)
+            if (App.Settings?.Llama?.Enabled == true && LlamaStatusText != null)
             {
                 LlamaStatusText.Text = isLoaded ? "Enabled (Loaded)" : "Enabled (Not Loaded)";
             }
@@ -378,8 +378,12 @@ public partial class MainWindow : Window
 
     public void UpdateLastTranscription(string text)
     {
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] UpdateLastTranscription called with: '{(text?.Length > 50 ? text.Substring(0, 50) + "..." : text)}'");
         Dispatcher.Invoke(() =>
         {
+            // Switch to Home tab to show the transcription
+            MainTabControl.SelectedIndex = 0;
+            
             if (string.IsNullOrEmpty(text))
             {
                 LastTranscriptionText.Text = "No transcriptions yet";
@@ -388,6 +392,7 @@ public partial class MainWindow : Window
             {
                 LastTranscriptionText.Text = text;
             }
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] LastTranscriptionText.Text is now: '{LastTranscriptionText.Text}'");
         });
     }
 
@@ -1102,7 +1107,7 @@ public partial class MainWindow : Window
         }
         
         LoggingService.Debug($"[UI] HuggingFaceTokenBox_PasswordChanged: Saving token, length={HuggingFaceTokenBox.Password?.Length ?? 0}");
-        App.Settings.Llama.HuggingFaceToken = HuggingFaceTokenBox.Password;
+        App.Settings.Llama.HuggingFaceToken = HuggingFaceTokenBox.Password ?? string.Empty;
         App.Settings.Save();
     }
 

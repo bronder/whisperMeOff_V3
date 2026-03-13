@@ -3,6 +3,14 @@ using System.IO;
 
 namespace whisperMeOff.Services;
 
+/// <summary>
+/// Service for capturing audio from microphone input using NAudio.
+/// Handles recording, audio level monitoring, and WAV file output.
+/// </summary>
+/// <remarks>
+/// Audio is recorded at 16kHz, mono, 16-bit PCM format for optimal Whisper transcription.
+/// The service manages the recording lifecycle including start, stop, and cleanup.
+/// </remarks>
 public class AudioService : IDisposable
 {
     private WaveInEvent? _waveIn;
@@ -10,12 +18,35 @@ public class AudioService : IDisposable
     private DateTime _recordingStartTime;
     private bool _isRecording;
     private bool _disposed;
+    private TaskCompletionSource<bool>? _recordingStoppedSource;
+    private readonly object _lock = new();
 
+    /// <summary>
+    /// Raised when recording starts.
+    /// </summary>
     public event EventHandler? RecordingStarted;
+
+    /// <summary>
+    /// Raised when recording stops.
+    /// </summary>
     public event EventHandler? RecordingStopped;
+
+    /// <summary>
+    /// Raised when audio level changes during recording. Value ranges from 0.0 to 1.0.
+    /// </summary>
+    /// <remarks>
+    /// The audio level is calculated as the maximum absolute sample value normalized to 0-1 range.
+    /// </remarks>
     public event EventHandler<float>? AudioLevelChanged;
 
+    /// <summary>
+    /// Gets whether audio is currently being recorded.
+    /// </summary>
     public bool IsRecording => _isRecording;
+
+    /// <summary>
+    /// Gets the duration of the last recording in seconds.
+    /// </summary>
     public double LastRecordingDuration { get; private set; }
 
     /// <summary>
@@ -49,6 +80,10 @@ public class AudioService : IDisposable
         writer.Write((int)audioDataLength);
     }
 
+    /// <summary>
+    /// Gets a list of available audio input devices.
+    /// </summary>
+    /// <returns>List of available audio devices with ID and name.</returns>
     public List<AudioDeviceInfo> GetAvailableDevices()
     {
         var devices = new List<AudioDeviceInfo>();
@@ -71,12 +106,23 @@ public class AudioService : IDisposable
         return devices;
     }
 
+    /// <summary>
+    /// Starts audio recording from the default or selected microphone.
+    /// </summary>
+    /// <remarks>
+    /// Recording uses 16kHz, mono, 16-bit PCM format.
+    /// Events: <see cref="RecordingStarted"/> is raised when recording begins.
+    /// </remarks>
     public void StartRecording()
     {
         if (_isRecording || _disposed) return;
 
         try
         {
+            // Reset the completion source for the new recording
+            _recordingStoppedSource?.TrySetCanceled();
+            _recordingStoppedSource = null;
+            
             _audioBuffer = new MemoryStream();
 
             // Use 16kHz, mono, 16-bit PCM as per PRD
@@ -126,10 +172,10 @@ public class AudioService : IDisposable
 
                 AudioLevelChanged?.Invoke(this, maxLevel);
             }
-            catch (Exception ex)
+            catch
             {
 #if DEBUG
-                LoggingService.Debug($"[DEBUG] Error in OnDataAvailable: {ex.Message}");
+                LoggingService.Debug($"[DEBUG] Error in OnDataAvailable");
 #endif
                 // Ignore errors during data capture
             }
@@ -148,12 +194,23 @@ public class AudioService : IDisposable
         {
             _isRecording = false;
             RecordingStopped?.Invoke(this, EventArgs.Empty);
+            
+            // Signal the waiting task that recording has stopped
+            _recordingStoppedSource?.TrySetResult(true);
         }
         
         // DO NOT call Cleanup() here! StopRecordingAsync will handle cleanup after saving audio.
         // Calling Cleanup() here was setting _audioBuffer = null before we could save it.
     }
 
+    /// <summary>
+    /// Stops the current recording and saves the audio to a temporary WAV file.
+    /// </summary>
+    /// <returns>Path to the saved WAV file, or null if no recording was active.</returns>
+    /// <remarks>
+    /// The returned file is saved in the system temp directory with a timestamped name.
+    /// Caller is responsible for cleaning up the temporary file after processing.
+    /// </remarks>
     public async Task<string?> StopRecordingAsync()
     {
 #if DEBUG
@@ -191,8 +248,24 @@ public class AudioService : IDisposable
                 LoggingService.Warn("_waveIn is null - cannot stop");
             }
 
-            // Wait for the recording to fully stop
-            await Task.Delay(200);
+            // Wait for the recording to fully stop using proper synchronization
+            // Create a completion source to wait for recording to stop
+            using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            _recordingStoppedSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            
+            // Wait for the recording to fully stop using proper synchronization
+            try
+            {
+                await _recordingStoppedSource.Task.WaitAsync(TimeSpan.FromSeconds(5), timeoutCts.Token);
+            }
+            catch (TimeoutException)
+            {
+                LoggingService.Warn("Recording stop timed out after 5 seconds");
+            }
+            catch (OperationCanceledException)
+            {
+                // Timeout was canceled, recording likely stopped
+            }
 
             // Copy audio buffer - we now write raw PCM and will add WAV header manually
             MemoryStream? pcmData = null;
@@ -252,13 +325,19 @@ public class AudioService : IDisposable
                 _waveIn.DataAvailable -= OnDataAvailable;
                 _waveIn.RecordingStopped -= OnRecordingStoppedInternal;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LoggingService.Warn($"[Audio] Error removing event handlers: {ex.Message}");
+            }
 
             try
             {
                 _waveIn.Dispose();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                LoggingService.Warn($"[Audio] Error disposing WaveIn: {ex.Message}");
+            }
             _waveIn = null;
         }
 
@@ -266,7 +345,10 @@ public class AudioService : IDisposable
         {
             _audioBuffer?.Dispose();
         }
-        catch { }
+        catch (Exception ex)
+        {
+            LoggingService.Warn($"[Audio] Error disposing audio buffer: {ex.Message}");
+        }
         _audioBuffer = null;
 
         // Note: Don't set _disposed = true here - it's only set in Dispose()
@@ -280,8 +362,18 @@ public class AudioService : IDisposable
     }
 }
 
-public class AudioDeviceInfo
-{
-    public string Id { get; set; } = "";
-    public string Name { get; set; } = "";
-}
+    /// <summary>
+    /// Represents information about an available audio input device.
+    /// </summary>
+    public class AudioDeviceInfo
+    {
+        /// <summary>
+        /// The device identifier.
+        /// </summary>
+        public string Id { get; set; } = "";
+
+        /// <summary>
+        /// The display name of the device.
+        /// </summary>
+        public string Name { get; set; } = "";
+    }

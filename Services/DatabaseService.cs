@@ -3,11 +3,25 @@ using Microsoft.Data.Sqlite;
 
 namespace whisperMeOff.Services;
 
+/// <summary>
+/// Service for storing and retrieving transcription history using SQLite.
+/// Provides async CRUD operations for transcription records.
+/// </summary>
+/// <remarks>
+/// Database is stored at %APPDATA%/whisperMeOff/transcriptions.db.
+/// Schema includes timestamp indexing for efficient history queries.
+/// </remarks>
 public class DatabaseService : IDisposable
 {
     private SqliteConnection? _connection;
 
-    public async void Initialize()
+    /// <summary>
+    /// Initializes the database connection and creates tables if needed.
+    /// </summary>
+    /// <remarks>
+    /// Creates the transcriptions table with an index on timestamp for fast queries.
+    /// </remarks>
+    public async Task InitializeAsync()
     {
         try
         {
@@ -37,6 +51,14 @@ public class DatabaseService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Adds a new transcription record to the database.
+    /// </summary>
+    /// <param name="text">The transcribed text.</param>
+    /// <param name="duration">Recording duration in seconds.</param>
+    /// <param name="model">The Whisper model used.</param>
+    /// <param name="language">The detected or selected language code.</param>
+    /// <returns>The ID of the inserted record, or -1 on failure.</returns>
     public async Task<long> AddTranscriptionAsync(string text, double duration, string? model, string? language)
     {
         if (_connection == null) return -1;
@@ -65,6 +87,11 @@ public class DatabaseService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Gets the most recent transcriptions.
+    /// </summary>
+    /// <param name="limit">Maximum number of records to retrieve (default 50).</param>
+    /// <returns>List of transcription records ordered by timestamp descending.</returns>
     public async Task<List<TranscriptionRecord>> GetTranscriptionsAsync(int limit = 50)
     {
         var records = new List<TranscriptionRecord>();
@@ -98,6 +125,11 @@ public class DatabaseService : IDisposable
         return records;
     }
 
+    /// <summary>
+    /// Gets a single transcription by ID.
+    /// </summary>
+    /// <param name="id">The transcription ID.</param>
+    /// <returns>The transcription record, or null if not found.</returns>
     public async Task<TranscriptionRecord?> GetTranscriptionAsync(long id)
     {
         if (_connection == null) return null;
@@ -130,6 +162,11 @@ public class DatabaseService : IDisposable
         return null;
     }
 
+    /// <summary>
+    /// Deletes a transcription by ID.
+    /// </summary>
+    /// <param name="id">The transcription ID to delete.</param>
+    /// <returns>True if deletion was successful.</returns>
     public async Task<bool> DeleteTranscriptionAsync(long id)
     {
         if (_connection == null) return false;
@@ -150,6 +187,10 @@ public class DatabaseService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Clears all transcription history.
+    /// </summary>
+    /// <returns>True if operation was successful.</returns>
     public async Task<bool> ClearAllTranscriptionsAsync()
     {
         if (_connection == null) return false;
@@ -169,6 +210,11 @@ public class DatabaseService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Deletes transcriptions older than the specified time span.
+    /// </summary>
+    /// <param name="olderThan">Delete records older than this duration.</param>
+    /// <returns>Number of records deleted.</returns>
     public async Task<int> ClearTranscriptionsOlderThanAsync(TimeSpan olderThan)
     {
         if (_connection == null) return 0;
@@ -190,6 +236,14 @@ public class DatabaseService : IDisposable
         }
     }
 
+    /// <summary>
+    /// Searches transcriptions by text content.
+    /// </summary>
+    /// <param name="query">The search query string.</param>
+    /// <returns>List of matching transcription records.</returns>
+    /// <remarks>
+    /// Uses SQL LIKE for substring matching.
+    /// </remarks>
     public async Task<List<TranscriptionRecord>> SearchTranscriptionsAsync(string query)
     {
         var records = new List<TranscriptionRecord>();
@@ -230,12 +284,26 @@ public class DatabaseService : IDisposable
     }
 }
 
+/// <summary>
+/// Represents a single transcription record from the database.
+/// </summary>
 public class TranscriptionRecord
 {
+    /// <summary>The unique record ID.</summary>
     public long Id { get; set; }
+
+    /// <summary>The transcribed text content.</summary>
     public string Text { get; set; } = "";
+
+    /// <summary>ISO 8601 timestamp of the transcription.</summary>
     public string Timestamp { get; set; } = "";
+
+    /// <summary>Recording duration in seconds.</summary>
     public double? Duration { get; set; }
+
+    /// <summary>The Whisper model used for transcription.</summary>
     public string? Model { get; set; }
+
+    /// <summary>The language code used.</summary>
     public string? Language { get; set; }
 }

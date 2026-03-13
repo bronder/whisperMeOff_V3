@@ -12,7 +12,6 @@ public partial class App : System.Windows.Application
     private NotifyIcon? _notifyIcon;
     private MainWindow? _mainWindow;
     private RecordingOverlayWindow? _recordingOverlay;
-    private System.Windows.Controls.MenuItem? _recordMenuItem;
     private ToolStripMenuItem? _recordToolStripItem;
 
     public static string AppDataPath { get; private set; } = null!;
@@ -35,7 +34,7 @@ public partial class App : System.Windows.Application
     // Track whether a transcription is in progress
     public static bool IsTranscribing { get; set; } = false;
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
@@ -124,7 +123,7 @@ public partial class App : System.Windows.Application
         }
 
         // Initialize database
-        Database.Initialize();
+        await Database.InitializeAsync();
 
         // Setup system tray
         SetupSystemTray();
@@ -151,8 +150,8 @@ public partial class App : System.Windows.Application
         // Start the app
         _mainWindow.Show();
 
-        // Initialize async services
-        Task.Run(async () =>
+        // Initialize async services (fire and forget - these load ML models)
+        _ = Task.Run(async () =>
         {
             await Whisper.InitializeAsync();
             if (Settings.Llama.Enabled && !string.IsNullOrEmpty(Settings.Llama.ModelPath))
@@ -341,8 +340,8 @@ public partial class App : System.Windows.Application
             _recordingOverlay?.Show();
             _recordingOverlay?.StartRecordingTimer();
             UpdateTrayIcon(true);
-            if (_recordMenuItem != null)
-                _recordMenuItem.Header = "Stop Recording";
+            if (_recordToolStripItem != null)
+                _recordToolStripItem.Text = "Stop Recording";
         });
     }
 
@@ -353,8 +352,8 @@ public partial class App : System.Windows.Application
             _recordingOverlay?.StopRecordingTimer();
             _recordingOverlay?.Hide();
             UpdateTrayIcon(false);
-            if (_recordMenuItem != null)
-                _recordMenuItem.Header = "Start Recording";
+            if (_recordToolStripItem != null)
+                _recordToolStripItem.Text = "Start Recording";
         });
     }
 
@@ -404,11 +403,17 @@ public partial class App : System.Windows.Application
     private void OnHotkeyReleased(object? sender, EventArgs e)
     {
         // Push-to-talk: stop recording and transcribe when key is released
+        LoggingService.Debug("[DEBUG] OnHotkeyReleased called");
         Dispatcher.Invoke(() =>
         {
             if (Settings.General.PushToTalkMode && Audio.IsRecording)
             {
+                LoggingService.Debug("[DEBUG] PushToTalk mode - calling StopRecordingAndTranscribeAsync");
                 _ = StopRecordingAndTranscribeAsync();
+            }
+            else
+            {
+                LoggingService.Debug($"[DEBUG] Not in PushToTalk mode or not recording. PushToTalkMode={Settings.General.PushToTalkMode}, IsRecording={Audio.IsRecording}");
             }
         });
     }
@@ -449,9 +454,17 @@ public partial class App : System.Windows.Application
             await Database.AddTranscriptionAsync(text, Audio.LastRecordingDuration, Settings.Whisper.ModelPath, Settings.Whisper.Language);
 
             // Update main window
+            LoggingService.Debug($"[DEBUG] ProcessTranscriptionAsync: Updating UI with text: '{(text?.Length > 50 ? text.Substring(0, 50) + "..." : text)}'");
             Dispatcher.Invoke(() =>
             {
-                _mainWindow?.UpdateLastTranscription(text);
+                if (_mainWindow == null)
+                {
+                    LoggingService.Debug("[DEBUG] _mainWindow is NULL!");
+                }
+                else
+                {
+                    _mainWindow.UpdateLastTranscription(text ?? string.Empty);
+                }
             });
 
             // Cleanup temp file
@@ -463,6 +476,8 @@ public partial class App : System.Windows.Application
         catch (Exception ex)
         {
             LoggingService.Error(ex, "Transcription error");
+            LoggingService.Debug($"[DEBUG] ProcessTranscriptionAsync EXCEPTION: {ex.Message}");
+            LoggingService.Debug($"[DEBUG] Stack trace: {ex.StackTrace}");
         }
         finally
         {

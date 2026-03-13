@@ -67,7 +67,8 @@ public class HotkeyService : IDisposable
 
         // Set up keyboard hook for release detection
         _keyboardProc = KeyboardHookCallback;
-        _keyboardHookId = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, GetModuleHandle((string?)null), 0);
+        var moduleHandle = GetModuleHandle(string.Empty);
+        _keyboardHookId = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, moduleHandle, 0);
 
         RegisterCurrentHotkey();
     }
@@ -190,19 +191,56 @@ public class HotkeyService : IDisposable
 
     public void Dispose()
     {
-        _source?.RemoveHook(HwndHook);
-        UnregisterHotKey(_windowHandle, HOTKEY_ID);
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing) return;
+        
+        try
+        {
+            _source?.RemoveHook(HwndHook);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn($"[Hotkey] Error removing hook: {ex.Message}");
+        }
+        
+        try
+        {
+            UnregisterHotKey(_windowHandle, HOTKEY_ID);
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn($"[Hotkey] Error unregistering hotkey: {ex.Message}");
+        }
         
         if (_keyboardHookId != IntPtr.Zero)
         {
-            UnhookWindowsHookEx(_keyboardHookId);
+            try
+            {
+                UnhookWindowsHookEx(_keyboardHookId);
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn($"[Hotkey] Error unhooking keyboard: {ex.Message}");
+            }
             _keyboardHookId = IntPtr.Zero;
         }
         
         // Close the message window
         if (_messageWindow != null)
         {
-            _messageWindow.Close();
+            try
+            {
+                _messageWindow.Close();
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn($"[Hotkey] Error closing message window: {ex.Message}");
+            }
             _messageWindow = null;
         }
     }
