@@ -2,6 +2,50 @@
 
 ## Latest Release
 
+### Version 1.6.0
+
+#### Features
+- **Whisper Model Validation**: Added model validation with visual badges showing Valid/Invalid status
+  - Validation checks file exists and minimum size requirements
+  - Green badge for valid models, red badge for invalid
+
+- **Model Metadata Badges**: Display model information directly on the UI
+  - Model size badge shows file size (e.g., "~75 MB")
+  - Sample rate badge shows audio format (e.g., "16kHz" for Whisper)
+  - Badges appear when model is loaded or selected
+
+- **Improved Llama Model Parsing**: Better detection of GGUF model metadata
+  - Supports FP16/F16/F32 precision types
+  - Case-insensitive size parsing (1.5b now works)
+  - Accurate RAM estimation based on precision type
+
+- **Download Progress & Auto-Select**: Enhanced model download experience
+  - Download buttons now show "Downloading..." state while downloading
+  - Button disabled during download to prevent double-clicks
+  - Model automatically selected after download completes
+  - Badges update automatically after download
+
+- **Model Performance Metrics**: Added Speed and Accuracy columns to download section
+  - Speed shows real-time factor (~60x to ~2x)
+  - Accuracy shows quality level (Low to Highest)
+  - Helps users choose the right model for their needs
+
+- **Theme-Compatible Badge Colors**: All badges now use theme resources
+  - ValidBadgeBrush (green) for valid status
+  - InvalidBadgeBrush (red) for invalid status
+  - InfoBadgeBrush (gray) for informational badges
+  - AccentBrush for RAM badges
+  - Consistent colors across all 7 themes (Dark, Light, Dracula, Nord, Synthwave, Gruvbox, Monokai)
+
+- **Transform Tab Disabled**: The Transform tab is now disabled in the UI
+  - Will be re-enabled in a future release
+
+#### Bug Fixes
+- Fixed issue where Whisper model badges didn't show on initial tab load
+- Fixed Llama model badges showing "Unknown" values for FP16 models
+
+---
+
 ### Version 1.5.1
 
 #### Bug Fixes
