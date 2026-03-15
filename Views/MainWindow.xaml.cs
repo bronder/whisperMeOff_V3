@@ -281,11 +281,11 @@ public partial class MainWindow : Window
         if (!string.IsNullOrEmpty(downloadPath))
         {
             ModelDownloadPathTextBox.Text = downloadPath;
-            DownloadPathStatusText.Text = $"Using: {downloadPath}";
+            DownloadPathSummaryText.Text = $"Using: {downloadPath}";
         }
         else
         {
-            DownloadPathStatusText.Text = $"Default: {App.WhisperModelsPath}";
+            DownloadPathSummaryText.Text = $"Default: {App.WhisperModelsPath}";
         }
 
         // Llama Model Download Path
@@ -293,11 +293,11 @@ public partial class MainWindow : Window
         if (!string.IsNullOrEmpty(llamaDownloadPath))
         {
             LlamaDownloadPathTextBox.Text = llamaDownloadPath;
-            LlamaDownloadPathStatusText.Text = $"Using: {llamaDownloadPath}";
+            LlamaDownloadPathSummaryText.Text = $"Using: {llamaDownloadPath}";
         }
         else
         {
-            LlamaDownloadPathStatusText.Text = $"Default: {App.LlamaModelsPath}";
+            LlamaDownloadPathSummaryText.Text = $"Default: {App.LlamaModelsPath}";
         }
 
         // Model path
@@ -1085,7 +1085,7 @@ public partial class MainWindow : Window
             ModelDownloadPathTextBox.Text = dialog.SelectedPath;
             App.Settings.General.ModelDownloadPath = dialog.SelectedPath;
             App.Settings.Save();
-            DownloadPathStatusText.Text = $"Using: {dialog.SelectedPath}";
+            DownloadPathSummaryText.Text = $"Using: {dialog.SelectedPath}";
             WhisperStatusText.Text = "Download path changed - restart to apply";
         }
     }
@@ -1115,7 +1115,7 @@ public partial class MainWindow : Window
             LlamaDownloadPathTextBox.Text = dialog.SelectedPath;
             App.Settings.General.LlamaDownloadPath = dialog.SelectedPath;
             App.Settings.Save();
-            LlamaDownloadPathStatusText.Text = $"Using: {dialog.SelectedPath}";
+            LlamaDownloadPathSummaryText.Text = $"Using: {dialog.SelectedPath}";
             LlamaStatusText.Text = "Download path changed - restart to apply";
         }
     }
@@ -1126,7 +1126,7 @@ public partial class MainWindow : Window
         var newPath = LlamaDownloadPathTextBox.Text;
         if (!string.IsNullOrEmpty(newPath) && System.IO.Directory.Exists(newPath))
         {
-            LlamaDownloadPathStatusText.Text = $"Using: {newPath}";
+            LlamaDownloadPathSummaryText.Text = $"Using: {newPath}";
             LlamaPathValidIcon.Visibility = Visibility.Visible;
             
             // Count GGUF model files
@@ -1147,11 +1147,11 @@ public partial class MainWindow : Window
             LlamaModelCountBadge.Visibility = Visibility.Collapsed;
             if (!string.IsNullOrEmpty(newPath))
             {
-                LlamaDownloadPathStatusText.Text = $"New path will be created: {newPath}";
+                LlamaDownloadPathSummaryText.Text = $"New path will be created: {newPath}";
             }
             else
             {
-                LlamaDownloadPathStatusText.Text = $"Default: {App.LlamaModelsPath}";
+                LlamaDownloadPathSummaryText.Text = $"Default: {App.LlamaModelsPath}";
             }
         }
     }
@@ -1174,7 +1174,7 @@ public partial class MainWindow : Window
         var newPath = ModelDownloadPathTextBox.Text;
         if (!string.IsNullOrEmpty(newPath) && System.IO.Directory.Exists(newPath))
         {
-            DownloadPathStatusText.Text = $"Using: {newPath}";
+            DownloadPathSummaryText.Text = $"Using: {newPath}";
             WhisperPathValidIcon.Visibility = Visibility.Visible;
             
             // Count model files
@@ -1195,7 +1195,7 @@ public partial class MainWindow : Window
             WhisperModelCountBadge.Visibility = Visibility.Collapsed;
             if (!string.IsNullOrEmpty(newPath))
             {
-                DownloadPathStatusText.Text = $"New path will be created: {newPath}";
+                DownloadPathSummaryText.Text = $"New path will be created: {newPath}";
             }
         }
     }
@@ -1521,12 +1521,6 @@ public partial class MainWindow : Window
             App.Hotkey.SetTriggerKey(text.ToLower());
             HotkeyDisplay.Text = text.ToUpper();
             HotkeyStatusText.Text = $"Ctrl+Shift+{text.ToUpper()}";
-            
-            // Update live preview
-            if (HotkeyPreviewText != null)
-            {
-                HotkeyPreviewText.Text = $"Press Ctrl+Shift+{text.ToUpper()} to record";
-            }
             
             // Update Quick Start hotkey display
             var quickStartHotkeyRun = FindName("QuickStartHotkeyRun") as System.Windows.Documents.Run;

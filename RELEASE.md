@@ -44,6 +44,16 @@
 - Fixed issue where Whisper model badges didn't show on initial tab load
 - Fixed Llama model badges showing "Unknown" values for FP16 models
 
+#### UI Improvements
+- **Recording Settings Explanation**: Added informative panel explaining recording modes
+  - Push-to-talk (default): Hold hotkey to record, release to stop
+  - Push-on, talk: Press once to start, press again to stop
+  - Push-off, talk: Press to start, auto-stop after silence
+  
+- **Hotkey Input Cleanup**: Removed redundant live preview section
+  - Streamlined the hotkey input UI in General settings
+  - Removed dead code referencing the removed preview element
+
 ---
 
 ### Version 1.5.1

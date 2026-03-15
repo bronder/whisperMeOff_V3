@@ -263,6 +263,27 @@
                                   Background="{DynamicResource CardBrush}" Padding="0">
                             <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0">
                                 <StackPanel>
+                                    <!-- Recording Mode Explanation -->
+                                    <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="6" Padding="12" Margin="0,0,0,15"
+                                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="Recording Modes" FontWeight="SemiBold" FontSize="12"
+                                                       Foreground="{DynamicResource AccentBrush}" Margin="0,0,0,8"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <TextBlock Text="• Push-to-talk (default):" FontWeight="Medium" Foreground="{DynamicResource TextBrush}" FontSize="11"/>
+                                                <TextBlock Text=" Hold hotkey to record, release to stop" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="4,0,0,0"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <TextBlock Text="• Push-on, talk:" FontWeight="Medium" Foreground="{DynamicResource TextBrush}" FontSize="11"/>
+                                                <TextBlock Text=" Press once to start, press again to stop" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="4,0,0,0"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="• Push-off, talk:" FontWeight="Medium" Foreground="{DynamicResource TextBrush}" FontSize="11"/>
+                                                <TextBlock Text=" Press to start, auto-stop after silence" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="4,0,0,0"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                    
                                     <!-- Push-to-talk Toggle -->
                                     <Grid>
                                         <Grid.ColumnDefinitions>
@@ -295,15 +316,8 @@
                                                      VerticalAlignment="Center"
                                                      ToolTipService.ToolTip="Press a letter or number key to set the hotkey"/>
                                         </StackPanel>
-                                        <!-- Live Preview -->
-                                        <Border x:Name="HotkeyPreviewBorder" Background="{DynamicResource AccentBrush}" CornerRadius="4" 
-                                                Padding="10,6" Margin="0,10,0,0" Opacity="0.9">
-                                            <TextBlock x:Name="HotkeyPreviewText" Text="Press Ctrl+Shift+A to record"
-                                                       Foreground="White" FontWeight="SemiBold" FontSize="12"
-                                                       HorizontalAlignment="Center"/>
-                                        </Border>
                                         <TextBlock Text="Type a single letter or number. The Ctrl+Shift modifiers are fixed."
-                                                   Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"/>
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,10,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Border>
@@ -412,8 +426,16 @@
                                                     Click="BrowseDownloadPath_Click" Margin="10,0,0,0"
                                                     Style="{DynamicResource SecondaryButtonStyle}"/>
                                         </Grid>
-                                        <TextBlock x:Name="DownloadPathStatusText" Margin="0,10,0,0"
-                                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                        <!-- Compact Path Summary -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <Border x:Name="WhisperPathSummaryBadge" Background="{DynamicResource AccentBrush}" 
+                                                    CornerRadius="10" Padding="8,3" Visibility="Collapsed">
+                                                <TextBlock x:Name="WhisperPathSummaryText" Text="0 models" FontSize="11" Foreground="White"/>
+                                            </Border>
+                                            <TextBlock x:Name="DownloadPathSummaryText" Margin="8,0,0,0" 
+                                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"
+                                                       TextTrimming="CharacterEllipsis" MaxWidth="400"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Border>
 
@@ -447,8 +469,16 @@
                                                     Click="BrowseLlamaDownloadPath_Click" Margin="10,0,0,0"
                                                     Style="{DynamicResource SecondaryButtonStyle}"/>
                                         </Grid>
-                                        <TextBlock x:Name="LlamaDownloadPathStatusText" Margin="0,10,0,0"
-                                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                        <!-- Compact Path Summary -->
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <Border x:Name="LlamaPathSummaryBadge" Background="{DynamicResource AccentBrush}" 
+                                                    CornerRadius="10" Padding="8,3" Visibility="Collapsed">
+                                                <TextBlock x:Name="LlamaPathSummaryText" Text="0 models" FontSize="11" Foreground="White"/>
+                                            </Border>
+                                            <TextBlock x:Name="LlamaDownloadPathSummaryText" Margin="8,0,0,0" 
+                                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"
+                                                       TextTrimming="CharacterEllipsis" MaxWidth="400"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>

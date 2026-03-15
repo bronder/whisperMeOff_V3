@@ -22,6 +22,9 @@ Hold a hotkey, speak your mind, and watch your words appear — automatically pa
 - **Custom Vocabulary**: Define word lists to improve recognition accuracy for domain-specific terminology
 - **Word Replacements**: Automatically replace spoken phrases with different text after transcription
 - **History Management**: Clear all transcriptions or filter by age (older than 1 hour/6 hours/24 hours/7 days/30 days/90 days)
+- **Model Validation**: Visual badges showing valid/invalid model status with size and sample rate info
+- **Recording Modes**: Support for push-to-talk, push-on talk, and push-off talk modes
+- **Download Progress**: Real-time download progress with auto-select after completion
 
 ## Top Benefits
 
