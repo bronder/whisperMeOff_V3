@@ -36,6 +36,11 @@ public class SettingsService
     public GeneralSettings General { get; set; } = new();
 
     /// <summary>
+    /// Text transformation settings.
+    /// </summary>
+    public TransformationSettings Transformation { get; set; } = new();
+
+    /// <summary>
     /// Loads settings from the JSON file, or creates default settings if file doesn't exist.
     /// </summary>
     /// <remarks>
@@ -55,6 +60,7 @@ public class SettingsService
                     Llama = settings.Llama ?? new LlamaSettings();
                     Audio = settings.Audio ?? new AudioSettings();
                     General = settings.General ?? new GeneralSettings();
+                    Transformation = settings.Transformation ?? new TransformationSettings();
                     
                     // Decrypt sensitive data
                     var beforeDecrypt = Llama.HuggingFaceToken;
@@ -96,7 +102,8 @@ public class SettingsService
                 Whisper = Whisper,
                 Llama = Llama,
                 Audio = Audio,
-                General = General
+                General = General,
+                Transformation = Transformation
             };
 
             // Encrypt sensitive data before saving (but only if it looks like plain text, not already encrypted)
@@ -204,6 +211,7 @@ public class AppSettings
     public LlamaSettings? Llama { get; set; }
     public AudioSettings? Audio { get; set; }
     public GeneralSettings? General { get; set; }
+    public TransformationSettings? Transformation { get; set; }
 }
 
 public class WhisperSettings
@@ -248,4 +256,23 @@ public class GeneralSettings
     public int ClipboardRestoreDelayMs { get; set; } = 1000;
     public bool PushToTalkMode { get; set; } = true; // true = hold to talk, false = toggle
     public bool MinimizeToTray { get; set; } = false; // minimize to system tray instead of taskbar
+}
+
+public class TransformationSettings
+{
+    public bool EnableAutoTransform { get; set; } = false;
+    public bool ShowTransformUI { get; set; } = false;
+    public string DefaultProfileId { get; set; } = "";
+    public string DefaultType { get; set; } = "Grammar";
+    public string DefaultDirection { get; set; } = "Default";
+    public bool PreserveProperNouns { get; set; } = true;
+    public bool PreserveTechnicalTerms { get; set; } = true;
+    public bool EnableQualityScoring { get; set; } = true;
+    public bool EnableBatchProcessing { get; set; } = false;
+    public int BatchSize { get; set; } = 5;
+    public double Temperature { get; set; } = 0.7;
+    public int MaxTokens { get; set; } = 4096;
+    public int MaxTextLength { get; set; } = 10000;
+    public bool AutoSaveHistory { get; set; } = true;
+    public int HistoryRetentionDays { get; set; } = 30;
 }

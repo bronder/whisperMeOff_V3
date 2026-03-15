@@ -197,7 +197,7 @@ public class WhisperService : IDisposable
                     dynamic dynamicBuilder = builder;
                     dynamicBuilder = dynamicBuilder.WithInitialPrompt(customVocabulary);
                     builder = dynamicBuilder;
-                    LoggingService.Debug($"[Whisper] Using custom vocabulary: {customVocabulary.Substring(0, Math.Min(50, customVocabulary.Length))}...");
+                    LoggingService.Debug($"[Whisper] Using custom vocabulary: {customVocabulary}");
                 }
                 catch (Exception ex)
                 {
@@ -242,7 +242,7 @@ public class WhisperService : IDisposable
             
             if (!string.IsNullOrEmpty(transcription))
             {
-                LoggingService.Info($"[Whisper] Transcription complete: {transcription.Substring(0, Math.Min(50, transcription.Length))}...");
+                LoggingService.Info($"[Whisper] Transcription complete: {transcription}");
             }
             else
             {

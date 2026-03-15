@@ -1,19 +1,106 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Linq;
 using Microsoft.Win32;
 using whisperMeOff.Services;
+using whisperMeOff.Models.Transformation;
 
 namespace whisperMeOff.Views;
 
 public partial class MainWindow : Window
 {
     private bool _isProcessing = false;
+    private bool _isMultiSelectMode = false;
+    
+    public bool IsMultiSelectMode
+    {
+        get => _isMultiSelectMode;
+        set
+        {
+            _isMultiSelectMode = value;
+            // Clear selections when exiting multi-select mode
+            if (!value)
+            {
+                foreach (var item in HistoryListBox.Items.OfType<TranscriptionListItem>())
+                {
+                    item.IsSelected = false;
+                }
+            }
+        }
+    }
     
     public MainWindow()
     {
         InitializeComponent();
         Loaded += MainWindow_Loaded;
         StateChanged += MainWindow_StateChanged;
+    }
+    
+    private void UpdateLlamaModelBadges(string modelPath)
+    {
+        if (string.IsNullOrEmpty(modelPath))
+        {
+            LlamaModelBadgesPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+        
+        var filename = System.IO.Path.GetFileName(modelPath);
+        
+        // Parse quantization from filename (e.g., Q4_K_M, Q5_K_S, Q8_0, fp16, f16, f32)
+        var quantization = "Unknown";
+        
+        // Try standard quantization patterns
+        var quantMatch = System.Text.RegularExpressions.Regex.Match(filename, @"\.([QKq][0-9]+_[A-Z]+)\.");
+        if (!quantMatch.Success)
+            quantMatch = System.Text.RegularExpressions.Regex.Match(filename, @"(Q[0-9]+_[A-Z]+)");
+        
+        // Try FP16/F32 patterns
+        if (!quantMatch.Success)
+            quantMatch = System.Text.RegularExpressions.Regex.Match(filename, @"(fp16|f16|f32)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        
+        if (quantMatch.Success)
+        {
+            quantization = quantMatch.Value.ToUpper();
+        }
+        
+        // Parse model size from common patterns like 7B, 3B, 1.7B, 2B, 8B, 70B, 1.5b, etc.
+        var size = "Unknown";
+        double sizeValue = 0;
+        
+        // Try patterns like 7B, 3B, 1.7B (case insensitive, word boundary)
+        var sizeMatch = System.Text.RegularExpressions.Regex.Match(filename, @"(\d+\.?\d*)\s*[bB]\b");
+        if (!sizeMatch.Success)
+            sizeMatch = System.Text.RegularExpressions.Regex.Match(filename, @"-(\d+\.?\d*)[bB]\b");
+        
+        if (sizeMatch.Success)
+        {
+            var sizeStr = sizeMatch.Groups[1].Value;
+            if (double.TryParse(sizeStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out sizeValue))
+            {
+                size = $"{sizeValue}B";
+            }
+        }
+        
+        // Estimate RAM usage based on quantization type
+        double estimatedRAM = 0;
+        if (sizeValue > 0)
+        {
+            if (quantization.Contains("FP16") || quantization == "F16")
+                estimatedRAM = sizeValue * 2; // FP16 = 2 bytes per parameter
+            else if (quantization == "F32")
+                estimatedRAM = sizeValue * 4; // FP32 = 4 bytes per parameter
+            else if (quantization.StartsWith("Q"))
+                estimatedRAM = sizeValue * 2; // Q4 = ~2 bytes per parameter (average)
+            else
+                estimatedRAM = sizeValue * 2; // Default assumption
+        }
+        
+        // Update badges
+        QuantizationBadgeText.Text = quantization;
+        SizeBadgeText.Text = size;
+        RAMBadgeText.Text = $"~{estimatedRAM:F1} GB";
+        
+        LlamaModelBadgesPanel.Visibility = Visibility.Visible;
     }
 
     private void MinimizeButton_Click(object sender, RoutedEventArgs e)
@@ -219,6 +306,7 @@ public partial class MainWindow : Window
         {
             ModelPathText.Text = System.IO.Path.GetFileName(modelPath);
             WhisperStatusText.Text = "Ready";
+            UpdateModelInfo(modelPath);
         }
 
         // Llama status - show whether enabled and loaded
@@ -282,6 +370,7 @@ public partial class MainWindow : Window
         if (!string.IsNullOrEmpty(llamaPath))
         {
             LlamaModelPathText.Text = System.IO.Path.GetFileName(llamaPath);
+            UpdateLlamaModelBadges(llamaPath);
         }
 
         // Llama translation settings
@@ -378,11 +467,10 @@ public partial class MainWindow : Window
 
     public void UpdateLastTranscription(string text)
     {
-        System.Diagnostics.Debug.WriteLine($"[DEBUG] UpdateLastTranscription called with: '{(text?.Length > 50 ? text.Substring(0, 50) + "..." : text)}'");
+        System.Diagnostics.Debug.WriteLine($"[DEBUG] UpdateLastTranscription called with: '{text}'");
         Dispatcher.Invoke(() =>
         {
-            // Switch to Home tab to show the transcription
-            MainTabControl.SelectedIndex = 0;
+            // Don't switch tabs - stay on current tab
             
             if (string.IsNullOrEmpty(text))
             {
@@ -399,15 +487,72 @@ public partial class MainWindow : Window
     private async Task LoadHistoryAsync()
     {
         var records = await App.Database.GetTranscriptionsAsync();
+        
+        // Group by date and session
         var items = records.Select(r => new TranscriptionListItem
         {
             Id = r.Id,
             Text = r.Text,
-            DisplayTime = DateTime.Parse(r.Timestamp).ToString("MMM d, yyyy 'at' h:mm tt"),
-            Duration = r.Duration
+            OriginalText = r.Text,
+            Timestamp = r.Timestamp,
+            Duration = r.Duration,
+            DisplayTime = DateTime.Parse(r.Timestamp).ToString("h:mm tt"),
+            DateHeader = GetDateHeader(DateTime.Parse(r.Timestamp)),
+            SessionId = GetSessionId(DateTime.Parse(r.Timestamp))
         }).ToList();
-
-        HistoryListBox.ItemsSource = items;
+        
+        // Apply grouping
+        var groupedItems = ApplyGrouping(items);
+        
+        HistoryListBox.ItemsSource = groupedItems;
+        
+        // Show/hide empty state based on item count
+        UpdateEmptyState(items.Count);
+    }
+    
+    private void UpdateEmptyState(int itemCount)
+    {
+        // Use the HistoryListBox to find the EmptyStatePanel in the visual tree
+        var grid = HistoryListBox.Parent as Grid;
+        if (grid != null)
+        {
+            foreach (var child in grid.Children)
+            {
+                if (child is System.Windows.Controls.StackPanel panel && panel.Name == "EmptyStatePanel")
+                {
+                    panel.Visibility = itemCount == 0 ? Visibility.Visible : Visibility.Collapsed;
+                    break;
+                }
+            }
+        }
+    }
+    
+    private string GetDateHeader(DateTime dt)
+    {
+        var today = DateTime.Today;
+        var yesterday = today.AddDays(-1);
+        
+        if (dt.Date == today)
+            return "Today — " + dt.ToString("MMMM d, yyyy");
+        else if (dt.Date == yesterday)
+            return "Yesterday — " + dt.ToString("MMMM d, yyyy");
+        else if (dt.Date > today.AddDays(-7))
+            return dt.ToString("dddd — MMMM d, yyyy");
+        else
+            return dt.ToString("MMMM d, yyyy");
+    }
+    
+    private string GetSessionId(DateTime dt)
+    {
+        // Group entries within 5 minutes of each other as the same session
+        return dt.ToString("yyyy-MM-dd-HH-mm");
+    }
+    
+    private System.Collections.ObjectModel.Collection<TranscriptionListItem> ApplyGrouping(List<TranscriptionListItem> items)
+    {
+        // For now, just return a flat list with date headers
+        // The ListBox.GroupStyle in XAML will handle visual grouping
+        return new System.Collections.ObjectModel.Collection<TranscriptionListItem>(items);
     }
 
     private void OpenSettings_Click(object sender, RoutedEventArgs e)
@@ -557,21 +702,48 @@ public partial class MainWindow : Window
         PresetBalancedBtn.Style = (Style)FindResource("SecondaryButtonStyle");
         PresetAccurateBtn.Style = (Style)FindResource("SecondaryButtonStyle");
         
-        // Highlight the selected preset
+        // Update preview panel
+        string presetName = "Custom";
+        string modelName = selectedSize;
+        string audioRate = "16kHz";
+        string processing = "Standard";
+        
+        // Highlight the selected preset and update preview
         switch (selectedSize.ToLower())
         {
             case "tiny":
                 PresetFastestBtn.Style = (Style)FindResource("PrimaryButtonStyle");
+                presetName = "Fastest";
+                modelName = "tiny (~75MB)";
+                audioRate = "8kHz";
+                processing = "Minimal";
                 break;
             case "base":
                 PresetBalancedBtn.Style = (Style)FindResource("PrimaryButtonStyle");
+                presetName = "Balanced";
+                modelName = "base (~150MB)";
+                audioRate = "16kHz";
+                processing = "Standard";
                 break;
             case "small":
             case "medium":
             case "large":
                 PresetAccurateBtn.Style = (Style)FindResource("PrimaryButtonStyle");
+                presetName = "Most Accurate";
+                modelName = selectedSize + " (~1.5GB+)";
+                audioRate = "48kHz";
+                processing = "Full";
                 break;
         }
+        
+        // Update preview panel text
+        Dispatcher.Invoke(() =>
+        {
+            CurrentPresetLabel.Text = $"Current: {presetName}";
+            PreviewModelText.Text = modelName;
+            PreviewAudioText.Text = audioRate;
+            PreviewProcessingText.Text = processing;
+        });
     }
 
     private void RecordButton_Click(object sender, RoutedEventArgs e)
@@ -623,7 +795,7 @@ public partial class MainWindow : Window
         {
             LoggingService.Debug("[DEBUG] Starting Whisper transcription...");
             var text = await App.Whisper.TranscribeAsync(audioFile) ?? string.Empty;
-            //System.Diagnostics.Debug.WriteLine($"[DEBUG] Whisper transcription complete: {text?.Substring(0, Math.Min(50, text?.Length ?? 0))}...");
+            //LoggingService.Debug($"[DEBUG] Whisper transcription complete: {text}");
             LoggingService.Info("[Whisper] Whisper transcription complete: " + text);
 
             LoggingService.Debug($"[DEBUG] llama Enabled: {App.Settings.Llama.Enabled}, Llama Loaded: {App.Llama.IsLoaded}");
@@ -725,6 +897,28 @@ public partial class MainWindow : Window
             App.Settings.Save();
         }
     }
+    
+    private void AutoDetectLanguageCheckbox_Changed(object sender, RoutedEventArgs e)
+    {
+        var isAutoDetect = AutoDetectLanguageCheckbox.IsChecked ?? true;
+        
+        // Show/hide language dropdown based on auto-detect toggle
+        if (LanguageDropdownPanel != null)
+        {
+            LanguageDropdownPanel.Visibility = isAutoDetect ? Visibility.Collapsed : Visibility.Visible;
+        }
+        
+        // Update settings
+        if (isAutoDetect)
+        {
+            App.Settings.Whisper.Language = "auto";
+        }
+        else if (LanguageComboBox.SelectedItem is ComboBoxItem item)
+        {
+            App.Settings.Whisper.Language = item.Tag?.ToString() ?? "en";
+        }
+        App.Settings.Save();
+    }
 
     private void TranslateCheckbox_Changed(object sender, RoutedEventArgs e)
     {
@@ -794,6 +988,69 @@ public partial class MainWindow : Window
             App.Whisper.ReloadModel(dialog.FileName);
             ModelPathText.Text = System.IO.Path.GetFileName(dialog.FileName);
             WhisperStatusText.Text = "Ready";
+            
+            // Update model info
+            UpdateModelInfo(dialog.FileName);
+        }
+    }
+    
+    private void ValidateModel_Click(object sender, RoutedEventArgs e)
+    {
+        // Validate the current model
+        var modelPath = App.Settings.Whisper.ModelPath;
+        if (string.IsNullOrEmpty(modelPath) || !System.IO.File.Exists(modelPath))
+        {
+            ShowModelValidation(false);
+            return;
+        }
+        
+        // Check file size
+        var fileInfo = new System.IO.FileInfo(modelPath);
+        var isValid = fileInfo.Exists && fileInfo.Length > 1024 * 1024; // At least 1MB
+        
+        ShowModelValidation(isValid);
+    }
+    
+    private void UpdateModelInfo(string filePath)
+    {
+        try
+        {
+            var fileInfo = new System.IO.FileInfo(filePath);
+            if (fileInfo.Exists)
+            {
+                // Show size badge
+                var sizeMB = fileInfo.Length / (1024.0 * 1024.0);
+                ModelSizeText.Text = $"~{sizeMB:F0} MB";
+                ModelSizeBadge.Visibility = Visibility.Visible;
+                
+                // Show sample rate badge (assume 16kHz for whisper)
+                ModelSampleRateText.Text = "16kHz";
+                ModelSampleRateBadge.Visibility = Visibility.Visible;
+                
+                // Auto-validate
+                ShowModelValidation(sizeMB > 1);
+            }
+        }
+        catch
+        {
+            ModelSizeBadge.Visibility = Visibility.Collapsed;
+            ModelSampleRateBadge.Visibility = Visibility.Collapsed;
+            ModelValidationBadge.Visibility = Visibility.Collapsed;
+        }
+    }
+    
+    private void ShowModelValidation(bool isValid)
+    {
+        ModelValidationBadge.Visibility = Visibility.Visible;
+        if (isValid)
+        {
+            ModelValidationBadge.SetResourceReference(Border.BackgroundProperty, "ValidBadgeBrush");
+            ModelValidationText.Text = "Valid";
+        }
+        else
+        {
+            ModelValidationBadge.SetResourceReference(Border.BackgroundProperty, "InvalidBadgeBrush");
+            ModelValidationText.Text = "Invalid";
         }
     }
 
@@ -870,14 +1127,32 @@ public partial class MainWindow : Window
         if (!string.IsNullOrEmpty(newPath) && System.IO.Directory.Exists(newPath))
         {
             LlamaDownloadPathStatusText.Text = $"Using: {newPath}";
-        }
-        else if (!string.IsNullOrEmpty(newPath))
-        {
-            LlamaDownloadPathStatusText.Text = $"New path will be created: {newPath}";
+            LlamaPathValidIcon.Visibility = Visibility.Visible;
+            
+            // Count GGUF model files
+            var modelCount = System.IO.Directory.GetFiles(newPath, "*.gguf").Length;
+            if (modelCount > 0)
+            {
+                LlamaModelCountText.Text = $"{modelCount} model{(modelCount != 1 ? "s" : "")}";
+                LlamaModelCountBadge.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                LlamaModelCountBadge.Visibility = Visibility.Collapsed;
+            }
         }
         else
         {
-            LlamaDownloadPathStatusText.Text = $"Default: {App.LlamaModelsPath}";
+            LlamaPathValidIcon.Visibility = Visibility.Collapsed;
+            LlamaModelCountBadge.Visibility = Visibility.Collapsed;
+            if (!string.IsNullOrEmpty(newPath))
+            {
+                LlamaDownloadPathStatusText.Text = $"New path will be created: {newPath}";
+            }
+            else
+            {
+                LlamaDownloadPathStatusText.Text = $"Default: {App.LlamaModelsPath}";
+            }
         }
     }
 
@@ -895,24 +1170,47 @@ public partial class MainWindow : Window
         DownloadLargeBtn.Content = "Download";
         DownloadLargeBtn.IsEnabled = true;
 
-        // Update status text
+        // Update validation icon and model count
         var newPath = ModelDownloadPathTextBox.Text;
         if (!string.IsNullOrEmpty(newPath) && System.IO.Directory.Exists(newPath))
         {
             DownloadPathStatusText.Text = $"Using: {newPath}";
-        }
-        else if (!string.IsNullOrEmpty(newPath))
-        {
-            DownloadPathStatusText.Text = $"New path will be created: {newPath}";
+            WhisperPathValidIcon.Visibility = Visibility.Visible;
+            
+            // Count model files
+            var modelCount = System.IO.Directory.GetFiles(newPath, "*.bin").Length;
+            if (modelCount > 0)
+            {
+                WhisperModelCountText.Text = $"{modelCount} model{(modelCount != 1 ? "s" : "")}";
+                WhisperModelCountBadge.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                WhisperModelCountBadge.Visibility = Visibility.Collapsed;
+            }
         }
         else
         {
-            DownloadPathStatusText.Text = $"Default: {App.WhisperModelsPath}";
+            WhisperPathValidIcon.Visibility = Visibility.Collapsed;
+            WhisperModelCountBadge.Visibility = Visibility.Collapsed;
+            if (!string.IsNullOrEmpty(newPath))
+            {
+                DownloadPathStatusText.Text = $"New path will be created: {newPath}";
+            }
         }
     }
 
     private async Task DownloadWhisperModelAsync(string size)
     {
+        // Disable button during download
+        var buttonName = $"Download{char.ToUpper(size[0])}{size.Substring(1)}Btn";
+        var downloadButton = this.FindName(buttonName) as System.Windows.Controls.Button;
+        if (downloadButton != null)
+        {
+            downloadButton.IsEnabled = false;
+            downloadButton.Content = "Downloading...";
+        }
+        
         DownloadProgressBar.Visibility = Visibility.Visible;
         DownloadStatusText.Visibility = Visibility.Visible;
         var displayFileName = size.ToLowerInvariant() == "large" ? "ggml-large-v3.bin" : $"ggml-{size}.bin";
@@ -934,18 +1232,25 @@ public partial class MainWindow : Window
             App.Whisper.ReloadModel(path);
             ModelPathText.Text = System.IO.Path.GetFileName(path);
             WhisperStatusText.Text = "Ready";
+            
+            // Update model info badges
+            UpdateModelInfo(path);
 
             // Update button to show "Re-download" so user can re-download if needed
-            var buttonName = $"Download{char.ToUpper(size[0])}{size.Substring(1)}Btn";
-            var button = this.FindName(buttonName) as System.Windows.Controls.Button;
-            if (button != null)
+            if (downloadButton != null)
             {
-                button.Content = "Re-download";
+                downloadButton.Content = "Re-download";
+                downloadButton.IsEnabled = true;
             }
         }
         else
         {
             DownloadStatusText.Text = "Download failed";
+            if (downloadButton != null)
+            {
+                downloadButton.Content = "Download";
+                downloadButton.IsEnabled = true;
+            }
         }
 
         await Task.Delay(2000);
@@ -970,8 +1275,26 @@ public partial class MainWindow : Window
 
     private void LlamaTranslateCheckbox_Changed(object sender, RoutedEventArgs e)
     {
-        App.Settings.Llama.Translate = LlamaTranslateCheckbox.IsChecked ?? false;
+        var isEnabled = LlamaTranslateCheckbox.IsChecked ?? false;
+        App.Settings.Llama.Translate = isEnabled;
         App.Settings.Save();
+        
+        // Disable dependent controls when toggle is off
+        LlamaTranslationOptionsPanel.IsEnabled = isEnabled;
+        LlamaTargetLanguageComboBox.IsEnabled = isEnabled;
+        
+        // Visual feedback - dim the dependent controls when disabled
+        if (isEnabled)
+        {
+            LlamaTranslationOptionsPanel.Opacity = 1.0;
+            LlamaTranslationDescription.Opacity = 1.0;
+        }
+        else
+        {
+            LlamaTranslationOptionsPanel.Opacity = 0.4;
+            LlamaTranslationDescription.Opacity = 0.4;
+        }
+        
         LoggingService.Debug($"[LLAMA] Translation enabled: {App.Settings.Llama.Translate}");
     }
 
@@ -998,6 +1321,7 @@ public partial class MainWindow : Window
             App.Settings.Llama.ModelPath = dialog.FileName;
             App.Settings.Save();
             LlamaModelPathText.Text = System.IO.Path.GetFileName(dialog.FileName);
+            UpdateLlamaModelBadges(dialog.FileName);
 
             // Reinitialize Llama with the new model
             if (App.Settings.Llama.Enabled && !string.IsNullOrEmpty(dialog.FileName))
@@ -1080,6 +1404,7 @@ public partial class MainWindow : Window
             App.Settings.Llama.ModelPath = path;
             App.Settings.Save();
             LlamaModelPathText.Text = System.IO.Path.GetFileName(path);
+            UpdateLlamaModelBadges(path);
 
             if (App.Settings.Llama.Enabled)
             {
@@ -1107,8 +1432,49 @@ public partial class MainWindow : Window
         }
         
         LoggingService.Debug($"[UI] HuggingFaceTokenBox_PasswordChanged: Saving token, length={HuggingFaceTokenBox.Password?.Length ?? 0}");
+        
+        // Sync with TextBox if visible
+        if (HuggingFaceTokenTextBox.Visibility == Visibility.Visible)
+        {
+            HuggingFaceTokenTextBox.Text = HuggingFaceTokenBox.Password;
+        }
+        
         App.Settings.Llama.HuggingFaceToken = HuggingFaceTokenBox.Password ?? string.Empty;
         App.Settings.Save();
+    }
+    
+    private void HuggingFaceTokenTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        // Don't save during initialization or loading
+        if (!_isInitialized || _isLoading) return;
+        
+        // Sync with PasswordBox
+        HuggingFaceTokenBox.Password = HuggingFaceTokenTextBox.Text;
+        
+        App.Settings.Llama.HuggingFaceToken = HuggingFaceTokenTextBox.Text ?? string.Empty;
+        App.Settings.Save();
+    }
+    
+    private void ToggleHuggingFaceToken_Click(object sender, RoutedEventArgs e)
+    {
+        if (HuggingFaceTokenBox.Visibility == Visibility.Visible)
+        {
+            // Show token
+            HuggingFaceTokenTextBox.Text = HuggingFaceTokenBox.Password;
+            HuggingFaceTokenBox.Visibility = Visibility.Collapsed;
+            HuggingFaceTokenTextBox.Visibility = Visibility.Visible;
+            ToggleHuggingFaceTokenBtn.Content = "🔒";
+            ToggleHuggingFaceTokenBtn.ToolTip = "Hide token";
+        }
+        else
+        {
+            // Hide token
+            HuggingFaceTokenBox.Password = HuggingFaceTokenTextBox.Text;
+            HuggingFaceTokenTextBox.Visibility = Visibility.Collapsed;
+            HuggingFaceTokenBox.Visibility = Visibility.Visible;
+            ToggleHuggingFaceTokenBtn.Content = "👁";
+            ToggleHuggingFaceTokenBtn.ToolTip = "Show token";
+        }
     }
 
     private bool _isInitialized = false;
@@ -1116,12 +1482,35 @@ public partial class MainWindow : Window
     
     private void HuggingFaceModelIdTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        // Validate the input format (should be "username/model-name")
+        var input = HuggingFaceModelIdTextBox.Text?.Trim() ?? "";
+        
+        // Check if it's a valid HuggingFace model ID format (allows letters, numbers, dashes, dots, underscores)
+        bool isValid = System.Text.RegularExpressions.Regex.IsMatch(input, @"^[\w.-]+/[\w.-]+$");
+        
+        // Update validation icon
+        if (string.IsNullOrEmpty(input))
+        {
+            ValidationIcon.Text = "";
+            ValidationIcon.Foreground = null;
+        }
+        else if (isValid)
+        {
+            ValidationIcon.Text = "✓";
+            ValidationIcon.Foreground = System.Windows.Media.Brushes.LimeGreen;
+        }
+        else
+        {
+            ValidationIcon.Text = "⚠";
+            ValidationIcon.Foreground = System.Windows.Media.Brushes.OrangeRed;
+        }
+        
         // Don't save during initialization
         if (!_isInitialized) return;
         
-        App.Settings.Llama.ModelId = HuggingFaceModelIdTextBox.Text;
+        App.Settings.Llama.ModelId = input;
         App.Settings.Save();
-        LoggingService.Debug($"[UI] Saved ModelId: {HuggingFaceModelIdTextBox.Text}");
+        LoggingService.Debug($"[UI] Saved ModelId: {input}");
     }
 
     private void HotkeyTriggerTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -1132,6 +1521,12 @@ public partial class MainWindow : Window
             App.Hotkey.SetTriggerKey(text.ToLower());
             HotkeyDisplay.Text = text.ToUpper();
             HotkeyStatusText.Text = $"Ctrl+Shift+{text.ToUpper()}";
+            
+            // Update live preview
+            if (HotkeyPreviewText != null)
+            {
+                HotkeyPreviewText.Text = $"Press Ctrl+Shift+{text.ToUpper()} to record";
+            }
             
             // Update Quick Start hotkey display
             var quickStartHotkeyRun = FindName("QuickStartHotkeyRun") as System.Windows.Documents.Run;
@@ -1249,6 +1644,7 @@ public partial class MainWindow : Window
 
     private async void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
+        // Live filtering - no need to press Enter
         var query = SearchTextBox.Text.Trim();
         if (string.IsNullOrEmpty(query))
         {
@@ -1261,11 +1657,18 @@ public partial class MainWindow : Window
             {
                 Id = r.Id,
                 Text = r.Text,
-                DisplayTime = DateTime.Parse(r.Timestamp).ToString("MMM d, yyyy 'at' h:mm tt"),
-                Duration = r.Duration
+                OriginalText = r.Text,
+                Timestamp = r.Timestamp,
+                Duration = r.Duration,
+                DisplayTime = DateTime.Parse(r.Timestamp).ToString("h:mm tt"),
+                DateHeader = GetDateHeader(DateTime.Parse(r.Timestamp)),
+                SessionId = GetSessionId(DateTime.Parse(r.Timestamp))
             }).ToList();
 
             HistoryListBox.ItemsSource = items;
+            
+            // Show/hide empty state based on item count
+            UpdateEmptyState(items.Count);
         }
     }
 
@@ -1338,12 +1741,491 @@ public partial class MainWindow : Window
                 MessageBoxImage.Information);
         }
     }
+    
+    private void ShowMoreButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button button && button.Tag is long id)
+        {
+            var item = HistoryListBox.Items.OfType<TranscriptionListItem>()
+                .FirstOrDefault(i => i.Id == id);
+            
+            if (item != null)
+            {
+                item.IsExpanded = !item.IsExpanded;
+            }
+        }
+    }
+    
+    private void CardBorder_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // Handle click on card to start editing
+        if (sender is System.Windows.Controls.Border border && border.DataContext is TranscriptionListItem item)
+        {
+            // Don't start editing if clicking on buttons or checkboxes
+            if (e.OriginalSource is System.Windows.Controls.Button || 
+                e.OriginalSource is System.Windows.Controls.CheckBox)
+                return;
+            
+            // Toggle edit mode on click
+            item.IsEditing = true;
+        }
+    }
+    
+    private async void TextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        // Save changes when focus is lost
+        if (sender is System.Windows.Controls.TextBox textBox && textBox.DataContext is TranscriptionListItem item)
+        {
+            if (item.Text != item.OriginalText)
+            {
+                await App.Database.UpdateTranscriptionAsync(item.Id, item.Text);
+                item.OriginalText = item.Text;
+            }
+            item.IsEditing = false;
+        }
+    }
+    
+    private async void TextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter)
+        {
+            // Save on Enter key
+            if (sender is System.Windows.Controls.TextBox textBox && textBox.DataContext is TranscriptionListItem item)
+            {
+                if (item.Text != item.OriginalText)
+                {
+                    await App.Database.UpdateTranscriptionAsync(item.Id, item.Text);
+                    item.OriginalText = item.Text;
+                }
+                item.IsEditing = false;
+                e.Handled = true;
+            }
+        }
+        else if (e.Key == System.Windows.Input.Key.Escape)
+        {
+            // Cancel editing on Escape
+            if (sender is System.Windows.Controls.TextBox textBox && textBox.DataContext is TranscriptionListItem item)
+            {
+                item.Text = item.OriginalText; // Revert changes
+                item.IsEditing = false;
+                e.Handled = true;
+            }
+        }
+    }
+
+    #region Transformation Tab Event Handlers
+
+    private TransformationType _currentTransformationType = TransformationType.Grammar;
+    private TransformationDirection _currentDirection = TransformationDirection.Default;
+
+    private void TransformationTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (TransformationTypeComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag)
+        {
+            _currentTransformationType = Enum.Parse<TransformationType>(tag);
+            
+            // Show/hide target language for translation
+            TargetLanguagePanel.Visibility = _currentTransformationType == TransformationType.Translation 
+                ? Visibility.Visible : Visibility.Collapsed;
+            
+            // Update direction ComboBox based on transformation type
+            UpdateDirectionComboBox();
+        }
+    }
+
+    private void UpdateDirectionComboBox()
+    {
+        TransformationDirectionComboBox.Items.Clear();
+        
+        var directions = _currentTransformationType switch
+        {
+            TransformationType.Tone => new[] { "Default", "Formal", "Informal" },
+            TransformationType.Voice => new[] { "Default", "Active", "Passive" },
+            TransformationType.Complexity => new[] { "Default", "Simplify", "Elaborate" },
+            TransformationType.Professionalism => new[] { "Default", "Professional", "Casual" },
+            TransformationType.Grammar => new[] { "Default" },
+            TransformationType.Translation => new[] { "Default" },
+            TransformationType.PersonalStyle => new[] { "Default" },
+            TransformationType.Custom => new[] { "Default" },
+            _ => new[] { "Default" }
+        };
+        
+        foreach (var dir in directions)
+        {
+            TransformationDirectionComboBox.Items.Add(new ComboBoxItem { Content = dir, Tag = dir });
+        }
+        
+        TransformationDirectionComboBox.SelectedIndex = 0;
+    }
+
+    private void TransformationDirectionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (TransformationDirectionComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag)
+        {
+            _currentDirection = Enum.Parse<TransformationDirection>(tag);
+        }
+    }
+
+    private async void TransformButton_Click(object sender, RoutedEventArgs e)
+    {
+        LoggingService.Debug("[DEBUG] TransformButton_Click called");
+        var inputText = TransformInputTextBox.Text?.Trim();
+        LoggingService.Debug($"[DEBUG] Input text length: {inputText?.Length ?? 0}");
+        
+        if (string.IsNullOrEmpty(inputText))
+        {
+            TransformStatusText.Text = "Please enter text to transform.";
+            LoggingService.Debug("[DEBUG] Empty input text");
+            return;
+        }
+
+        LoggingService.Debug($"[DEBUG] Llama.IsLoaded: {App.Llama.IsLoaded}");
+        
+        if (!App.Llama.IsLoaded)
+        {
+            TransformStatusText.Text = "Llama model is not loaded. Please enable and load a Llama model in the Llama settings tab.";
+            LoggingService.Debug("[DEBUG] Llama not loaded");
+            return;
+        }
+
+        try
+        {
+            TransformButton.IsEnabled = false;
+            TransformStatusText.Text = "Transforming...";
+            
+            // Initialize transformation service if needed
+            await App.Transform.InitializeAsync();
+            
+            var request = new TransformationRequest
+            {
+                Text = inputText,
+                TransformationType = _currentTransformationType,
+                Direction = _currentDirection,
+                PreserveProperNouns = PreserveProperNounsCheckBox.IsChecked ?? true,
+                PreserveTechnicalTerms = PreserveTechnicalTermsCheckBox.IsChecked ?? true,
+                MinQualityThreshold = (int)QualityThresholdSlider.Value,
+                IncludeQualityMetrics = true
+            };
+            
+            // Add target language for translation
+            if (_currentTransformationType == TransformationType.Translation && 
+                TransformTargetLanguageComboBox.SelectedItem is ComboBoxItem langItem)
+            {
+                request.TargetLanguage = langItem.Tag?.ToString();
+            }
+            
+            var result = await App.Transform.TransformAsync(request);
+            LoggingService.Debug($"[DEBUG] TransformAsync completed. Success: {result.Success}, Error: {result.ErrorMessage}");
+            
+            if (result.Success)
+            {
+                TransformOutputTextBox.Text = result.TransformedText;
+                
+                // Show quality metrics
+                if (result.QualityMetrics != null)
+                {
+                    QualityMetricsPanel.Visibility = Visibility.Visible;
+                    SimilarityProgressBar.Value = result.QualityMetrics.SimilarityScore;
+                    SimilarityText.Text = $"{result.QualityMetrics.SimilarityScore:F0}%";
+                    
+                    ConfidenceProgressBar.Value = result.QualityMetrics.ConfidenceScore;
+                    ConfidenceText.Text = $"{result.QualityMetrics.ConfidenceScore:F0}%";
+                    
+                    ReadabilityProgressBar.Value = result.QualityMetrics.ReadabilityScore;
+                    ReadabilityText.Text = $"{result.QualityMetrics.ReadabilityScore:F0}%";
+                    
+                    OverallProgressBar.Value = result.QualityMetrics.OverallScore;
+                    OverallScoreText.Text = $"{result.QualityMetrics.OverallScore:F0}%";
+                }
+                
+                TransformStatusText.Text = $"Transformation completed in {result.ProcessingTimeMs}ms";
+            }
+            else
+            {
+                TransformStatusText.Text = $"Error: {result.ErrorMessage}";
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error(ex, "Text transformation failed");
+            LoggingService.Error($"[DEBUG] Stack trace: {ex.StackTrace}");
+            TransformStatusText.Text = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            TransformButton.IsEnabled = true;
+        }
+    }
+
+    private void ClearTransformButton_Click(object sender, RoutedEventArgs e)
+    {
+        TransformInputTextBox.Text = string.Empty;
+        TransformOutputTextBox.Text = string.Empty;
+        QualityMetricsPanel.Visibility = Visibility.Collapsed;
+        TransformStatusText.Text = string.Empty;
+    }
+
+    private void PasteToTransformButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (System.Windows.Clipboard.ContainsText())
+        {
+            TransformInputTextBox.Text = System.Windows.Clipboard.GetText();
+        }
+    }
+
+    private void CopyTransformedButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrEmpty(TransformOutputTextBox.Text))
+        {
+            System.Windows.Clipboard.SetText(TransformOutputTextBox.Text);
+            TransformStatusText.Text = "Copied to clipboard.";
+        }
+    }
+
+    private void ApplyToOutputButton_Click(object sender, RoutedEventArgs e)
+    {
+        TransformStatusText.Text = "Transformed text ready. Use Copy to copy it.";
+    }
+
+    private async void TransformationProfilesListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // Profile selection changed
+    }
+
+    private async void LoadProfileButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button button && button.Tag is string profileId)
+        {
+            try
+            {
+                var profile = await App.Transform.GetProfileAsync(profileId);
+                if (profile != null)
+                {
+                    // Set transformation type
+                    _currentTransformationType = profile.TransformationType;
+                    foreach (ComboBoxItem item in TransformationTypeComboBox.Items)
+                    {
+                        if (item.Tag?.ToString() == profile.TransformationType.ToString())
+                        {
+                            TransformationTypeComboBox.SelectedItem = item;
+                            break;
+                        }
+                    }
+                    
+                    // Set direction
+                    _currentDirection = profile.Direction;
+                    foreach (ComboBoxItem item in TransformationDirectionComboBox.Items)
+                    {
+                        if (item.Tag?.ToString() == profile.Direction.ToString())
+                        {
+                            TransformationDirectionComboBox.SelectedItem = item;
+                            break;
+                        }
+                    }
+                    
+                    // Set options
+                    PreserveProperNounsCheckBox.IsChecked = profile.PreserveProperNouns;
+                    PreserveTechnicalTermsCheckBox.IsChecked = profile.PreserveTechnicalTerms;
+                    QualityThresholdSlider.Value = profile.MinQualityThreshold;
+                    
+                    TransformStatusText.Text = $"Loaded profile: {profile.Name}";
+                }
+            }
+            catch (Exception ex)
+            {
+                TransformStatusText.Text = $"Error loading profile: {ex.Message}";
+            }
+        }
+    }
+
+    private async void DeleteProfileButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button button && button.Tag is string profileId)
+        {
+            var result = System.Windows.MessageBox.Show(
+                "Delete this profile? This cannot be undone.",
+                "Confirm",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            
+            if (result == MessageBoxResult.Yes)
+            {
+                try
+                {
+                    await App.Transform.DeleteProfileAsync(profileId);
+                    await LoadTransformationProfilesAsync();
+                    TransformStatusText.Text = "Profile deleted.";
+                }
+                catch (Exception ex)
+                {
+                    TransformStatusText.Text = $"Error deleting profile: {ex.Message}";
+                }
+            }
+        }
+    }
+
+    private async void CreateProfileButton_Click(object sender, RoutedEventArgs e)
+    {
+        var name = NewProfileNameBox.Text?.Trim();
+        if (string.IsNullOrEmpty(name))
+        {
+            TransformStatusText.Text = "Please enter a profile name.";
+            return;
+        }
+        
+        try
+        {
+            var profile = new TransformationProfile
+            {
+                Name = name,
+                Description = NewProfileDescriptionBox.Text?.Trim(),
+                TransformationType = _currentTransformationType,
+                Direction = _currentDirection,
+                PreserveProperNouns = PreserveProperNounsCheckBox.IsChecked ?? true,
+                PreserveTechnicalTerms = PreserveTechnicalTermsCheckBox.IsChecked ?? true,
+                MinQualityThreshold = (int)QualityThresholdSlider.Value
+            };
+            
+            await App.Transform.CreateProfileAsync(profile);
+            
+            NewProfileNameBox.Text = string.Empty;
+            NewProfileDescriptionBox.Text = string.Empty;
+            
+            await LoadTransformationProfilesAsync();
+            TransformStatusText.Text = $"Profile '{name}' created.";
+        }
+        catch (Exception ex)
+        {
+            TransformStatusText.Text = $"Error creating profile: {ex.Message}";
+        }
+    }
+
+    private async Task LoadTransformationProfilesAsync()
+    {
+        try
+        {
+            if (TransformationProfilesListBox == null) return;
+            var profiles = await App.Transform.GetProfilesAsync();
+            TransformationProfilesListBox.ItemsSource = profiles.ToList();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error(ex, "Failed to load transformation profiles");
+        }
+    }
+
+    #endregion
 }
 
-public class TranscriptionListItem
+public class TranscriptionListItem : System.ComponentModel.INotifyPropertyChanged
 {
+    private bool _isSelected;
+    private bool _isEditing;
+    private bool _isExpanded;
+    private string _text = "";
+    private string _displayTime = "";
+    
     public long Id { get; set; }
-    public string Text { get; set; } = "";
-    public string DisplayTime { get; set; } = "";
+    public string OriginalText { get; set; } = "";
+    public string Timestamp { get; set; } = "";
+    public string DateHeader { get; set; } = "";
+    public string SessionId { get; set; } = "";
     public double? Duration { get; set; }
+    public int WordCount => string.IsNullOrWhiteSpace(Text) ? 0 : Text.Split(new[] { ' ', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries).Length;
+    
+    public string Text
+    {
+        get => _text;
+        set
+        {
+            _text = value;
+            OnPropertyChanged(nameof(Text));
+            OnPropertyChanged(nameof(DisplayText));
+            OnPropertyChanged(nameof(ShowExpandButton));
+            OnPropertyChanged(nameof(ExpandButtonText));
+            OnPropertyChanged(nameof(WordCount));
+            OnPropertyChanged(nameof(DurationBadge));
+        }
+    }
+    
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set { _isSelected = value; OnPropertyChanged(nameof(IsSelected)); }
+    }
+    
+    public bool IsEditing
+    {
+        get => _isEditing;
+        set { _isEditing = value; OnPropertyChanged(nameof(IsEditing)); }
+    }
+    
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            _isExpanded = value;
+            OnPropertyChanged(nameof(DisplayText));
+            OnPropertyChanged(nameof(ShowExpandButton));
+            OnPropertyChanged(nameof(ExpandButtonText));
+        }
+    }
+    
+    // Show full text or truncated based on expansion state
+    public string DisplayText
+    {
+        get
+        {
+            if (IsExpanded || Text.Length <= 200)
+                return Text;
+            
+            // Truncate to ~200 chars but preserve word boundaries
+            if (Text.Length <= 200)
+                return Text;
+            
+            var truncated = Text.Substring(0, 200);
+            var lastSpace = truncated.LastIndexOf(' ');
+            if (lastSpace > 150)
+                truncated = truncated.Substring(0, lastSpace);
+            
+            return truncated + "...";
+        }
+    }
+    
+    // Show expand button only if text is long enough
+    public bool ShowExpandButton => Text.Length > 200;
+    
+    // Toggle button text
+    public string ExpandButtonText => IsExpanded ? "Show less" : "Show more";
+    
+    // Duration badge text
+    public string DurationBadge
+    {
+        get
+        {
+            if (Duration.HasValue && Duration.Value > 0)
+            {
+                if (Duration.Value < 60)
+                    return $"~{(int)Duration.Value} sec";
+                else
+                    return $"~{Duration.Value / 60:F1} min";
+            }
+            return $"~{WordCount} words";
+        }
+    }
+    
+    // Display time (just the time, not full date)
+    public string DisplayTime
+    {
+        get => _displayTime;
+        set { _displayTime = value; OnPropertyChanged(nameof(DisplayTime)); }
+    }
+    
+    public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    
+    protected virtual void OnPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(propertyName));
+    }
 }

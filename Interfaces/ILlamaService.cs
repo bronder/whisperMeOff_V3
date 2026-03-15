@@ -1,3 +1,5 @@
+using whisperMeOff.Models.Transformation;
+
 namespace whisperMeOff.Interfaces;
 
 /// <summary>
@@ -40,4 +42,40 @@ public interface ILlamaService : IDisposable
     /// <param name="targetLanguage">Target language code (default: "en")</param>
     /// <returns>Translated text</returns>
     Task<string> TranslateTextAsync(string rawText, string targetLanguage = "en");
+
+    /// <summary>
+    /// Transform text based on specified transformation type and direction
+    /// </summary>
+    /// <param name="request">Transformation request containing text, type, and direction</param>
+    /// <returns>Transformation result with transformed text and metadata</returns>
+    Task<TransformationResult> TransformTextAsync(TransformationRequest request);
+
+    /// <summary>
+    /// Transform text with custom profile settings
+    /// </summary>
+    /// <param name="text">Text to transform</param>
+    /// <param name="profile">Custom transformation profile</param>
+    /// <returns>Transformation result</returns>
+    Task<TransformationResult> TransformWithProfileAsync(string text, TransformationProfile profile);
+
+    /// <summary>
+    /// Apply multiple transformations in sequence
+    /// </summary>
+    /// <param name="text">Text to transform</param>
+    /// <param name="transformations">List of transformations to apply in order</param>
+    /// <returns>Final transformation result</returns>
+    Task<TransformationResult> TransformBatchAsync(string text, List<TransformationRequest> transformations);
+
+    /// <summary>
+    /// Get available transformation types supported by the model
+    /// </summary>
+    /// <returns>List of supported transformation types</returns>
+    List<TransformationType> GetSupportedTransformations();
+
+    /// <summary>
+    /// Estimate token count for transformation prompt
+    /// </summary>
+    /// <param name="text">Text to estimate</param>
+    /// <returns>Estimated token count</returns>
+    int EstimateTokens(string text);
 }

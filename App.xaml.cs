@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Forms;
 using Microsoft.Win32;
+using whisperMeOff.Interfaces;
 using whisperMeOff.Services;
 using whisperMeOff.Views;
 
@@ -30,6 +31,9 @@ public partial class App : System.Windows.Application
     public static HotkeyService Hotkey { get; private set; } = null!;
     public static ClipboardService Clipboard { get; private set; } = null!;
     public static ModelDownloadService ModelDownload { get; private set; } = null!;
+    
+    private static TextTransformationService? _transform;
+    public static TextTransformationService Transform => _transform ??= new TextTransformationService((ILlamaService)Llama);
     
     // Track whether a transcription is in progress
     public static bool IsTranscribing { get; set; } = false;
@@ -436,25 +440,47 @@ public partial class App : System.Windows.Application
                 text = await Llama.FormatTextAsync(text);
             }
 
-            // Copy to clipboard
-            var previousClipboard = Clipboard.GetText();
-            Clipboard.SetText(text);
-
-            // Auto-paste (now uses retry mechanism internally)
-            await Clipboard.PasteToWindow(targetWindow);
-
-            // Restore previous clipboard after shorter delay
-            await Task.Delay(50);
-            if (!string.IsNullOrEmpty(previousClipboard))
+            // Run clipboard operations on UI thread via Dispatcher (same as MainWindow.xaml.cs)
+            await Dispatcher.InvokeAsync(async () =>
             {
-                Clipboard.SetText(previousClipboard);
-            }
+                try
+                {
+                    // Use ClipboardService for proper STA thread handling
+                    var previousClipboard = App.Clipboard.GetText();
+                    
+                    if (string.IsNullOrEmpty(text))
+                    {
+                        return;
+                    }
+                    
+                    // Set the transcribed text to clipboard
+                    App.Clipboard.SetText(text);
+
+                    // Paste to previous window (now uses retry mechanism internally)
+                    await App.Clipboard.PasteToWindow(targetWindow);
+
+                    // Restore previous clipboard after delay (if enabled)
+                    if (Settings.General.RestoreClipboard && !string.IsNullOrEmpty(previousClipboard))
+                    {
+                        var delay = Settings.General.ClipboardRestoreDelayMs;
+                        if (delay > 0)
+                        {
+                            await Task.Delay(delay);
+                            App.Clipboard.SetText(previousClipboard);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Error(ex, "[CLIPBOARD] Error in hotkey transcription");
+                }
+            });
 
             // Save to database
             await Database.AddTranscriptionAsync(text, Audio.LastRecordingDuration, Settings.Whisper.ModelPath, Settings.Whisper.Language);
 
             // Update main window
-            LoggingService.Debug($"[DEBUG] ProcessTranscriptionAsync: Updating UI with text: '{(text?.Length > 50 ? text.Substring(0, 50) + "..." : text)}'");
+            LoggingService.Debug($"[DEBUG] ProcessTranscriptionAsync: Updating UI with text: '{text}'");
             Dispatcher.Invoke(() =>
             {
                 if (_mainWindow == null)
@@ -506,5 +532,73 @@ public partial class App : System.Windows.Application
         
         ExitApplication();
         base.OnExit(e);
+    }
+}
+
+/// <summary>
+/// Converts boolean to Visibility
+/// </summary>
+public class BoolToVisibilityConverter : System.Windows.Data.IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is bool boolValue)
+        {
+            return boolValue ? Visibility.Visible : Visibility.Collapsed;
+        }
+        return Visibility.Collapsed;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is Visibility visibility)
+        {
+            return visibility == Visibility.Visible;
+        }
+        return false;
+    }
+}
+
+/// <summary>
+/// Converts boolean to inverse Visibility
+/// </summary>
+public class InverseBoolToVisibilityConverter : System.Windows.Data.IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is bool boolValue)
+        {
+            return boolValue ? Visibility.Collapsed : Visibility.Visible;
+        }
+        return Visibility.Visible;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is Visibility visibility)
+        {
+            return visibility != Visibility.Visible;
+        }
+        return true;
+    }
+}
+
+/// <summary>
+/// Converts int to bool (for checking if length > 0)
+/// </summary>
+public class IntToBoolConverter : System.Windows.Data.IValueConverter
+{
+    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        if (value is int intValue)
+        {
+            return intValue > 0;
+        }
+        return false;
+    }
+
+    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -1,8 +1,11 @@
 using System.IO;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using LLama;
 using LLama.Common;
 using LLama.Sampling;
+using whisperMeOff.Interfaces;
+using whisperMeOff.Models.Transformation;
 
 namespace whisperMeOff.Services;
 
@@ -14,7 +17,7 @@ namespace whisperMeOff.Services;
 /// Supports GGUF-formatted models. Uses Vulkan GPU acceleration when available.
 /// The service runs inference on background threads to avoid blocking the UI.
 /// </remarks>
-public class LlamaService : IDisposable
+public class LlamaService : ILlamaService
 {
     private LLamaWeights? _model;
     private LLamaContext? _context;
@@ -206,11 +209,18 @@ public class LlamaService : IDisposable
                 "Input: " + rawText.Trim() + "\n\n" +
                 "Corrected:";
 
+            // Add extra anti-prompts to prevent repetition
+            var extraAntiPrompts = new List<string>();
+            for (int i = 1; i <= 10; i++)
+            {
+                extraAntiPrompts.Add($"The corrected text is:");
+            }
+            var allAntiPrompts = new List<string> { "\n\n", "Input:", "Human:", "AI:", "Assistant:", "Question:", "Answer:" }.Concat(extraAntiPrompts).ToList();
             var inferenceParams = new InferenceParams
             {
-                MaxTokens = 256,
-                AntiPrompts = new List<string> { "\n\n", "Input:", "Human:", "AI:", "Assistant:", "Question:", "Answer:" },
-                SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.0f, RepeatPenalty = 1.0f }
+                MaxTokens = 512,
+                AntiPrompts = allAntiPrompts,
+                SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.1f, RepeatPenalty = 1.5f, FrequencyPenalty = 0.5f, PresencePenalty = 0.5f }
             };
 
             LoggingService.Debug("[LLAMA] Starting inference...");
@@ -420,52 +430,469 @@ public class LlamaService : IDisposable
     
     private string CleanupLlamaOutput(string output, string original)
     {
-        // Remove common Llama output artifacts
+        if (string.IsNullOrWhiteSpace(output))
+            return output;
+
+        // If output is very short or looks like it was cut off, try to use it as-is
+        if (output.Length < 50 || !output.Contains('\n'))
+            return output.Trim();
+
         var lines = output.Split('\n');
         var cleanedLines = new List<string>();
+        bool foundRealContent = false;
         
         foreach (var line in lines)
         {
             var trimmed = line.Trim();
             
-            // Skip lines that look like prompts or instructions
-            if (trimmed.StartsWith("Result:") || trimmed.StartsWith("Fix") || 
-                trimmed.StartsWith("Spelling") || trimmed.StartsWith("Grammar") ||
-                trimmed.StartsWith("Input") || trimmed.StartsWith("Output") ||
-                trimmed.StartsWith("* ") || trimmed.StartsWith("- ") ||
-                trimmed.StartsWith("# ") || trimmed.StartsWith("1.") ||
-                trimmed.StartsWith("Here is") || trimmed.StartsWith("Sure,") ||
-                trimmed.StartsWith("Here's") || trimmed.StartsWith("Human:") ||
-                trimmed.StartsWith("AI:") || trimmed.StartsWith("Assistant:"))
-            {
+            // Skip empty lines at the start
+            if (string.IsNullOrWhiteSpace(trimmed) && !foundRealContent)
                 continue;
+            
+            // Skip lines that are clearly prompt fragments or instructions
+            // But be careful not to skip valid output that happens to contain similar words
+            if (!foundRealContent)
+            {
+                // Skip obvious prompt headers/instructions
+                if (trimmed.StartsWith("Fix any") || 
+                    trimmed.StartsWith("Correct any") ||
+                    trimmed.StartsWith("Grammar:") ||
+                    trimmed.StartsWith("Text to transform:") ||
+                    trimmed.StartsWith("Input:") ||
+                    trimmed.StartsWith("Original:") ||
+                    trimmed.StartsWith("Here is") ||
+                    trimmed.StartsWith("Sure,") ||
+                    trimmed.StartsWith("Here's") ||
+                    trimmed.StartsWith("The") && trimmed.Length < 30 ||  // "The following..."
+                    trimmed.StartsWith("Do NOT") ||
+                    trimmed.StartsWith("Human:") ||
+                    trimmed.StartsWith("Assistant:") ||
+                    trimmed.StartsWith("AI:") ||
+                    trimmed.StartsWith("Result:") ||
+                    trimmed.StartsWith("Corrected:") ||
+                    trimmed.StartsWith("Output:") ||
+                    trimmed.StartsWith("Transform"))
+                {
+                    continue;
+                }
             }
             
-            cleanedLines.Add(line);
+            // After finding content, collect all subsequent non-empty lines
+            if (!string.IsNullOrWhiteSpace(trimmed))
+            {
+                foundRealContent = true;
+                cleanedLines.Add(line);
+            }
+            else if (foundRealContent)
+            {
+                // Preserve blank lines within content
+                cleanedLines.Add(line);
+            }
         }
         
         var result = string.Join("\n", cleanedLines).Trim();
         
-        // If output is significantly longer than input, it's probably adding unwanted content
-        // In that case, try to find where actual new content starts
-        if (result.Length > original.Length * 2)
+        // If we filtered everything out, return original output
+        if (string.IsNullOrWhiteSpace(result))
+            return output.Trim();
+        
+        // If result is suspiciously short compared to input, might be missing content
+        if (result.Length < original.Length * 0.3)
         {
-            // Look for common patterns where corrections might start
-            var lowerResult = result.ToLowerInvariant();
-            var patterns = new[] { "corrected:", "fixed:", "output:", "result:", "text:" };
-            
-            foreach (var pattern in patterns)
-            {
-                var idx = lowerResult.IndexOf(pattern);
-                if (idx >= 0 && idx < result.Length / 2) // Found in first half
-                {
-                    result = result.Substring(idx + pattern.Length).Trim();
-                    break;
-                }
-            }
+            // Try to use more of the original output
+            return output.Trim();
         }
         
         return result;
+    }
+
+    /// <summary>
+    /// Transforms text based on the specified transformation request.
+    /// </summary>
+    /// <param name="request">The transformation request containing text and transformation type.</param>
+    /// <returns>A transformation result containing the transformed text and quality metrics.</returns>
+    public async Task<TransformationResult> TransformTextAsync(TransformationRequest request)
+    {
+        if (!_isLoaded)
+        {
+            return new TransformationResult
+            {
+                OriginalText = request.Text,
+                TransformedText = string.Empty,
+                Success = false,
+                ErrorMessage = "Model not loaded"
+            };
+        }
+
+        try
+        {
+            // Build the prompt using BuildPrompt to include preservation instructions
+            var prompt = TransformationPrompts.BuildPrompt(request);
+
+            var inferenceParams = new InferenceParams
+            {
+                MaxTokens = Math.Max(512, request.Text.Length / 2),
+                AntiPrompts = new List<string> { "Human:", "User:", "\n\n" },
+                SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.3f, RepeatPenalty = 1.0f }
+            };
+
+            var result = await Task.Run(async () =>
+            {
+                var response = new System.Text.StringBuilder();
+                await foreach (var text in _executor!.InferAsync(prompt, inferenceParams))
+                {
+                    response.Append(text);
+                    if (response.Length > request.Text.Length * 3)
+                        break;
+                }
+                return response.ToString();
+            });
+
+            var transformed = CleanupLlamaOutput(result, request.Text);
+            
+            // Calculate quality metrics
+            var metrics = CalculateQualityMetrics(request.Text, transformed);
+
+            return new TransformationResult
+            {
+                OriginalText = request.Text,
+                TransformedText = transformed,
+                Success = true,
+                TransformationType = request.TransformationType,
+                QualityMetrics = metrics,
+                ProcessingTimeMs = 0 // Could add timing if needed
+            };
+        }
+        catch (Exception ex)
+        {
+            return new TransformationResult
+            {
+                OriginalText = request.Text,
+                TransformedText = string.Empty,
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
+
+    /// <summary>
+    /// Transforms text using a predefined transformation profile.
+    /// </summary>
+    /// <param name="text">The text to transform.</param>
+    /// <param name="profile">The transformation profile to use.</param>
+    /// <returns>A transformation result containing the transformed text and quality metrics.</returns>
+    public async Task<TransformationResult> TransformWithProfileAsync(string text, TransformationProfile profile)
+    {
+        if (!_isLoaded)
+        {
+            return new TransformationResult
+            {
+                OriginalText = text,
+                TransformedText = string.Empty,
+                Success = false,
+                ErrorMessage = "Model not loaded"
+            };
+        }
+
+        try
+        {
+            // Build prompt from profile settings
+            var prompt = BuildProfilePrompt(text, profile);
+            
+            var inferenceParams = new InferenceParams
+            {
+                MaxTokens = Math.Max(512, text.Length / 2),
+                AntiPrompts = new List<string> { "Human:", "User:", "\n\n" },
+                SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.3f, RepeatPenalty = 1.0f }
+            };
+
+            var result = await Task.Run(async () =>
+            {
+                var response = new System.Text.StringBuilder();
+                await foreach (var t in _executor!.InferAsync(prompt, inferenceParams))
+                {
+                    response.Append(t);
+                    if (response.Length > text.Length * 3)
+                        break;
+                }
+                return response.ToString();
+            });
+
+            var transformed = CleanupLlamaOutput(result, text);
+            
+            // Calculate quality metrics
+            var metrics = CalculateQualityMetrics(text, transformed);
+
+            return new TransformationResult
+            {
+                OriginalText = text,
+                TransformedText = transformed,
+                Success = true,
+                TransformationType = TransformationType.PersonalStyle,
+                QualityMetrics = metrics,
+                ProcessingTimeMs = 0
+            };
+        }
+        catch (Exception ex)
+        {
+            return new TransformationResult
+            {
+                OriginalText = text,
+                TransformedText = string.Empty,
+                Success = false,
+                ErrorMessage = ex.Message
+            };
+        }
+    }
+
+    /// <summary>
+    /// Applies multiple transformations to the same text sequentially.
+    /// </summary>
+    /// <param name="text">The text to transform.</param>
+    /// <param name="transformations">List of transformation requests to apply in order.</param>
+    /// <returns>A transformation result containing the final transformed text and aggregated quality metrics.</returns>
+    public async Task<TransformationResult> TransformBatchAsync(string text, List<TransformationRequest> transformations)
+    {
+        if (!_isLoaded)
+        {
+            return new TransformationResult
+            {
+                OriginalText = text,
+                TransformedText = string.Empty,
+                Success = false,
+                ErrorMessage = "Model not loaded"
+            };
+        }
+
+        var currentText = text;
+        var allMetrics = new List<QualityMetrics>();
+        
+        foreach (var request in transformations)
+        {
+            request.Text = currentText;
+            var result = await TransformTextAsync(request);
+            
+            if (!result.Success)
+            {
+                return new TransformationResult
+                {
+                    OriginalText = text,
+                    TransformedText = currentText,
+                    Success = false,
+                    ErrorMessage = $"Transformation failed at {request.TransformationType}: {result.ErrorMessage}"
+                };
+            }
+            
+            currentText = result.TransformedText;
+            allMetrics.Add(result.QualityMetrics);
+        }
+
+        // Calculate aggregate metrics
+        var aggregateMetrics = AggregateQualityMetrics(allMetrics);
+
+        return new TransformationResult
+        {
+            OriginalText = text,
+            TransformedText = currentText,
+            Success = true,
+            TransformationType = TransformationType.Custom,
+            QualityMetrics = aggregateMetrics,
+            ProcessingTimeMs = 0
+        };
+    }
+
+    /// <summary>
+    /// Gets the list of supported transformation types.
+    /// </summary>
+    /// <returns>List of supported transformation types.</returns>
+    public List<TransformationType> GetSupportedTransformations()
+    {
+        return new List<TransformationType>
+        {
+            TransformationType.Tone,
+            TransformationType.Voice,
+            TransformationType.Complexity,
+            TransformationType.Professionalism,
+            TransformationType.PersonalStyle,
+            TransformationType.Grammar,
+            TransformationType.Translation,
+            TransformationType.Custom
+        };
+    }
+
+    /// <summary>
+    /// Estimates the number of tokens needed for a given text.
+    /// </summary>
+    /// <param name="text">The text to estimate tokens for.</param>
+    /// <returns>Estimated token count.</returns>
+    public int EstimateTokens(string text)
+    {
+        // Rough estimate: 1 token ≈ 4 characters for English text
+        // This is a simplified estimation; actual tokenization varies by model
+        return text.Length / 4;
+    }
+
+    /// <summary>
+    /// Builds a transformation prompt from a transformation profile.
+    /// </summary>
+    private string BuildProfilePrompt(string text, TransformationProfile profile)
+    {
+        var promptBuilder = new System.Text.StringBuilder();
+        
+        promptBuilder.AppendLine("You are a text transformation assistant.");
+        promptBuilder.AppendLine("Transform the following text according to the specified requirements:");
+        promptBuilder.AppendLine();
+        
+        // Add transformation settings from profile parameters
+        if (profile.Parameters != null && profile.Parameters.Count > 0)
+        {
+            foreach (var param in profile.Parameters)
+            {
+                promptBuilder.AppendLine($"- {param.Key}: {param.Value}");
+            }
+            promptBuilder.AppendLine();
+        }
+        
+        // Add transformation description
+        if (!string.IsNullOrEmpty(profile.Description))
+        {
+            promptBuilder.AppendLine($"Transformation goal: {profile.Description}");
+            promptBuilder.AppendLine();
+        }
+        
+        promptBuilder.AppendLine("- Preserve the original meaning as much as possible");
+        promptBuilder.AppendLine("- Maintain grammatical correctness");
+        
+        if (profile.PreserveProperNouns)
+        {
+            promptBuilder.AppendLine("- Preserve proper nouns (names, places, organizations)");
+        }
+        
+        if (profile.PreserveTechnicalTerms)
+        {
+            promptBuilder.AppendLine("- Preserve technical terminology");
+        }
+        
+        promptBuilder.AppendLine();
+        promptBuilder.AppendLine("Text to transform:");
+        promptBuilder.AppendLine(text);
+        
+        return promptBuilder.ToString();
+    }
+
+    private QualityMetrics CalculateQualityMetrics(string original, string transformed)
+    {
+        // Simple similarity calculation using Levenshtein-like approach
+        var similarity = CalculateSimilarity(original, transformed);
+        
+        // Estimate confidence based on length difference
+        var lengthRatio = original.Length > 0
+            ? (double)transformed.Length / original.Length
+            : 1.0;
+        var confidence = Math.Max(0, Math.Min(1, 1 - Math.Abs(1 - lengthRatio) * 0.5));
+        
+        // Calculate readability (simplified Flesch-like score)
+        var readability = CalculateReadabilityScore(transformed);
+        
+        // Structure preservation (based on sentence count ratio)
+        var originalSentences = original.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        var transformedSentences = transformed.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries).Length;
+        var structureScore = originalSentences > 0
+            ? Math.Min(1.0, (double)transformedSentences / originalSentences)
+            : 1.0;
+
+        // Calculate overall score
+        var overall = (similarity + confidence + readability + structureScore) / 4.0;
+
+        return new QualityMetrics
+        {
+            SimilarityScore = (int)(similarity * 100),
+            ConfidenceScore = (int)(confidence * 100),
+            ReadabilityScore = (int)(readability * 100),
+            StructureScore = (int)(structureScore * 100),
+            OverallScore = (int)(overall * 100)
+        };
+    }
+
+    private double CalculateSimilarity(string s1, string s2)
+    {
+        if (string.IsNullOrEmpty(s1) || string.IsNullOrEmpty(s2))
+            return s1 == s2 ? 1.0 : 0.0;
+
+        int distance = LevenshteinDistance(s1, s2);
+        int maxLen = Math.Max(s1.Length, s2.Length);
+        return maxLen > 0 ? 1.0 - ((double)distance / maxLen) : 1.0;
+    }
+
+    private int LevenshteinDistance(string s1, string s2)
+    {
+        int[,] d = new int[s1.Length + 1, s2.Length + 1];
+        
+        for (int i = 0; i <= s1.Length; i++) d[i, 0] = i;
+        for (int j = 0; j <= s2.Length; j++) d[0, j] = j;
+        
+        for (int i = 1; i <= s1.Length; i++)
+        {
+            for (int j = 1; j <= s2.Length; j++)
+            {
+                int cost = s1[i - 1] == s2[j - 1] ? 0 : 1;
+                d[i, j] = Math.Min(
+                    Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
+                    d[i - 1, j - 1] + cost);
+            }
+        }
+        
+        return d[s1.Length, s2.Length];
+    }
+
+    private double CalculateReadabilityScore(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return 0;
+
+        var words = text.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        var sentences = text.Split(new[] { '.', '!', '?' }, StringSplitOptions.RemoveEmptyEntries);
+        
+        if (words.Length == 0 || sentences.Length == 0)
+            return 0.5;
+
+        // Simplified Flesch Reading Ease approximation
+        double avgWordsPerSentence = words.Length / (double)sentences.Length;
+        double avgCharsPerWord = text.Replace(" ", "").Length / (double)words.Length;
+        
+        // Normalize to 0-1 scale (typical scores range 0-100)
+        double score = 1.0 - ((avgWordsPerSentence / 20.0) * 0.5 + (avgCharsPerWord / 10.0) * 0.5);
+        return Math.Max(0, Math.Min(1, score));
+    }
+
+    private QualityMetrics AggregateQualityMetrics(List<QualityMetrics> metrics)
+    {
+        if (metrics.Count == 0)
+        {
+            return new QualityMetrics
+            {
+                SimilarityScore = 0,
+                ConfidenceScore = 0,
+                ReadabilityScore = 0,
+                StructureScore = 0,
+                OverallScore = 0
+            };
+        }
+
+        var avgSimilarity = metrics.Average(m => m.SimilarityScore);
+        var avgConfidence = metrics.Average(m => m.ConfidenceScore);
+        var avgReadability = metrics.Average(m => m.ReadabilityScore);
+        var avgStructure = metrics.Average(m => m.StructureScore);
+        var avgOverall = metrics.Average(m => m.OverallScore);
+
+        return new QualityMetrics
+        {
+            SimilarityScore = (int)avgSimilarity,
+            ConfidenceScore = (int)avgConfidence,
+            ReadabilityScore = (int)avgReadability,
+            StructureScore = (int)avgStructure,
+            OverallScore = (int)avgOverall
+        };
     }
 
     /// <summary>

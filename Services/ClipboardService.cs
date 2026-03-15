@@ -35,20 +35,27 @@ public class ClipboardService
         }
         else
         {
-            // Need to invoke on UI thread
+            // Need to invoke on UI thread and wait for result
             try
             {
                 System.Windows.Application.Current?.Dispatcher?.Invoke(() =>
                 {
-                    if (System.Windows.Clipboard.ContainsText())
+                    try
                     {
-                        result = System.Windows.Clipboard.GetText();
+                        if (System.Windows.Clipboard.ContainsText())
+                        {
+                            result = System.Windows.Clipboard.GetText();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LoggingService.Error(ex, "Get clipboard error (dispatcher)");
                     }
                 });
             }
             catch (Exception ex)
             {
-                LoggingService.Error(ex, "Get clipboard error (dispatcher)");
+                LoggingService.Error(ex, "Get clipboard error (dispatcher invoke)");
             }
         }
 

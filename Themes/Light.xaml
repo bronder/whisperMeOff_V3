@@ -24,6 +24,11 @@
     <SolidColorBrush x:Key="SecondaryTextBrush" Color="{StaticResource SecondaryTextColor}"/>
     <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}"/>
     <SolidColorBrush x:Key="BorderFocusBrush" Color="{StaticResource BorderFocusColor}"/>
+    
+    <!-- Status Badge Brushes -->
+    <SolidColorBrush x:Key="ValidBadgeBrush" Color="#FF2E7D32"/>
+    <SolidColorBrush x:Key="InvalidBadgeBrush" Color="#FFD32F2F"/>
+    <SolidColorBrush x:Key="InfoBadgeBrush" Color="#FF607D8B"/>
 
     <!-- Primary Button Style -->
     <Style x:Key="PrimaryButtonStyle" TargetType="Button">
@@ -321,6 +326,36 @@
     <!-- MenuItem Style -->
     <Style TargetType="MenuItem">
         <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+    </Style>
+
+    <!-- ToggleButton Switch Style -->
+    <Style x:Key="ToggleButtonSwitchStyle" TargetType="ToggleButton">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Grid>
+                        <Border x:Name="Track" Width="44" Height="22" CornerRadius="11" 
+                                Background="#CCCCCC" BorderBrush="#999999" BorderThickness="1"/>
+                        <Border x:Name="Thumb" Width="18" Height="18" CornerRadius="9" Background="White" 
+                                HorizontalAlignment="Left" Margin="2,0,0,0">
+                            <Border.Effect>
+                                <DropShadowEffect ShadowDepth="1" BlurRadius="2" Opacity="0.3"/>
+                            </Border.Effect>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Track" Property="Background" Value="{StaticResource AccentBrush}"/>
+                            <Setter TargetName="Track" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                            <Setter TargetName="Thumb" Property="Margin" Value="24,0,0,0"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Track" Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
 </ResourceDictionary>

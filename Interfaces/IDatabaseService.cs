@@ -49,6 +49,12 @@ public interface IDatabaseService : IDisposable
     /// Search transcriptions by text
     /// </summary>
     Task<List<TranscriptionRecord>> SearchTranscriptionsAsync(string query);
+
+    /// <summary>
+    /// Update a transcription's text
+    /// </summary>
+    /// <returns>True if updated</returns>
+    Task<bool> UpdateTranscriptionAsync(long id, string text);
 }
 
 /// <summary>

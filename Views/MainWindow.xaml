@@ -219,38 +219,92 @@
                                             Click="PresetFastest_Click"
                                             Style="{DynamicResource SecondaryButtonStyle}"
                                             Margin="0,0,10,0"
-                                            ToolTipService.ToolTip="Tiny model (~75MB) - Fastest transcription, lower accuracy. Best for quick dictation."/>
+                                            ToolTipService.ToolTip="Fastest: Tiny model (~75MB), 8kHz audio, minimal post-processing. Best for quick dictation."/>
                                     <Button x:Name="PresetBalancedBtn" Content="⚖️ Balanced" 
                                             Click="PresetBalanced_Click"
                                             Style="{DynamicResource SecondaryButtonStyle}"
                                             Margin="0,0,10,0"
-                                            ToolTipService.ToolTip="Base model (~150MB) - Good balance of speed and accuracy for everyday use."/>
+                                            ToolTipService.ToolTip="Balanced: Base model (~150MB), 16kHz audio, standard formatting. Good balance of speed and accuracy."/>
                                     <Button x:Name="PresetAccurateBtn" Content="🎯 Most Accurate" 
                                             Click="PresetAccurate_Click"
                                             Style="{DynamicResource SecondaryButtonStyle}"
-                                            ToolTipService.ToolTip="Medium model (~1.5GB) - Highest accuracy, slower transcription. Best for important transcriptions."/>
+                                            ToolTipService.ToolTip="Most Accurate: Medium model (~1.5GB), 48kHz audio, full processing. Highest accuracy for important transcriptions."/>
                                 </StackPanel>
+                                <!-- Live Preview Panel -->
+                                <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="6" 
+                                        Padding="12" Margin="0,12,0,0" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                                    <StackPanel>
+                                        <TextBlock x:Name="CurrentPresetLabel" Text="Current: Balanced" 
+                                                   FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}" FontSize="12"/>
+                                        <Grid Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Model:" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,0,10,2"/>
+                                            <TextBlock x:Name="PreviewModelText" Grid.Row="0" Grid.Column="1" Text="base" Foreground="{DynamicResource TextBrush}" FontSize="11"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="Audio:" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,0,10,2"/>
+                                            <TextBlock x:Name="PreviewAudioText" Grid.Row="1" Grid.Column="1" Text="16kHz" Foreground="{DynamicResource TextBrush}" FontSize="11"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="Processing:" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,0,10,0"/>
+                                            <TextBlock x:Name="PreviewProcessingText" Grid.Row="2" Grid.Column="1" Text="Standard" Foreground="{DynamicResource TextBrush}" FontSize="11"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
 
-                        <!-- Hotkey Configuration -->
-                        <Expander Header="Push-to-Talk Hotkey" IsExpanded="True" Margin="0,20,0,0"
+                        <!-- Recording Settings -->
+                        <Expander Header="Recording Settings" IsExpanded="True" Margin="0,20,0,0"
                                   Background="{DynamicResource CardBrush}" Padding="0">
                             <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0">
                                 <StackPanel>
-                                    <TextBlock Text="Push-to-Talk Hotkey" FontSize="14" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextBrush}"
-                                               ToolTipService.ToolTip="The keyboard shortcut used to start/stop voice recording"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                        <TextBlock Text="Ctrl+Shift+" Foreground="{DynamicResource TextBrush}"
-                                                   VerticalAlignment="Center"/>
-                                        <TextBox x:Name="HotkeyTriggerTextBox" Width="40" MaxLength="1"
-                                                 TextAlignment="Center" TextChanged="HotkeyTriggerTextBox_TextChanged"
-                                                 VerticalAlignment="Center"
-                                                 ToolTipService.ToolTip="Press a letter or number key to set the hotkey"/>
+                                    <!-- Push-to-talk Toggle -->
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Push-to-talk mode" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextBrush}"/>
+                                            <TextBlock Text="Hold hotkey to record, release to stop"
+                                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,3,0,0"/>
+                                        </StackPanel>
+                                        <CheckBox x:Name="PushToTalkCheckbox" Grid.Column="1"
+                                                  Style="{DynamicResource ToggleSwitchStyle}"
+                                                  Checked="PushToTalkCheckbox_Changed" Unchecked="PushToTalkCheckbox_Changed"
+                                                  ToolTipService.ToolTip="Hold the hotkey to record, release to transcribe. Best for privacy."/>
+                                    </Grid>
+                                    
+                                    <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,15,0,15"/>
+                                    
+                                    <!-- Hotkey Input -->
+                                    <StackPanel x:Name="HotkeyInputPanel">
+                                        <TextBlock Text="Hotkey" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                            <TextBlock Text="Ctrl+Shift+" Foreground="{DynamicResource TextBrush}"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBox x:Name="HotkeyTriggerTextBox" Width="40" MaxLength="1"
+                                                     TextAlignment="Center" TextChanged="HotkeyTriggerTextBox_TextChanged"
+                                                     VerticalAlignment="Center"
+                                                     ToolTipService.ToolTip="Press a letter or number key to set the hotkey"/>
+                                        </StackPanel>
+                                        <!-- Live Preview -->
+                                        <Border x:Name="HotkeyPreviewBorder" Background="{DynamicResource AccentBrush}" CornerRadius="4" 
+                                                Padding="10,6" Margin="0,10,0,0" Opacity="0.9">
+                                            <TextBlock x:Name="HotkeyPreviewText" Text="Press Ctrl+Shift+A to record"
+                                                       Foreground="White" FontWeight="SemiBold" FontSize="12"
+                                                       HorizontalAlignment="Center"/>
+                                        </Border>
+                                        <TextBlock Text="Type a single letter or number. The Ctrl+Shift modifiers are fixed."
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"/>
                                     </StackPanel>
-                                    <TextBlock Text="Type a single letter or number. The Ctrl+Shift modifiers are fixed."
-                                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"/>
                                 </StackPanel>
                             </Border>
                         </Expander>
@@ -265,18 +319,60 @@
                                                ToolTipService.ToolTip="Choose your preferred color scheme for the application"/>
                                     <TextBlock Text="Choose between light and dark visual themes"
                                                Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
-                                    <ComboBox x:Name="ThemeComboBox" Width="200" HorizontalAlignment="Left"
+                                    <ComboBox x:Name="ThemeComboBox" Width="220" HorizontalAlignment="Left"
                                               SelectionChanged="ThemeComboBox_SelectionChanged"
                                               Background="{DynamicResource CardBrush}"
                                               Foreground="{DynamicResource TextBrush}"
                                               ToolTipService.ToolTip="Select Light, Dark, or one of the colorful themes">
-                                        <ComboBoxItem Content="Light"/>
-                                        <ComboBoxItem Content="Dark"/>
-                                        <ComboBoxItem Content="Nord"/>
-                                        <ComboBoxItem Content="Dracula"/>
-                                        <ComboBoxItem Content="Gruvbox"/>
-                                        <ComboBoxItem Content="Monokai"/>
-                                        <ComboBoxItem Content="Synthwave"/>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#DDD" BorderThickness="1">
+                                                    <Border.Background>
+                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                                            <GradientStop Color="#FFFFFF" Offset="0"/>
+                                                            <GradientStop Color="#F5F5F5" Offset="1"/>
+                                                        </LinearGradientBrush>
+                                                    </Border.Background>
+                                                </Border>
+                                                <TextBlock Text="Light"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#444" BorderThickness="1" Background="#252526"/>
+                                                <TextBlock Text="Dark"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#5E81AC" BorderThickness="1" Background="#2E3440"/>
+                                                <TextBlock Text="Nord"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#BD93F9" BorderThickness="1" Background="#282A36"/>
+                                                <TextBlock Text="Dracula"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#FABD2F" BorderThickness="1" Background="#282828"/>
+                                                <TextBlock Text="Gruvbox"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#F92672" BorderThickness="1" Background="#272822"/>
+                                                <TextBlock Text="Monokai"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#FF79C6" BorderThickness="1" Background="#1A1A2E"/>
+                                                <TextBlock Text="Synthwave"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
                                     </ComboBox>
                                 </StackPanel>
                             </Border>
@@ -298,12 +394,21 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBox x:Name="ModelDownloadPathTextBox" Grid.Column="0" 
                                                      VerticalContentAlignment="Center" Padding="5"
                                                      TextChanged="ModelDownloadPathTextBox_TextChanged"
                                                      ToolTipService.ToolTip="Click Browse to select a folder"/>
-                                            <Button x:Name="BrowseDownloadPathBtn" Content="Browse..." Grid.Column="1" 
+                                            <TextBlock x:Name="WhisperPathValidIcon" Grid.Column="1" Text="✓" FontSize="16" 
+                                                       Foreground="#4ADE80" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="Collapsed"
+                                                       ToolTipService.ToolTip="Path is valid"/>
+                                            <Border x:Name="WhisperModelCountBadge" Grid.Column="2" Background="{DynamicResource AccentBrush}" 
+                                                    CornerRadius="10" Padding="8,3" Margin="8,0,0,0" Visibility="Collapsed">
+                                                <TextBlock x:Name="WhisperModelCountText" Text="0 models" FontSize="11" Foreground="White"/>
+                                            </Border>
+                                            <Button x:Name="BrowseDownloadPathBtn" Content="Browse..." Grid.Column="3" 
                                                     Click="BrowseDownloadPath_Click" Margin="10,0,0,0"
                                                     Style="{DynamicResource SecondaryButtonStyle}"/>
                                         </Grid>
@@ -324,12 +429,21 @@
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBox x:Name="LlamaDownloadPathTextBox" Grid.Column="0" 
                                                      VerticalContentAlignment="Center" Padding="5"
                                                      TextChanged="LlamaDownloadPathTextBox_TextChanged"
                                                      ToolTipService.ToolTip="Click Browse to select a folder"/>
-                                            <Button x:Name="BrowseLlamaDownloadPathBtn" Content="Browse..." Grid.Column="1" 
+                                            <TextBlock x:Name="LlamaPathValidIcon" Grid.Column="1" Text="✓" FontSize="16" 
+                                                       Foreground="#4ADE80" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="Collapsed"
+                                                       ToolTipService.ToolTip="Path is valid"/>
+                                            <Border x:Name="LlamaModelCountBadge" Grid.Column="2" Background="{DynamicResource AccentBrush}" 
+                                                    CornerRadius="10" Padding="8,3" Margin="8,0,0,0" Visibility="Collapsed">
+                                                <TextBlock x:Name="LlamaModelCountText" Text="0 models" FontSize="11" Foreground="White"/>
+                                            </Border>
+                                            <Button x:Name="BrowseLlamaDownloadPathBtn" Content="Browse..." Grid.Column="3" 
                                                     Click="BrowseLlamaDownloadPath_Click" Margin="10,0,0,0"
                                                     Style="{DynamicResource SecondaryButtonStyle}"/>
                                         </Grid>
@@ -345,20 +459,46 @@
                                   Background="{DynamicResource CardBrush}" Padding="0">
                             <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0">
                                 <StackPanel>
-                                    <CheckBox x:Name="LaunchAtLoginCheckbox" Content="Launch at login"
-                                              Checked="LaunchAtLoginCheckbox_Changed" Unchecked="LaunchAtLoginCheckbox_Changed"
-                                              ToolTipService.ToolTip="Automatically start whisperMeOff when you log in to Windows"/>
-                                    <CheckBox x:Name="MinimizeToTrayCheckbox" Content="Minimize to system tray"
-                                              Margin="0,10,0,0"
-                                              Checked="MinimizeToTrayCheckbox_Changed" Unchecked="MinimizeToTrayCheckbox_Changed"
-                                              ToolTipService.ToolTip="Keep the app running in the system tray instead of the taskbar"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Launch at login" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextBrush}"/>
+                                            <TextBlock Text="Start the app automatically when you log in to Windows"
+                                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,3,0,0"/>
+                                        </StackPanel>
+                                        <CheckBox x:Name="LaunchAtLoginCheckbox" Grid.Column="1"
+                                                  Style="{DynamicResource ToggleSwitchStyle}"
+                                                  Checked="LaunchAtLoginCheckbox_Changed" Unchecked="LaunchAtLoginCheckbox_Changed"
+                                                  ToolTipService.ToolTip="Automatically start whisperMeOff when you log in to Windows"/>
+                                    </Grid>
+                                    <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,15,0,15"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Minimize to system tray" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextBrush}"/>
+                                            <TextBlock Text="Keep running in the background when window is closed"
+                                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,3,0,0"/>
+                                        </StackPanel>
+                                        <CheckBox x:Name="MinimizeToTrayCheckbox" Grid.Column="1"
+                                                  Style="{DynamicResource ToggleSwitchStyle}"
+                                                  Checked="MinimizeToTrayCheckbox_Changed" Unchecked="MinimizeToTrayCheckbox_Changed"
+                                                  ToolTipService.ToolTip="Keep the app running in the system tray instead of the taskbar"/>
+                                    </Grid>
                                 </StackPanel>
                             </Border>
                         </Expander>
 
                         <!-- Clipboard Settings -->
                         <Expander Header="Clipboard Settings" IsExpanded="False" Margin="0,10,0,0"
-                                  Background="{DynamicResource CardBrush}" Padding="0">
+                                  Background="{DynamicResource CardBrush}" Padding="0" Visibility="Collapsed">
                             <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0">
                                 <StackPanel>
                                     <TextBlock Text="Clipboard Settings" FontSize="14" FontWeight="SemiBold"
@@ -380,24 +520,6 @@
                             </Border>
                         </Expander>
 
-                        <!-- Recording Mode -->
-                        <Expander Header="Recording Mode" IsExpanded="False" Margin="0,10,0,0"
-                                  Background="{DynamicResource CardBrush}" Padding="0">
-                            <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0">
-                                <StackPanel>
-                                    <TextBlock Text="Recording Mode" FontSize="14" FontWeight="SemiBold"
-                                               Foreground="{DynamicResource TextBrush}"
-                                               ToolTipService.ToolTip="Choose how the recording hotkey behaves"/>
-                                    <CheckBox x:Name="PushToTalkCheckbox" Content="Push-to-talk (hold hotkey to record)"
-                                              Margin="0,10,0,0"
-                                              Checked="PushToTalkCheckbox_Changed" Unchecked="PushToTalkCheckbox_Changed"
-                                              ToolTipService.ToolTip="Hold the hotkey to record, release to transcribe. Best for privacy."/>
-                                    <TextBlock Text="When off: Press hotkey to start/stop recording (toggle mode)"
-                                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"
-                                               ToolTipService.ToolTip="Toggle mode: Press once to start recording, press again to stop"/>
-                                </StackPanel>
-                            </Border>
-                        </Expander>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -437,21 +559,41 @@
                                 <TextBlock Text="Language" FontSize="14" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"
                                            ToolTipService.ToolTip="Select the language you'll be speaking. Auto Detect will identify the language automatically."/>
-                                <ComboBox x:Name="LanguageComboBox" Margin="0,10,0,0"
-                                          SelectionChanged="LanguageComboBox_SelectionChanged"
-                                          ToolTipService.ToolTip="Choose your language or use Auto Detect">
-                                    <ComboBoxItem Content="Auto Detect" Tag="auto"/>
-                                    <ComboBoxItem Content="English" Tag="en"/>
-                                    <ComboBoxItem Content="Spanish" Tag="es"/>
-                                    <ComboBoxItem Content="French" Tag="fr"/>
-                                    <ComboBoxItem Content="German" Tag="de"/>
-                                    <ComboBoxItem Content="Italian" Tag="it"/>
-                                    <ComboBoxItem Content="Portuguese" Tag="pt"/>
-                                    <ComboBoxItem Content="Russian" Tag="ru"/>
-                                    <ComboBoxItem Content="Chinese" Tag="zh"/>
-                                    <ComboBoxItem Content="Japanese" Tag="ja"/>
-                                    <ComboBoxItem Content="Korean" Tag="ko"/>
-                                </ComboBox>
+                                <!-- Auto Detect Toggle -->
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Auto language detection" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Text="Automatically detect spoken language"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="AutoDetectLanguageCheckbox" Grid.Column="1"
+                                              IsChecked="True"
+                                              Style="{DynamicResource ToggleSwitchStyle}"
+                                              Checked="AutoDetectLanguageCheckbox_Changed" Unchecked="AutoDetectLanguageCheckbox_Changed"/>
+                                </Grid>
+                                <!-- Language Dropdown (shown when auto-detect is OFF) -->
+                                <StackPanel x:Name="LanguageDropdownPanel" Margin="0,10,0,0" Visibility="Collapsed">
+                                    <TextBlock Text="Target language:" Foreground="{DynamicResource TextBrush}" Margin="0,0,0,5"/>
+                                    <ComboBox x:Name="LanguageComboBox"
+                                              SelectionChanged="LanguageComboBox_SelectionChanged"
+                                              ToolTipService.ToolTip="Choose your target language">
+                                        <ComboBoxItem Content="English" Tag="en" IsSelected="True"/>
+                                        <ComboBoxItem Content="Spanish" Tag="es"/>
+                                        <ComboBoxItem Content="French" Tag="fr"/>
+                                        <ComboBoxItem Content="German" Tag="de"/>
+                                        <ComboBoxItem Content="Italian" Tag="it"/>
+                                        <ComboBoxItem Content="Portuguese" Tag="pt"/>
+                                        <ComboBoxItem Content="Russian" Tag="ru"/>
+                                        <ComboBoxItem Content="Chinese" Tag="zh"/>
+                                        <ComboBoxItem Content="Japanese" Tag="ja"/>
+                                        <ComboBoxItem Content="Korean" Tag="ko"/>
+                                    </ComboBox>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
@@ -460,7 +602,8 @@
                             <StackPanel>
                                 <CheckBox x:Name="TranslateCheckbox" Content="Translate to English"
                                           Checked="TranslateCheckbox_Changed" Unchecked="TranslateCheckbox_Changed"
-                                          ToolTipService.ToolTip="Automatically translate non-English speech to English"/>
+                                          ToolTipService.ToolTip="Automatically translate non-English speech to English"
+                                          Style="{DynamicResource ToggleSwitchStyle}"/>
                             </StackPanel>
                         </Border>
 
@@ -470,13 +613,42 @@
                                 <TextBlock Text="Model" FontSize="14" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"
                                            ToolTipService.ToolTip="Select which Whisper AI model to use for transcription"/>
-                                <TextBlock x:Name="ModelPathText" Text="No model selected"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0"
-                                           ToolTipService.ToolTip="Path to the currently selected model file"/>
-                                <Button Content="Select Model File..." Click="SelectModel_Click"
-                                        Style="{DynamicResource SecondaryButtonStyle}" Margin="0,10,0,0"
-                                        HorizontalAlignment="Left"
-                                        ToolTipService.ToolTip="Browse for a .bin model file"/>
+                                <!-- Model Info Row -->
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock x:Name="ModelPathText" Text="No model selected"
+                                                   Foreground="{DynamicResource TextBrush}" FontSize="12"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   ToolTipService.ToolTip="Path to the currently selected model file"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                            <Border x:Name="ModelSizeBadge" Background="{DynamicResource ValidBadgeBrush}" 
+                                                    CornerRadius="8" Padding="6,2" Margin="0,0,5,0" Visibility="Collapsed">
+                                                <TextBlock x:Name="ModelSizeText" Text="0 MB" FontSize="10" Foreground="White"/>
+                                            </Border>
+                                            <Border x:Name="ModelSampleRateBadge" Background="{DynamicResource AccentBrush}" 
+                                                    CornerRadius="8" Padding="6,2" Visibility="Collapsed">
+                                                <TextBlock x:Name="ModelSampleRateText" Text="16kHz" FontSize="10" Foreground="White"/>
+                                            </Border>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <Border x:Name="ModelValidationBadge" Grid.Column="1" 
+                                            CornerRadius="8" Padding="8,4" Visibility="Collapsed" VerticalAlignment="Center">
+                                        <TextBlock x:Name="ModelValidationText" Text="Valid" FontSize="11" FontWeight="SemiBold" Foreground="White"/>
+                                    </Border>
+                                </Grid>
+                                <!-- Button Row -->
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <Button Content="Select Model File..." Click="SelectModel_Click"
+                                            Style="{DynamicResource SecondaryButtonStyle}"
+                                            ToolTipService.ToolTip="Browse for a .bin model file"/>
+                                    <Button x:Name="ValidateModelBtn" Content="Validate" Click="ValidateModel_Click"
+                                            Style="{DynamicResource SecondaryButtonStyle}" Margin="10,0,0,0"
+                                            ToolTipService.ToolTip="Validate the selected model file"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
@@ -491,75 +663,110 @@
                                            ToolTipService.ToolTip="Tiny: fastest, least accurate. Large: slowest, most accurate."/>
 
                                 <StackPanel x:Name="DownloadModelsPanel">
-                                    <!-- Tiny -->
-                                    <Grid Margin="0,5">
+                                    <!-- Header Row -->
+                                    <Grid Margin="0,0,0,5">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="80"/>
-                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="Model" Grid.Column="0" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" FontSize="11"/>
+                                        <TextBlock Text="Size" Grid.Column="1" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" FontSize="11"/>
+                                        <TextBlock Text="Speed" Grid.Column="2" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" FontSize="11"/>
+                                        <TextBlock Text="Accuracy" Grid.Column="3" FontWeight="SemiBold" Foreground="{DynamicResource TextBrush}" FontSize="11"/>
+                                    </Grid>
+                                    <!-- Tiny -->
+                                    <Grid Margin="0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="50"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="Tiny" Grid.Column="0" Foreground="{DynamicResource TextBrush}"
                                                    ToolTipService.ToolTip="~75MB - Fastest but least accurate. Good for quick dictation."/>
-                                        <TextBlock Text="~75MB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        <Button x:Name="DownloadTinyBtn" Content="Download" Grid.Column="3" Click="DownloadTiny_Click"
-                                                Style="{DynamicResource SecondaryButtonStyle}"/>
+                                        <TextBlock Text="~75MB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                        <TextBlock Text="~60x" Grid.Column="2" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" ToolTipService.ToolTip="Real-time factor - higher is faster"/>
+                                        <TextBlock Text="Low" Grid.Column="3" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                        <Button x:Name="DownloadTinyBtn" Content="Download" Grid.Column="5" Click="DownloadTiny_Click"
+                                                Style="{DynamicResource SecondaryButtonStyle}" Padding="12,6"/>
                                     </Grid>
                                     <!-- Base -->
-                                    <Grid Margin="0,5">
+                                    <Grid Margin="0,3">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="80"/>
-                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="50"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="Base" Grid.Column="0" Foreground="{DynamicResource TextBrush}"
                                                    ToolTipService.ToolTip="~150MB - Good balance of speed and accuracy for most use cases."/>
-                                        <TextBlock Text="~150MB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        <Button x:Name="DownloadBaseBtn" Content="Download" Grid.Column="3" Click="DownloadBase_Click"
-                                                Style="{DynamicResource SecondaryButtonStyle}"/>
+                                        <TextBlock Text="~150MB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                        <TextBlock Text="~30x" Grid.Column="2" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" ToolTipService.ToolTip="Real-time factor - higher is faster"/>
+                                        <TextBlock Text="Medium" Grid.Column="3" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                        <Button x:Name="DownloadBaseBtn" Content="Download" Grid.Column="5" Click="DownloadBase_Click"
+                                                Style="{DynamicResource SecondaryButtonStyle}" Padding="12,6"/>
                                     </Grid>
                                     <!-- Small -->
-                                    <Grid Margin="0,5">
+                                    <Grid Margin="0,3">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="80"/>
-                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="50"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="Small" Grid.Column="0" Foreground="{DynamicResource TextBrush}"
                                                    ToolTipService.ToolTip="~500MB - Better accuracy than Base, still relatively fast."/>
-                                        <TextBlock Text="~500MB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        <Button x:Name="DownloadSmallBtn" Content="Download" Grid.Column="3" Click="DownloadSmall_Click"
-                                                Style="{DynamicResource SecondaryButtonStyle}"/>
+                                        <TextBlock Text="~500MB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                        <TextBlock Text="~15x" Grid.Column="2" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" ToolTipService.ToolTip="Real-time factor - higher is faster"/>
+                                        <TextBlock Text="High" Grid.Column="3" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                        <Button x:Name="DownloadSmallBtn" Content="Download" Grid.Column="5" Click="DownloadSmall_Click"
+                                                Style="{DynamicResource SecondaryButtonStyle}" Padding="12,6"/>
                                     </Grid>
                                     <!-- Medium -->
-                                    <Grid Margin="0,5">
+                                    <Grid Margin="0,3">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="80"/>
-                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="50"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="Medium" Grid.Column="0" Foreground="{DynamicResource TextBrush}"
                                                    ToolTipService.ToolTip="~1.5GB - High accuracy, slower processing. Recommended for important transcriptions."/>
-                                        <TextBlock Text="~1.5GB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        <Button x:Name="DownloadMediumBtn" Content="Download" Grid.Column="3" Click="DownloadMedium_Click"
-                                                Style="{DynamicResource SecondaryButtonStyle}"/>
+                                        <TextBlock Text="~1.5GB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                        <TextBlock Text="~6x" Grid.Column="2" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" ToolTipService.ToolTip="Real-time factor - higher is faster"/>
+                                        <TextBlock Text="Very High" Grid.Column="3" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                        <Button x:Name="DownloadMediumBtn" Content="Download" Grid.Column="5" Click="DownloadMedium_Click"
+                                                Style="{DynamicResource SecondaryButtonStyle}" Padding="12,6"/>
                                     </Grid>
                                     <!-- Large -->
-                                    <Grid Margin="0,5">
+                                    <Grid Margin="0,3">
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="80"/>
-                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="70"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="50"/>
+                                            <ColumnDefinition Width="50"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBlock Text="Large" Grid.Column="0" Foreground="{DynamicResource TextBrush}"
                                                    ToolTipService.ToolTip="~3GB - Highest accuracy, slowest processing. Requires powerful hardware."/>
-                                        <TextBlock Text="~3GB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                        <Button x:Name="DownloadLargeBtn" Content="Download" Grid.Column="3" Click="DownloadLarge_Click"
-                                                Style="{DynamicResource SecondaryButtonStyle}"/>
+                                        <TextBlock Text="~3GB" Grid.Column="1" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                        <TextBlock Text="~2x" Grid.Column="2" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" ToolTipService.ToolTip="Real-time factor - higher is faster"/>
+                                        <TextBlock Text="Highest" Grid.Column="3" Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                        <Button x:Name="DownloadLargeBtn" Content="Download" Grid.Column="5" Click="DownloadLarge_Click"
+                                                Style="{DynamicResource SecondaryButtonStyle}" Padding="12,6"/>
                                     </Grid>
                                 </StackPanel>
 
@@ -582,30 +789,33 @@
                         <TextBlock Text="Llama Text Formatting" FontSize="20" FontWeight="Bold"
                                    Foreground="{DynamicResource TextBrush}"/>
 
-                        <!-- Enable Llama -->
+                        <!-- Enable Llama (consolidated card) -->
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
+                                <!-- Text Formatting Section -->
                                 <CheckBox x:Name="LlamaEnableCheckbox" Content="Enable Llama text formatting"
                                           Checked="LlamaEnableCheckbox_Changed" Unchecked="LlamaEnableCheckbox_Changed"
-                                          ToolTipService.ToolTip="Use AI to automatically format and improve transcribed text (capitalization, punctuation, etc.)"/>
+                                          ToolTipService.ToolTip="Use AI to automatically format and improve transcribed text (capitalization, punctuation, etc.)"
+                                          Style="{DynamicResource ToggleSwitchStyle}"/>
                                 <TextBlock Text="Automatically format transcribed text with Llama"
                                            Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"
                                            ToolTipService.ToolTip="When enabled, Llama will process your transcriptions to add proper capitalization, punctuation, and formatting"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Llama Translation -->
-                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
-                            <StackPanel>
+                                
+                                <!-- Divider -->
+                                <Rectangle Height="1" Fill="{DynamicResource BorderBrush}" Margin="0,20,0,20"/>
+                                
+                                <!-- Translation Section -->
                                 <CheckBox x:Name="LlamaTranslateCheckbox" Content="Enable Llama translation"
                                           Checked="LlamaTranslateCheckbox_Changed" Unchecked="LlamaTranslateCheckbox_Changed"
-                                          ToolTipService.ToolTip="Use AI to translate transcribed text to a different language"/>
+                                          ToolTipService.ToolTip="Use AI to translate transcribed text to a different language"
+                                          Style="{DynamicResource ToggleSwitchStyle}"/>
                                 <TextBlock Text="Translate transcribed text using Llama (after Whisper transcription)"
                                            Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"
                                            ToolTipService.ToolTip="When enabled, Llama will translate the transcribed text. Useful when Whisper's built-in translation doesn't work well for your language pair."/>
                                 
                                 <!-- Language Selection -->
-                                <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
+                                <StackPanel x:Name="LlamaTranslationOptionsPanel" Orientation="Horizontal" Margin="0,15,0,0"
+                                            IsEnabled="{Binding ElementName=LlamaTranslateCheckbox, Path=IsChecked, Mode=OneWay}">
                                     <TextBlock Text="Translate to:" VerticalAlignment="Center" 
                                                Foreground="{DynamicResource TextBrush}" Margin="0,0,10,0"/>
                                     <ComboBox x:Name="LlamaTargetLanguageComboBox" Width="150"
@@ -628,7 +838,7 @@
                                         <ComboBoxItem Content="Vietnamese (vi)" Tag="vi"/>
                                     </ComboBox>
                                 </StackPanel>
-                                <TextBlock Text="Select the target language for translation"
+                                <TextBlock x:Name="LlamaTranslationDescription" Text="Select the target language for translation"
                                            Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0" FontSize="11"
                                            ToolTipService.ToolTip="Choose the language to translate transcribed text to"/>
                             </StackPanel>
@@ -641,6 +851,20 @@
                                            Foreground="{DynamicResource TextBrush}"/>
                                 <TextBlock x:Name="LlamaModelPathText" Text="No model selected"
                                            Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0"/>
+                                
+                                <!-- Model Metadata Badges -->
+                                <StackPanel x:Name="LlamaModelBadgesPanel" Orientation="Horizontal" Margin="0,8,0,0" Visibility="Collapsed">
+                                    <Border x:Name="QuantizationBadge" Background="{DynamicResource InfoBadgeBrush}" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
+                                        <TextBlock x:Name="QuantizationBadgeText" Text="" FontSize="11" Foreground="White"/>
+                                    </Border>
+                                    <Border x:Name="SizeBadge" Background="{DynamicResource ValidBadgeBrush}" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
+                                        <TextBlock x:Name="SizeBadgeText" Text="" FontSize="11" Foreground="White"/>
+                                    </Border>
+                                    <Border x:Name="RAMBadge" Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="6,2">
+                                        <TextBlock x:Name="RAMBadgeText" Text="" FontSize="11" Foreground="White"/>
+                                    </Border>
+                                </StackPanel>
+                                
                                 <Button Content="Select Model File..." Click="SelectLlamaModel_Click"
                                         Style="{DynamicResource SecondaryButtonStyle}" Margin="0,10,0,0"
                                         HorizontalAlignment="Left"/>
@@ -653,9 +877,17 @@
                                 <TextBlock Text="Download from HuggingFace" FontSize="14" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"
                                            ToolTipService.ToolTip="Download Llama models from HuggingFace model hub"/>
-                                <TextBox x:Name="HuggingFaceModelIdTextBox" Margin="0,10,0,0"
-                                         TextChanged="HuggingFaceModelIdTextBox_TextChanged"
-                                         ToolTipService.ToolTip="Enter the model ID from huggingface.co (e.g., TheBloke/Llama-2-7B-Chat-GGUF)"/>
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="HuggingFaceModelIdTextBox" Grid.Column="0"
+                                             TextChanged="HuggingFaceModelIdTextBox_TextChanged"
+                                             ToolTipService.ToolTip="Enter the model ID from huggingface.co (e.g., TheBloke/Llama-2-7B-Chat-GGUF)"/>
+                                    <TextBlock x:Name="ValidationIcon" Grid.Column="1" Text="" FontSize="16" 
+                                               Margin="8,0,0,0" VerticalAlignment="Center"/>
+                                </Grid>
                                 <TextBlock Text="Find models at huggingface.co/models — search for GGUF quantized models"
                                            Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"
                                            TextWrapping="Wrap"
@@ -688,15 +920,37 @@
                                 <TextBlock Text="HuggingFace Token (for private models)" FontSize="14" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}" Margin="0,20,0,0"
                                            ToolTipService.ToolTip="Required to access private or gated models on HuggingFace"/>
-                                <PasswordBox x:Name="HuggingFaceTokenBox" Margin="0,10,0,0"
-                                            PasswordChanged="HuggingFaceTokenBox_PasswordChanged"
-                                            Background="{DynamicResource CardBrush}"
-                                            Foreground="{DynamicResource TextBrush}"
-                                            BorderBrush="{DynamicResource BorderBrush}"
-                                            BorderThickness="1"
-                                            Padding="10,8"
-                                            CaretBrush="{DynamicResource TextBrush}"
-                                            ToolTipService.ToolTip="Your HuggingFace access token. Get it from huggingface.co/settings/tokens"/>
+                                <Grid Margin="0,10,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <PasswordBox x:Name="HuggingFaceTokenBox" Grid.Column="0"
+                                                PasswordChanged="HuggingFaceTokenBox_PasswordChanged"
+                                                Background="{DynamicResource CardBrush}"
+                                                Foreground="{DynamicResource TextBrush}"
+                                                BorderBrush="{DynamicResource BorderBrush}"
+                                                BorderThickness="1"
+                                                Padding="10,8"
+                                                CaretBrush="{DynamicResource TextBrush}"
+                                                ToolTipService.ToolTip="Your HuggingFace access token. Get it from huggingface.co/settings/tokens"/>
+                                    <TextBox x:Name="HuggingFaceTokenTextBox" Grid.Column="0"
+                                             Visibility="Collapsed"
+                                             TextChanged="HuggingFaceTokenTextBox_TextChanged"
+                                             Background="{DynamicResource CardBrush}"
+                                             Foreground="{DynamicResource TextBrush}"
+                                             BorderBrush="{DynamicResource BorderBrush}"
+                                             BorderThickness="1"
+                                             Padding="10,8"
+                                             CaretBrush="{DynamicResource TextBrush}"
+                                             ToolTipService.ToolTip="Your HuggingFace access token. Get it from huggingface.co/settings/tokens"/>
+                                    <Button x:Name="ToggleHuggingFaceTokenBtn" Grid.Column="1" Content="👁"
+                                            Click="ToggleHuggingFaceToken_Click"
+                                            Style="{DynamicResource SecondaryButtonStyle}"
+                                            Width="70" Height="36" Margin="5,0,0,0"
+                                            FontSize="15"
+                                            ToolTipService.ToolTip="Show/Hide token"/>
+                                </Grid>
                                 <TextBlock Text="Required for gated/private models. Get yours at huggingface.co/settings/tokens"
                                            Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,5,0,0"/>
                             </StackPanel>
@@ -833,61 +1087,452 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Search -->
-                            <TextBox x:Name="SearchTextBox" Grid.Row="0"
-                                     TextChanged="SearchTextBox_TextChanged"/>
+                    <!-- Search with live filtering -->
+                    <Grid Grid.Row="0">
+                        <TextBox x:Name="SearchTextBox" 
+                                 TextChanged="SearchTextBox_TextChanged"
+                                 Style="{DynamicResource SearchTextBoxStyle}"/>
+                        <TextBlock Text="Search transcriptions…" 
+                                   IsHitTestVisible="False"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"
+                                   VerticalAlignment="Center" Margin="10,0,0,0"
+                                   Visibility="{Binding Text.Length, ElementName=SearchTextBox, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+                    </Grid>
 
-                    <!-- History List -->
-                    <ListBox x:Name="HistoryListBox" Grid.Row="1" Margin="0,10,0,0"
-                             Background="Transparent" BorderThickness="0"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="15" Margin="0,5">
-                                    <Grid>
+                    <!-- History List with grouping -->
+                    <Grid Grid.Row="1">
+                        <ListBox x:Name="HistoryListBox" Margin="0,10,0,0"
+                                 Background="Transparent" BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 SelectionMode="Extended">
+                            <ListBox.GroupStyle>
+                                <GroupStyle>
+                                    <GroupStyle.HeaderTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource CardBrush}" 
+                                                    CornerRadius="6" Padding="12,8" Margin="0,8,0,4">
+                                                <TextBlock Text="{Binding Name}" 
+                                                           FontWeight="SemiBold" 
+                                                           FontSize="13"
+                                                           Foreground="{DynamicResource AccentBrush}"/>
+                                            </Border>
+                                        </DataTemplate>
+                                    </GroupStyle.HeaderTemplate>
+                                </GroupStyle>
+                            </ListBox.GroupStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border x:Name="CardBorder" 
+                                            Background="{DynamicResource CardBrush}" 
+                                            CornerRadius="8" Padding="12" Margin="0,4"
+                                            BorderThickness="1"
+                                            BorderBrush="Transparent"
+                                            MouseLeftButtonDown="CardBorder_MouseLeftButtonDown">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Style.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <StackPanel Grid.Column="0">
+                                                <!-- Header row with time and badge -->
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                                    <TextBlock Text="{Binding DisplayTime}" FontSize="12" FontWeight="Medium"
+                                                               Foreground="{DynamicResource TextBrush}"/>
+                                                    <Border Background="{DynamicResource SecondaryTextBrush}" 
+                                                            CornerRadius="4" Padding="6,2" Margin="10,0,0,0"
+                                                            Opacity="0.7" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding DurationBadge}" FontSize="10"
+                                                                   Foreground="{DynamicResource CardBrush}"/>
+                                                    </Border>
+                                                </StackPanel>
+                                                
+                                                <!-- Editable text area -->
+                                                <TextBox x:Name="TextDisplay" 
+                                                         Text="{Binding Text, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                         TextWrapping="Wrap" 
+                                                         AcceptsReturn="False"
+                                                         Background="Transparent"
+                                                         BorderThickness="0"
+                                                         Foreground="{DynamicResource TextBrush}"
+                                                         FontSize="14"
+                                                         Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"
+                                                         LostFocus="TextBox_LostFocus"
+                                                         KeyDown="TextBox_KeyDown"/>
+                                                
+                                                <!-- Truncated text display -->
+                                                <StackPanel Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                                                    <TextBlock Text="{Binding DisplayText}" TextWrapping="Wrap" 
+                                                               Foreground="{DynamicResource TextBrush}"
+                                                               FontSize="14" MaxHeight="80"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <Button x:Name="ShowMoreButton" 
+                                                            Content="{Binding ExpandButtonText}"
+                                                            Click="ShowMoreButton_Click"
+                                                            Tag="{Binding Id}"
+                                                            Style="{DynamicResource LinkButtonStyle}"
+                                                            HorizontalAlignment="Left"
+                                                            Margin="0,4,0,0"
+                                                            Visibility="{Binding ShowExpandButton, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                                </StackPanel>
+                                                
+                                                <!-- Click to edit hint -->
+                                                <TextBlock Text="Click text to edit" 
+                                                           FontSize="10" 
+                                                           Foreground="{DynamicResource SecondaryTextBrush}"
+                                                           Margin="0,4,0,0"
+                                                           Opacity="0.6"
+                                                           Visibility="{Binding IsMouseOver, ElementName=CardBorder, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                            </StackPanel>
+                                            
+                                            <!-- Hover-reveal actions -->
+                                            <StackPanel x:Name="ActionsPanel" Grid.Column="2" 
+                                                        Orientation="Horizontal" VerticalAlignment="Top"
+                                                        Opacity="0">
+                                                <Button Content="Copy" Click="CopyTranscription_Click"
+                                                        Tag="{Binding Id}"
+                                                        Style="{DynamicResource SmallButtonStyle}" Margin="4,0"/>
+                                                <Button Content="Delete" Click="DeleteTranscription_Click"
+                                                        Tag="{Binding Id}"
+                                                        Style="{DynamicResource SmallDangerButtonStyle}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                    <DataTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="ActionsPanel" Property="Opacity" Value="1"/>
+                                        </Trigger>
+                                    </DataTemplate.Triggers>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <!-- Empty State -->
+                        <StackPanel x:Name="EmptyStatePanel" 
+                                    VerticalAlignment="Center" HorizontalAlignment="Center"
+                                    Visibility="Collapsed">
+                            <TextBlock Text="🎙️" FontSize="64" HorizontalAlignment="Center" Margin="0,0,0,20"/>
+                            <TextBlock Text="No transcriptions yet" 
+                                       FontSize="24" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource TextBrush}"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Press Ctrl+Shift+A to record" 
+                                       FontSize="14"
+                                       Foreground="{DynamicResource SecondaryTextBrush}"
+                                       HorizontalAlignment="Center" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Bottom toolbar -->
+                    <Grid Grid.Row="2" Margin="0,10,0,0">
+                        <!-- Right side: Clear controls -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <ComboBox x:Name="ClearOlderThanComboBox" Width="140" Margin="0,0,8,0">
+                                <ComboBoxItem Content="1 hour" Tag="1"/>
+                                <ComboBoxItem Content="6 hours" Tag="6"/>
+                                <ComboBoxItem Content="24 hours" Tag="24"/>
+                                <ComboBoxItem Content="7 days" Tag="168" IsSelected="True"/>
+                                <ComboBoxItem Content="30 days" Tag="720"/>
+                                <ComboBoxItem Content="90 days" Tag="2160"/>
+                            </ComboBox>
+                            <Button x:Name="ClearOlderThanButton" Content="Clear Older Than"
+                                    Click="ClearOlderThanButton_Click"
+                                    Style="{DynamicResource SecondaryButtonStyle}" Margin="0,0,15,0"/>
+                            <Rectangle Width="1" Fill="#555555" Margin="0,5,15,5"/>
+                            <Button x:Name="ClearAllButton" Content="Clear All"
+                                    Click="ClearAllButton_Click"
+                                    Style="{DynamicResource SecondaryButtonStyle}"/>
+                        </StackPanel>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <!-- Transform Tab (Disabled) -->
+            <TabItem Header="Transform" IsEnabled="False">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20">
+                        <TextBlock Text="Text Transformation" FontSize="20" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextBrush}"/>
+                        <TextBlock Text="Transform transcribed text using AI"
+                                   Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,20"/>
+
+                        <!-- Transformation Settings -->
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="Transformation Settings" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                                
+                                <!-- Transformation Type -->
+                                <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
+                                    <TextBlock Text="Type:" VerticalAlignment="Center" 
+                                               Foreground="{DynamicResource TextBrush}" Width="100"/>
+                                    <ComboBox x:Name="TransformationTypeComboBox" Width="200">
+                                        <ComboBoxItem Content="Grammar" Tag="Grammar"/>
+                                        <ComboBoxItem Content="Tone" Tag="Tone"/>
+                                        <ComboBoxItem Content="Voice" Tag="Voice"/>
+                                        <ComboBoxItem Content="Complexity" Tag="Complexity"/>
+                                        <ComboBoxItem Content="Professionalism" Tag="Professionalism"/>
+                                        <ComboBoxItem Content="Personal Style" Tag="PersonalStyle"/>
+                                        <ComboBoxItem Content="Translation" Tag="Translation"/>
+                                        <ComboBoxItem Content="Custom" Tag="Custom"/>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <!-- Direction -->
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <TextBlock Text="Direction:" VerticalAlignment="Center" 
+                                               Foreground="{DynamicResource TextBrush}" Width="100"/>
+                                    <ComboBox x:Name="TransformationDirectionComboBox" Width="200">
+                                        <ComboBoxItem Content="Default" Tag="Default"/>
+                                        <ComboBoxItem Content="Formal" Tag="Formal"/>
+                                        <ComboBoxItem Content="Informal" Tag="Informal"/>
+                                        <ComboBoxItem Content="Active" Tag="Active"/>
+                                        <ComboBoxItem Content="Passive" Tag="Passive"/>
+                                        <ComboBoxItem Content="Simplify" Tag="Simplify"/>
+                                        <ComboBoxItem Content="Elaborate" Tag="Elaborate"/>
+                                        <ComboBoxItem Content="Professional" Tag="Professional"/>
+                                        <ComboBoxItem Content="Casual" Tag="Casual"/>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <!-- Target Language (for Translation) -->
+                                <StackPanel x:Name="TargetLanguagePanel" Orientation="Horizontal" Margin="0,10,0,0" Visibility="Collapsed">
+                                    <TextBlock Text="Target Language:" VerticalAlignment="Center" 
+                                               Foreground="{DynamicResource TextBrush}" Width="100"/>
+                                    <ComboBox x:Name="TransformTargetLanguageComboBox" Width="200">
+                                        <ComboBoxItem Content="English (en)" Tag="en" IsSelected="True"/>
+                                        <ComboBoxItem Content="Spanish (es)" Tag="es"/>
+                                        <ComboBoxItem Content="French (fr)" Tag="fr"/>
+                                        <ComboBoxItem Content="German (de)" Tag="de"/>
+                                        <ComboBoxItem Content="Italian (it)" Tag="it"/>
+                                        <ComboBoxItem Content="Portuguese (pt)" Tag="pt"/>
+                                        <ComboBoxItem Content="Russian (ru)" Tag="ru"/>
+                                        <ComboBoxItem Content="Chinese (zh)" Tag="zh"/>
+                                        <ComboBoxItem Content="Japanese (ja)" Tag="ja"/>
+                                        <ComboBoxItem Content="Korean (ko)" Tag="ko"/>
+                                        <ComboBoxItem Content="Arabic (ar)" Tag="ar"/>
+                                        <ComboBoxItem Content="Hindi (hi)" Tag="hi"/>
+                                    </ComboBox>
+                                </StackPanel>
+
+                                <!-- Preserve Options -->
+                                <StackPanel Margin="0,15,0,0">
+                                    <CheckBox x:Name="PreserveProperNounsCheckBox" Content="Preserve proper nouns (names, places)" 
+                                              IsChecked="True"
+                                              Foreground="{DynamicResource TextBrush}"/>
+                                    <CheckBox x:Name="PreserveTechnicalTermsCheckBox" Content="Preserve technical terms" 
+                                              IsChecked="True" Margin="0,5,0,0"
+                                              Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+
+                                <!-- Quality Threshold -->
+                                <StackPanel Margin="0,15,0,0">
+                                    <TextBlock Text="Quality Threshold" Foreground="{DynamicResource TextBrush}"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <Slider x:Name="QualityThresholdSlider" Width="200" Minimum="0" Maximum="100" Value="70"
+                                                TickFrequency="10" IsSnapToTickEnabled="True"/>
+                                        <TextBlock x:Name="QualityThresholdValue" Text="70" Margin="10,0,0,0" 
+                                                   VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
+                                    </StackPanel>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Text Input -->
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Input Text" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                                <TextBlock Text="Enter or paste text to transform"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
+                                <TextBox x:Name="TransformInputTextBox" 
+                                         AcceptsReturn="True" 
+                                         TextWrapping="Wrap"
+                                         Height="120"
+                                         VerticalScrollBarVisibility="Auto"
+                                         Padding="5"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                    <Button x:Name="TransformButton" Content="Transform" 
+                                            Click="TransformButton_Click"
+                                            Style="{DynamicResource PrimaryButtonStyle}"
+                                            Padding="20,8"/>
+                                    <Button x:Name="ClearTransformButton" Content="Clear" 
+                                            Click="ClearTransformButton_Click"
+                                            Style="{DynamicResource SecondaryButtonStyle}"
+                                            Margin="10,0,0,0" Padding="20,8"/>
+                                    <Button x:Name="PasteToTransformButton" Content="Paste from Clipboard" 
+                                            Click="PasteToTransformButton_Click"
+                                            Style="{DynamicResource SecondaryButtonStyle}"
+                                            Margin="10,0,0,0" Padding="20,8"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Transformation Output -->
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Transformed Text" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                                <TextBox x:Name="TransformOutputTextBox" 
+                                         AcceptsReturn="True" 
+                                         TextWrapping="Wrap"
+                                         Height="120"
+                                         IsReadOnly="True"
+                                         VerticalScrollBarVisibility="Auto"
+                                         Padding="5"
+                                         Margin="0,10,0,0"/>
+                                
+                                <!-- Quality Metrics -->
+                                <StackPanel x:Name="QualityMetricsPanel" Visibility="Collapsed" Margin="0,15,0,0">
+                                    <TextBlock Text="Quality Metrics" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <Grid Margin="0,10,0,0">
                                         <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="120"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="60"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Text="Similarity:" Grid.Row="0" Grid.Column="0" 
+                                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                        <ProgressBar x:Name="SimilarityProgressBar" Grid.Row="0" Grid.Column="1" 
+                                                     Minimum="0" Maximum="100" Height="10" Margin="0,3"
+                                                     Background="{DynamicResource CardBrush}"
+                                                     Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock x:Name="SimilarityText" Grid.Row="0" Grid.Column="2" 
+                                                   Foreground="{DynamicResource TextBrush}" TextAlignment="Right"/>
+
+                                        <TextBlock Text="Confidence:" Grid.Row="1" Grid.Column="0" Margin="0,5,0,0"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                        <ProgressBar x:Name="ConfidenceProgressBar" Grid.Row="1" Grid.Column="1" 
+                                                     Minimum="0" Maximum="100" Height="10" Margin="0,8,0,0"
+                                                     Background="{DynamicResource CardBrush}"
+                                                     Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock x:Name="ConfidenceText" Grid.Row="1" Grid.Column="2" Margin="0,5,0,0"
+                                                   Foreground="{DynamicResource TextBrush}" TextAlignment="Right"/>
+
+                                        <TextBlock Text="Readability:" Grid.Row="2" Grid.Column="0" Margin="0,5,0,0"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                        <ProgressBar x:Name="ReadabilityProgressBar" Grid.Row="2" Grid.Column="1" 
+                                                     Minimum="0" Maximum="100" Height="10" Margin="0,8,0,0"
+                                                     Background="{DynamicResource CardBrush}"
+                                                     Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock x:Name="ReadabilityText" Grid.Row="2" Grid.Column="2" Margin="0,5,0,0"
+                                                   Foreground="{DynamicResource TextBrush}" TextAlignment="Right"/>
+
+                                        <TextBlock Text="Overall:" Grid.Row="3" Grid.Column="0" Margin="0,5,0,0"
+                                                   Foreground="{DynamicResource TextBrush}" FontWeight="SemiBold"/>
+                                        <ProgressBar x:Name="OverallProgressBar" Grid.Row="3" Grid.Column="1" 
+                                                     Minimum="0" Maximum="100" Height="14" Margin="0,8,0,0"
+                                                     Background="{DynamicResource CardBrush}"
+                                                     Foreground="{DynamicResource AccentBrush}"/>
+                                        <TextBlock x:Name="OverallScoreText" Grid.Row="3" Grid.Column="2" Margin="0,5,0,0"
+                                                   Foreground="{DynamicResource AccentBrush}" FontWeight="Bold" TextAlignment="Right"/>
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- Output Actions -->
+                                <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
+                                    <Button x:Name="CopyTransformedButton" Content="Copy" 
+                                            Click="CopyTransformedButton_Click"
+                                            Style="{DynamicResource SecondaryButtonStyle}"
+                                            Padding="15,5"/>
+                                    <Button x:Name="ApplyToOutputButton" Content="Apply to Output" 
+                                            Click="ApplyToOutputButton_Click"
+                                            Style="{DynamicResource PrimaryButtonStyle}"
+                                            Margin="10,0,0,0" Padding="15,5"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Profiles Section -->
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Transformation Profiles" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                                <TextBlock Text="Save and manage transformation settings as profiles"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
+
+                                <!-- Profile List -->
+                                <ListBox x:Name="TransformationProfilesListBox" 
+                                         Background="Transparent" BorderThickness="0"
+                                         MaxHeight="150"
+                                         SelectionChanged="TransformationProfilesListBox_SelectionChanged"
+                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{DynamicResource CardBrush}" CornerRadius="4" Padding="10" Margin="0,3">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                                   Foreground="{DynamicResource TextBrush}"/>
+                                                        <TextBlock Text="{Binding Description}" FontSize="11"
+                                                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                                    </StackPanel>
+                                                    <Button Grid.Column="1" Content="Load" 
+                                                            Click="LoadProfileButton_Click"
+                                                            Tag="{Binding Id}"
+                                                            Style="{DynamicResource SecondaryButtonStyle}" 
+                                                            Padding="10,3" Margin="5,0"/>
+                                                    <Button Grid.Column="2" Content="Delete" 
+                                                            Click="DeleteProfileButton_Click"
+                                                            Tag="{Binding Id}"
+                                                            Style="{DynamicResource SecondaryButtonStyle}" 
+                                                            Padding="10,3"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+
+                                <!-- Create New Profile -->
+                                <StackPanel Margin="0,15,0,0">
+                                    <TextBlock Text="Create New Profile" Foreground="{DynamicResource TextBrush}"/>
+                                    <Grid Margin="0,10,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <StackPanel Grid.Column="0">
-                                            <TextBlock Text="{Binding DisplayTime}" FontSize="11"
-                                                       Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap"
-                                                       Foreground="{DynamicResource TextBrush}"/>
-                                        </StackPanel>
-                                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
-                                            <Button Content="Copy" Click="CopyTranscription_Click"
-                                                    Tag="{Binding Id}"
-                                                    Style="{DynamicResource SecondaryButtonStyle}" Margin="5,0"/>
-                                            <Button Content="Delete" Click="DeleteTranscription_Click"
-                                                    Tag="{Binding Id}"
-                                                    Style="{DynamicResource SecondaryButtonStyle}"/>
-                                        </StackPanel>
+                                        <TextBox x:Name="NewProfileNameBox" Grid.Column="0" 
+                                                 VerticalContentAlignment="Center" Padding="5" Margin="0,0,5,0"
+                                                 ToolTipService.ToolTip="Profile name"/>
+                                        <TextBox x:Name="NewProfileDescriptionBox" Grid.Column="1" 
+                                                 VerticalContentAlignment="Center" Padding="5" Margin="5,0,5,0"
+                                                 ToolTipService.ToolTip="Profile description"/>
+                                        <Button x:Name="CreateProfileButton" Grid.Column="2" Content="Create" 
+                                                Click="CreateProfileButton_Click"
+                                                Style="{DynamicResource PrimaryButtonStyle}" Padding="15,5"/>
                                     </Grid>
-                                </Border>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
 
-                    <!-- Clear All -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-                        <ComboBox x:Name="ClearOlderThanComboBox" Width="140" Margin="0,0,8,0">
-                            <ComboBoxItem Content="1 hour" Tag="1"/>
-                            <ComboBoxItem Content="6 hours" Tag="6"/>
-                            <ComboBoxItem Content="24 hours" Tag="24"/>
-                            <ComboBoxItem Content="7 days" Tag="168"/>
-                            <ComboBoxItem Content="30 days" Tag="720"/>
-                            <ComboBoxItem Content="90 days" Tag="2160"/>
-                        </ComboBox>
-                        <Button x:Name="ClearOlderThanButton" Content="Clear Older Than"
-                                Click="ClearOlderThanButton_Click"
-                                Style="{DynamicResource SecondaryButtonStyle}" Margin="0,0,15,0"/>
-                        <Rectangle Width="1" Fill="#555555" Margin="0,5,15,5"/>
-                        <Button x:Name="ClearAllButton" Content="Clear All"
-                                Click="ClearAllButton_Click"
-                                Style="{DynamicResource SecondaryButtonStyle}"/>
+                        <!-- Status -->
+                        <TextBlock x:Name="TransformStatusText" Margin="0,20,0,0"
+                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
                     </StackPanel>
-                </Grid>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
     </Grid>
