@@ -212,6 +212,16 @@ public partial class MainWindow : Window
             }
         });
 
+        // Subscribe to Whisper model load/unload events
+        App.Whisper.ModelLoaded += (s, isLoaded) => Dispatcher.Invoke(() =>
+        {
+            if (WhisperModelText != null)
+            {
+                var modelName = App.Whisper.LoadedModelName;
+                WhisperModelText.Text = string.IsNullOrEmpty(modelName) ? "" : $" — {modelName}";
+            }
+        });
+
         // Load history
         await LoadHistoryAsync();
 

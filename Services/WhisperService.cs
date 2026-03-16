@@ -31,6 +31,17 @@ public class WhisperService : IDisposable
     public bool IsInitialized => _isInitialized;
 
     /// <summary>
+    /// Gets the name of the currently loaded model (e.g., "tiny", "small", "medium", "large").
+    /// </summary>
+    public string? LoadedModelName { get; private set; }
+
+    /// <summary>
+    /// Event fired when the Whisper model is loaded or unloaded.
+    /// </summary>
+    /// <param name="isLoaded">True if model is now loaded, false if unloaded.</param>
+    public event EventHandler<bool>? ModelLoaded;
+
+    /// <summary>
     /// Initializes the Whisper service and loads the configured model.
     /// </summary>
     /// <remarks>
@@ -44,7 +55,18 @@ public class WhisperService : IDisposable
             var modelPath = GetModelPath();
             if (string.IsNullOrEmpty(modelPath) || !File.Exists(modelPath))
             {
-                modelPath = Path.Combine(App.WhisperModelsPath, "ggml-small.bin");
+                // Fallback: try to find any available model, checking from large to tiny
+                var modelSizes = new[] { "large-v3", "medium", "small", "base", "tiny" };
+                foreach (var size in modelSizes)
+                {
+                    var fileName = size == "large-v3" ? "ggml-large-v3.bin" : $"ggml-{size}.bin";
+                    var fallbackPath = Path.Combine(App.WhisperModelsPath, fileName);
+                    if (File.Exists(fallbackPath))
+                    {
+                        modelPath = fallbackPath;
+                        break;
+                    }
+                }
             }
 
             if (File.Exists(modelPath))
@@ -67,7 +89,16 @@ public class WhisperService : IDisposable
                 _factory = WhisperFactory.FromPath(modelPath);
                 LoggingService.Info("[Whisper] Factory loaded successfully");
                 
+                // Extract model name from file path (e.g., "ggml-medium.bin" -> "medium")
+                var fileName = Path.GetFileName(modelPath);
+                if (fileName.StartsWith("ggml-"))
+                {
+                    var namePart = fileName.Substring(5); // Remove "ggml-" prefix
+                    LoadedModelName = namePart.Replace(".bin", "").Replace("-v3", "");
+                }
+                
                 _isInitialized = true;
+                ModelLoaded?.Invoke(this, true);
             }
             else
             {
@@ -86,7 +117,7 @@ public class WhisperService : IDisposable
     /// </summary>
     /// <returns>Path to the model file, or empty string if no model is configured.</returns>
     /// <remarks>
-    /// Checks custom path from settings first, then falls back to default location.
+    /// Checks custom path from settings first, then falls back to default location based on ModelSize setting.
     /// </remarks>
     public string GetModelPath()
     {
@@ -95,8 +126,20 @@ public class WhisperService : IDisposable
             return App.Settings.Whisper.ModelPath;
         }
 
-        // Check default locations
-        var defaultPath = Path.Combine(App.WhisperModelsPath, "ggml-small.bin");
+        // Use ModelSize setting to determine which model file to load
+        var modelSize = App.Settings.Whisper.ModelSize;
+        if (string.IsNullOrEmpty(modelSize))
+        {
+            modelSize = "small"; // Default to small if not set
+        }
+
+        // Handle large model special case (uses ggml-large-v3.bin)
+        var modelFileName = modelSize.ToLowerInvariant() == "large" 
+            ? "ggml-large-v3.bin" 
+            : $"ggml-{modelSize}.bin";
+
+        // Check default locations based on ModelSize setting
+        var defaultPath = Path.Combine(App.WhisperModelsPath, modelFileName);
         if (File.Exists(defaultPath))
         {
             return defaultPath;
