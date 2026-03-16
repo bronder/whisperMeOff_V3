@@ -2,6 +2,27 @@
 
 ## Latest Release
 
+### Version 1.5.1
+
+#### Bug Fixes
+- **Null Reference Fixes**: Fixed multiple potential null reference issues in MainWindow.xaml.cs and LlamaService.cs
+  - Added null-conditional operators for App.Settings property access
+  - Added validation for GGUF file header reading to prevent reading invalid files
+  - Fixed null reference in quality metrics tracking
+- **Disk Space Check Fix**: Fixed potential null reference when checking disk space with invalid paths
+- **Token Sync Fix**: Fixed null reference when syncing HuggingFace token between password and text fields
+
+#### Improvements
+- **Package Updates**: Updated multiple NuGet packages:
+  - NAudio: 2.2.1 → 2.3.0
+  - Microsoft.Data.Sqlite: 10.0.3 → 10.0.5
+  - NLog: 5.2.8 → 6.1.1
+  - MathNet.Numerics: 5.0.0 → 6.0.0-beta2
+  - Microsoft.Extensions.DependencyInjection: 8.0.0 → 9.0.0
+- **LLama Sampling**: Simplified sampling pipeline configuration
+
+---
+
 ### Version 1.5.0
 
 #### Features

@@ -49,7 +49,11 @@ public class LlamaService : IDisposable
             {
                 using var fs = new FileStream(modelPath, FileMode.Open, FileAccess.Read);
                 var header = new byte[4];
-                fs.Read(header, 0, 4);
+                var bytesRead = fs.Read(header, 0, 4);
+                if (bytesRead != 4)
+                {
+                    throw new Exception($"Invalid model file: file too small (only {bytesRead} bytes)");
+                }
                 // GGUF files start with "GGUF" (0x46554747 in little endian)
                 var magic = BitConverter.ToUInt32(header, 0);
                 if (magic != 0x46554747) // "GGUF" in little endian

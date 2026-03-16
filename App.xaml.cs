@@ -12,7 +12,6 @@ public partial class App : System.Windows.Application
     private NotifyIcon? _notifyIcon;
     private MainWindow? _mainWindow;
     private RecordingOverlayWindow? _recordingOverlay;
-    private System.Windows.Controls.MenuItem? _recordMenuItem;
     private ToolStripMenuItem? _recordToolStripItem;
 
     public static string AppDataPath { get; private set; } = null!;
@@ -341,8 +340,8 @@ public partial class App : System.Windows.Application
             _recordingOverlay?.Show();
             _recordingOverlay?.StartRecordingTimer();
             UpdateTrayIcon(true);
-            if (_recordMenuItem != null)
-                _recordMenuItem.Header = "Stop Recording";
+            if (_recordToolStripItem != null)
+                _recordToolStripItem.Text = "Stop Recording";
         });
     }
 
@@ -353,8 +352,8 @@ public partial class App : System.Windows.Application
             _recordingOverlay?.StopRecordingTimer();
             _recordingOverlay?.Hide();
             UpdateTrayIcon(false);
-            if (_recordMenuItem != null)
-                _recordMenuItem.Header = "Start Recording";
+            if (_recordToolStripItem != null)
+                _recordToolStripItem.Text = "Start Recording";
         });
     }
 

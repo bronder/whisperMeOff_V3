@@ -102,7 +102,7 @@ public partial class MainWindow : Window
         // Update preset button visual state based on current settings
         if (App.Settings?.Whisper?.ModelSize != null)
         {
-            UpdatePresetButtons(App.Settings.Whisper.ModelSize);
+            UpdatePresetButtons(App.Settings?.Whisper?.ModelSize!);
         }
         
         // Done loading - now allow saves
@@ -111,7 +111,7 @@ public partial class MainWindow : Window
         // Subscribe to Llama model load/unload events
         App.Llama.ModelLoaded += (s, isLoaded) => Dispatcher.Invoke(() =>
         {
-            if (App.Settings.Llama.Enabled)
+            if (App.Settings?.Llama?.Enabled == true)
             {
                 LlamaStatusText.Text = isLoaded ? "Enabled (Loaded)" : "Enabled (Not Loaded)";
             }
@@ -222,7 +222,7 @@ public partial class MainWindow : Window
         }
 
         // Llama status - show whether enabled and loaded
-        if (App.Settings.Llama.Enabled)
+        if (App.Settings?.Llama?.Enabled == true)
         {
             if (App.Llama.IsLoaded)
             {
@@ -277,16 +277,16 @@ public partial class MainWindow : Window
         }
 
         // Llama settings
-        LlamaEnableCheckbox.IsChecked = App.Settings.Llama.Enabled;
-        var llamaPath = App.Settings.Llama.ModelPath;
+        LlamaEnableCheckbox.IsChecked = App.Settings?.Llama?.Enabled ?? false;
+        var llamaPath = App.Settings?.Llama?.ModelPath ?? "";
         if (!string.IsNullOrEmpty(llamaPath))
         {
             LlamaModelPathText.Text = System.IO.Path.GetFileName(llamaPath);
         }
 
         // Llama translation settings
-        LlamaTranslateCheckbox.IsChecked = App.Settings.Llama.Translate;
-        var targetLang = App.Settings.Llama.TranslateTo ?? "en";
+        LlamaTranslateCheckbox.IsChecked = App.Settings?.Llama?.Translate ?? false;
+        var targetLang = App.Settings?.Llama?.TranslateTo ?? "en";
         // Set the combo box selection based on saved setting
         for (int i = 0; i < LlamaTargetLanguageComboBox.Items.Count; i++)
         {
@@ -298,14 +298,14 @@ public partial class MainWindow : Window
         }
 
         // HuggingFace Model ID
-        var modelId = App.Settings.Llama.ModelId;
+        var modelId = App.Settings?.Llama?.ModelId ?? "";
         if (!string.IsNullOrEmpty(modelId))
         {
             HuggingFaceModelIdTextBox.Text = modelId;
         }
 
         // HuggingFace Token (load into PasswordBox)
-        var hfToken = App.Settings.Llama.HuggingFaceToken;
+        var hfToken = App.Settings?.Llama?.HuggingFaceToken ?? "";
         
         // If token looks encrypted (very long base64 string), try to decrypt it first
         if (!string.IsNullOrEmpty(hfToken) && hfToken.Length > 128)
@@ -317,14 +317,20 @@ public partial class MainWindow : Window
                 if (decrypted.Length <= 128)
                 {
                     hfToken = decrypted;
-                    App.Settings.Llama.HuggingFaceToken = decrypted; // Update settings with decrypted value
+                    if (App.Settings?.Llama != null)
+                    {
+                        App.Settings.Llama.HuggingFaceToken = decrypted;
+                    } // Update settings with decrypted value
                 }
                 else
                 {
                     // Still too long after decrypt attempt - clear it
                     LoggingService.Warn("[Settings] HuggingFaceToken still too long after decrypt, clearing");
                     hfToken = "";
-                    App.Settings.Llama.HuggingFaceToken = "";
+                    if (App.Settings?.Llama != null)
+                    {
+                        App.Settings.Llama.HuggingFaceToken = "";
+                    }
                 }
             }
             catch
@@ -332,7 +338,10 @@ public partial class MainWindow : Window
                 // Decrypt failed - clear corrupted token
                 LoggingService.Warn("[Settings] HuggingFaceToken decrypt failed, clearing");
                 hfToken = "";
-                App.Settings.Llama.HuggingFaceToken = "";
+                if (App.Settings?.Llama != null)
+                {
+                    App.Settings.Llama.HuggingFaceToken = "";
+                }
             }
         }
         
@@ -342,29 +351,29 @@ public partial class MainWindow : Window
         }
 
         // Hotkey
-        HotkeyTriggerTextBox.Text = App.Settings.General.HotkeyTriggerKey;
-        HotkeyDisplay.Text = App.Settings.General.HotkeyTriggerKey.ToUpper();
-        HotkeyStatusText.Text = $"Ctrl+Shift+{App.Settings.General.HotkeyTriggerKey.ToUpper()}";
+        HotkeyTriggerTextBox.Text = App.Settings?.General?.HotkeyTriggerKey ?? "r";
+        HotkeyDisplay.Text = (App.Settings?.General?.HotkeyTriggerKey ?? "r").ToUpper();
+        HotkeyStatusText.Text = $"Ctrl+Shift+{(App.Settings?.General?.HotkeyTriggerKey ?? "r").ToUpper()}";
         
         // Update Quick Start hotkey display
         var quickStartHotkeyRun = FindName("QuickStartHotkeyRun") as System.Windows.Documents.Run;
         if (quickStartHotkeyRun != null)
         {
-            quickStartHotkeyRun.Text = App.Settings.General.HotkeyTriggerKey.ToUpper();
+            quickStartHotkeyRun.Text = (App.Settings?.General?.HotkeyTriggerKey ?? "r").ToUpper();
         }
         
         // Theme
         ThemeComboBox.SelectedIndex = App.Theme.GetCurrentThemeIndex();
 
         // Launch at login
-        LaunchAtLoginCheckbox.IsChecked = App.Settings.General.LaunchAtLogin;
+        LaunchAtLoginCheckbox.IsChecked = App.Settings?.General?.LaunchAtLogin ?? false;
         
         // Clipboard restore settings
-        RestoreClipboardCheckbox.IsChecked = App.Settings.General.RestoreClipboard;
-        ClipboardDelayTextBox.Text = App.Settings.General.ClipboardRestoreDelayMs.ToString();
+        RestoreClipboardCheckbox.IsChecked = App.Settings?.General?.RestoreClipboard ?? true;
+        ClipboardDelayTextBox.Text = (App.Settings?.General?.ClipboardRestoreDelayMs ?? 1000).ToString();
         
         // Recording mode
-        PushToTalkCheckbox.IsChecked = App.Settings.General.PushToTalkMode;
+        PushToTalkCheckbox.IsChecked = App.Settings?.General?.PushToTalkMode ?? true;
         
         // Mark as initialized - now TextChanged will save settings
         _isInitialized = true;
@@ -1102,7 +1111,7 @@ public partial class MainWindow : Window
         }
         
         LoggingService.Debug($"[UI] HuggingFaceTokenBox_PasswordChanged: Saving token, length={HuggingFaceTokenBox.Password?.Length ?? 0}");
-        App.Settings.Llama.HuggingFaceToken = HuggingFaceTokenBox.Password;
+        App.Settings.Llama.HuggingFaceToken = HuggingFaceTokenBox.Password ?? string.Empty;
         App.Settings.Save();
     }
 
