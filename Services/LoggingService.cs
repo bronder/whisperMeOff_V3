@@ -29,7 +29,6 @@ public static class LoggingService
             Layout = "${longdate} [${level:uppercase=true}] ${logger} - ${message} ${exception:format=tostring}",
             ArchiveEvery = NLog.Targets.FileArchivePeriod.Day,
             MaxArchiveFiles = 7,
-            ConcurrentWrites = true,
             KeepFileOpen = false
         };
         

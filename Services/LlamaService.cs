@@ -81,7 +81,11 @@ public class LlamaService : ILlamaService
             {
                 using var fs = new FileStream(modelPath, FileMode.Open, FileAccess.Read);
                 var header = new byte[4];
-                fs.Read(header, 0, 4);
+                var bytesRead = fs.Read(header, 0, 4);
+                if (bytesRead < 4)
+                {
+                    throw new Exception($"Invalid model file. Could not read header. Got {bytesRead} bytes, expected 4.");
+                }
                 // GGUF files start with "GGUF" (0x46554747 in little endian)
                 var magic = BitConverter.ToUInt32(header, 0);
                 if (magic != 0x46554747) // "GGUF" in little endian
@@ -220,7 +224,7 @@ public class LlamaService : ILlamaService
             {
                 MaxTokens = 512,
                 AntiPrompts = allAntiPrompts,
-                SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.1f, RepeatPenalty = 1.5f, FrequencyPenalty = 0.5f, PresencePenalty = 0.5f }
+                SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.1f, RepeatPenalty = 1.5f }
             };
 
             LoggingService.Debug("[LLAMA] Starting inference...");
@@ -684,7 +688,10 @@ public class LlamaService : ILlamaService
             }
             
             currentText = result.TransformedText;
-            allMetrics.Add(result.QualityMetrics);
+            if (result.QualityMetrics != null)
+            {
+                allMetrics.Add(result.QualityMetrics);
+            }
         }
 
         // Calculate aggregate metrics

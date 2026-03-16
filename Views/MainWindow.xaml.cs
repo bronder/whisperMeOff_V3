@@ -1696,7 +1696,9 @@ public partial class MainWindow : Window
             // Check disk space
             try
             {
-                var drive = new System.IO.DriveInfo(System.IO.Path.GetPathRoot(newPath));
+                var pathRoot = System.IO.Path.GetPathRoot(newPath);
+                if (string.IsNullOrEmpty(pathRoot)) return;
+                var drive = new System.IO.DriveInfo(pathRoot);
                 if (drive.IsReady)
                 {
                     var freeSpaceGB = drive.AvailableFreeSpace / (1024.0 * 1024 * 1024);
@@ -1954,7 +1956,7 @@ public partial class MainWindow : Window
         // Sync with TextBox if visible
         if (HuggingFaceTokenTextBox.Visibility == Visibility.Visible)
         {
-            HuggingFaceTokenTextBox.Text = HuggingFaceTokenBox.Password;
+            HuggingFaceTokenTextBox.Text = HuggingFaceTokenBox.Password ?? string.Empty;
         }
         
         App.Settings.Llama.HuggingFaceToken = HuggingFaceTokenBox.Password ?? string.Empty;
@@ -1978,7 +1980,7 @@ public partial class MainWindow : Window
         if (HuggingFaceTokenBox.Visibility == Visibility.Visible)
         {
             // Show token
-            HuggingFaceTokenTextBox.Text = HuggingFaceTokenBox.Password;
+            HuggingFaceTokenTextBox.Text = HuggingFaceTokenBox.Password ?? string.Empty;
             HuggingFaceTokenBox.Visibility = Visibility.Collapsed;
             HuggingFaceTokenTextBox.Visibility = Visibility.Visible;
             ToggleHuggingFaceTokenBtn.Content = "🔒";
@@ -2789,7 +2791,7 @@ public class TranscriptionListItem : System.ComponentModel.INotifyPropertyChange
         set { _displayTime = value; OnPropertyChanged(nameof(DisplayTime)); }
     }
     
-    public event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     
     protected virtual void OnPropertyChanged(string propertyName)
     {
