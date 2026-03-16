@@ -2,6 +2,10 @@
 
 ## Latest Release
 
+### Version 1.7.1
+
+---
+
 ### Version 1.7.0
 
 #### Features
