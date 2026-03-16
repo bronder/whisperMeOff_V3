@@ -1,6 +1,5 @@
 using System.IO;
 using System.Windows;
-using System.Windows.Forms;
 using Microsoft.Win32;
 using whisperMeOff.Interfaces;
 using whisperMeOff.Services;
