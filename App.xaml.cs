@@ -40,13 +40,15 @@ public partial class App : System.Windows.Application
 
     protected override async void OnStartup(StartupEventArgs e)
     {
-        base.OnStartup(e);
+        try
+        {
+            base.OnStartup(e);
 
-        // Initialize logging FIRST before anything else
-        LoggingService.Initialize();
+            // Initialize logging FIRST before anything else
+            LoggingService.Initialize();
 
-        // Setup global exception handlers
-        SetupExceptionHandling();
+            // Setup global exception handlers
+            SetupExceptionHandling();
 
         // Setup application data paths
         AppDataPath = Path.Combine(
@@ -75,7 +77,45 @@ public partial class App : System.Windows.Application
         ModelDownload = new ModelDownloadService();
 
         // Load settings
-        Settings.Load();
+        try
+        {
+            Settings.Load();
+            LoggingService.Info("[Startup] Settings loaded successfully");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error(ex, "[Startup] Error loading settings - using defaults");
+        }
+        
+        // Check if first run - show onboarding window
+        if (!Settings.General.HasCompletedOnboarding)
+        {
+            LoggingService.Info("[Startup] First run detected - showing onboarding");
+            try
+            {
+                var firstRunWindow = new FirstRunWindow();
+                firstRunWindow.ShowDialog();
+                
+                // If user cancelled, exit the app
+                if (firstRunWindow.DialogResult != true)
+                {
+                    LoggingService.Info("[Startup] User cancelled onboarding - exiting");
+                    Shutdown();
+                    return;
+                }
+                
+                // Reload settings after FirstRunWindow saves changes
+                Settings.Load();
+                LoggingService.Info("[Startup] Settings reloaded after onboarding");
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Error(ex, "[Startup] Error showing FirstRunWindow");
+                // Continue anyway - show the error but try to proceed
+                System.Windows.MessageBox.Show($"Error during first-run setup: {ex.Message}", "Warning", 
+                    System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+            }
+        }
         
         // Apply startup registration if enabled
         if (Settings.General.LaunchAtLogin)
@@ -100,7 +140,15 @@ public partial class App : System.Windows.Application
         }
         
         // Apply saved theme
-        Theme.ApplyTheme(Settings.General.Theme);
+        try
+        {
+            Theme.ApplyTheme(Settings.General.Theme);
+            LoggingService.Info($"[Startup] Applied theme: {Settings.General.Theme}");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error(ex, $"[Startup] Failed to apply theme: {Settings.General.Theme}");
+        }
 
         // Update model paths based on settings - use custom paths if set
         var customWhisperPath = Settings.General.ModelDownloadPath;
@@ -163,6 +211,14 @@ public partial class App : System.Windows.Application
                 await Llama.InitializeAsync(Settings.Llama.ModelPath);
             }
         });
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Fatal(ex, "[Startup] Unexpected error during application startup");
+            System.Windows.MessageBox.Show($"An unexpected error occurred during startup: {ex.Message}\n\nThe application will now exit.", "Startup Error", 
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            Environment.Exit(1);
+        }
     }
 
     private void SetupExceptionHandling()
@@ -476,8 +532,8 @@ public partial class App : System.Windows.Application
                 }
             });
 
-            // Save to database
-            await Database.AddTranscriptionAsync(text, Audio.LastRecordingDuration, Settings.Whisper.ModelPath, Settings.Whisper.Language);
+            // Save to database (pass 0 for processing time - can be enhanced later)
+            await Database.AddTranscriptionAsync(text, Audio.LastRecordingDuration, 0, Settings.Whisper.ModelPath, Settings.Whisper.Language);
 
             // Update main window
             LoggingService.Debug($"[DEBUG] ProcessTranscriptionAsync: Updating UI with text: '{text}'");

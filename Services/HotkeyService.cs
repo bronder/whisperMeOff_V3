@@ -46,31 +46,54 @@ public class HotkeyService : IDisposable
 
     public void Initialize(Window window)
     {
-        // Create a separate hidden window to handle hotkey messages
-        // This window stays active even when main window is minimized/hidden
-        _messageWindow = new System.Windows.Window
+        try
         {
-            Width = 0,
-            Height = 0,
-            WindowStyle = WindowStyle.None,
-            ResizeMode = ResizeMode.NoResize,
-            ShowInTaskbar = false,
-            ShowActivated = false,
-            Visibility = Visibility.Hidden
-        };
-        _messageWindow.Show();
-        
-        var helper = new WindowInteropHelper(_messageWindow);
-        _windowHandle = helper.Handle;
-        _source = HwndSource.FromHwnd(_windowHandle);
-        _source?.AddHook(HwndHook);
-
-        // Set up keyboard hook for release detection
-        _keyboardProc = KeyboardHookCallback;
-        var moduleHandle = GetModuleHandle(string.Empty);
-        _keyboardHookId = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, moduleHandle, 0);
-
-        RegisterCurrentHotkey();
+            // Read hotkey from settings
+            var settingsKey = App.Settings?.General?.HotkeyTriggerKey;
+            if (!string.IsNullOrEmpty(settingsKey))
+            {
+                _triggerKey = settingsKey.ToUpperInvariant();
+            }
+            
+            // Create a separate hidden window to handle hotkey messages
+            // This window stays active even when main window is minimized/hidden
+            _messageWindow = new System.Windows.Window
+            {
+                Width = 0,
+                Height = 0,
+                WindowStyle = WindowStyle.None,
+                ResizeMode = ResizeMode.NoResize,
+                ShowInTaskbar = false,
+                ShowActivated = false,
+                Visibility = Visibility.Hidden
+            };
+            
+            // Use Dispatcher to ensure window handle is created on UI thread
+            _messageWindow.Loaded += (s, e) =>
+            {
+                var helper = new WindowInteropHelper(_messageWindow);
+                _windowHandle = helper.Handle;
+                
+                if (_windowHandle != IntPtr.Zero)
+                {
+                    _source = HwndSource.FromHwnd(_windowHandle);
+                    _source?.AddHook(HwndHook);
+                    
+                    // Set up keyboard hook for release detection
+                    _keyboardProc = KeyboardHookCallback;
+                    var moduleHandle = GetModuleHandle(string.Empty);
+                    _keyboardHookId = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, moduleHandle, 0);
+                    
+                    RegisterCurrentHotkey();
+                }
+            };
+            
+            _messageWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error(ex, "[Hotkey] Failed to initialize hotkey service");
+        }
     }
 
     public void RegisterCurrentHotkey()

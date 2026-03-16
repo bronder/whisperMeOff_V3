@@ -20,6 +20,16 @@ public class AudioService : IDisposable
     private bool _disposed;
     private TaskCompletionSource<bool>? _recordingStoppedSource;
     private readonly object _lock = new();
+    
+    // Pre-recording buffer for capturing audio before trigger
+    private WaveInEvent? _preBufferWaveIn;
+    private readonly byte[] _preBuffer; // Circular buffer for pre-recording
+    private int _preBufferWritePos;
+    private bool _isPreBuffering;
+    private const int PreBufferMs = 300; // 300ms pre-buffer
+    private const int SampleRate = 16000;
+    private const int BytesPerSample = 2; // 16-bit
+    private readonly int _preBufferSize;
 
     /// <summary>
     /// Raised when recording starts.
@@ -48,6 +58,95 @@ public class AudioService : IDisposable
     /// Gets the duration of the last recording in seconds.
     /// </summary>
     public double LastRecordingDuration { get; private set; }
+    
+    /// <summary>
+    /// Gets whether the pre-buffer is currently active.
+    /// </summary>
+    public bool IsPreBuffering => _isPreBuffering;
+
+    /// <summary>
+    /// Constructor initializes the pre-buffer.
+    /// </summary>
+    public AudioService()
+    {
+        // Pre-buffer size: 300ms at 16kHz, 16-bit, mono = 9600 bytes
+        // Add some extra margin
+        _preBufferSize = (SampleRate * BytesPerSample * PreBufferMs) / 1000;
+        _preBuffer = new byte[_preBufferSize];
+    }
+
+    /// <summary>
+    /// Starts the pre-recording buffer to capture audio before trigger.
+    /// </summary>
+    public void StartPreBuffer()
+    {
+        if (_isPreBuffering || _disposed) return;
+        
+        try
+        {
+            _preBufferWritePos = 0;
+            Array.Clear(_preBuffer, 0, _preBuffer.Length);
+            
+            _preBufferWaveIn = new WaveInEvent
+            {
+                WaveFormat = new WaveFormat(SampleRate, 16, 1)
+            };
+            _preBufferWaveIn.DataAvailable += OnPreBufferDataAvailable;
+            _preBufferWaveIn.StartRecording();
+            _isPreBuffering = true;
+            LoggingService.Trace("Pre-buffer started");
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error(ex, "Failed to start pre-buffer");
+            CleanupPreBuffer();
+        }
+    }
+    
+    /// <summary>
+    /// Stops the pre-recording buffer.
+    /// </summary>
+    public void StopPreBuffer()
+    {
+        if (!_isPreBuffering) return;
+        
+        CleanupPreBuffer();
+        _isPreBuffering = false;
+        LoggingService.Trace("Pre-buffer stopped");
+    }
+    
+    private void OnPreBufferDataAvailable(object? sender, WaveInEventArgs e)
+    {
+        if (!_isPreBuffering) return;
+        
+        // Write to circular buffer
+        int bytesToWrite = Math.Min(e.BytesRecorded, _preBuffer.Length);
+        int remaining = _preBuffer.Length - _preBufferWritePos;
+        
+        if (remaining >= bytesToWrite)
+        {
+            Array.Copy(e.Buffer, 0, _preBuffer, _preBufferWritePos, bytesToWrite);
+            _preBufferWritePos = (_preBufferWritePos + bytesToWrite) % _preBuffer.Length;
+        }
+        else
+        {
+            // Wrap around
+            Array.Copy(e.Buffer, 0, _preBuffer, _preBufferWritePos, remaining);
+            Array.Copy(e.Buffer, remaining, _preBuffer, 0, bytesToWrite - remaining);
+            _preBufferWritePos = bytesToWrite - remaining;
+        }
+    }
+    
+    private void CleanupPreBuffer()
+    {
+        try
+        {
+            _preBufferWaveIn?.StopRecording();
+            _preBufferWaveIn?.Dispose();
+            _preBufferWaveIn = null;
+        }
+        catch { }
+    }
 
     /// <summary>
     /// Writes a proper WAV file header
@@ -92,10 +191,19 @@ public class AudioService : IDisposable
             for (int i = 0; i < WaveIn.DeviceCount; i++)
             {
                 var capabilities = WaveIn.GetCapabilities(i);
+                
+                // Common sample rates for audio devices
+                var sampleRates = "8kHz, 11kHz, 16kHz, 22kHz, 44kHz, 48kHz";
+                
                 devices.Add(new AudioDeviceInfo
                 {
                     Id = i.ToString(),
-                    Name = capabilities.ProductName
+                    Name = capabilities.ProductName,
+                    Channels = capabilities.Channels,
+                    SampleRates = sampleRates,
+                    BitsPerSample = 16, // Standard for WaveIn
+                    Latency = 0, // Not available in WaveIn
+                    SupportsExclusiveMode = false // WaveIn doesn't support exclusive mode
                 });
             }
         }
@@ -124,6 +232,15 @@ public class AudioService : IDisposable
             _recordingStoppedSource = null;
             
             _audioBuffer = new MemoryStream();
+
+            // Write pre-buffer content to the beginning of the recording
+            if (_isPreBuffering && _preBuffer.Length > 0)
+            {
+                // Write from the current position (most recent audio)
+                int preBufferBytes = _preBuffer.Length;
+                _audioBuffer.Write(_preBuffer, 0, preBufferBytes);
+                LoggingService.Trace($"Added {preBufferBytes} bytes from pre-buffer to recording");
+            }
 
             // Use 16kHz, mono, 16-bit PCM as per PRD
             _waveIn = new WaveInEvent
@@ -376,4 +493,39 @@ public class AudioService : IDisposable
         /// The display name of the device.
         /// </summary>
         public string Name { get; set; } = "";
+        
+        /// <summary>
+        /// Number of audio channels (e.g., 1 for mono, 2 for stereo).
+        /// </summary>
+        public int Channels { get; set; } = 1;
+        
+        /// <summary>
+        /// Supported sample rates (comma-separated).
+        /// </summary>
+        public string SampleRates { get; set; } = "";
+        
+        /// <summary>
+        /// Bits per sample (e.g., 16, 24, 32).
+        /// </summary>
+        public int BitsPerSample { get; set; } = 16;
+        
+        /// <summary>
+        /// Device latency in milliseconds.
+        /// </summary>
+        public int Latency { get; set; } = 0;
+        
+        /// <summary>
+        /// Whether the device supports exclusive mode.
+        /// </summary>
+        public bool SupportsExclusiveMode { get; set; } = false;
+        
+        /// <summary>
+        /// Gets a formatted string showing channels and sample rate.
+        /// </summary>
+        public string FormatInfo => $"{SampleRates} · {(Channels == 1 ? "Mono" : Channels == 2 ? "Stereo" : $"{Channels} ch")}";
+        
+        /// <summary>
+        /// Gets diagnostic info string.
+        /// </summary>
+        public string DiagnosticsInfo => $"Sample Rate: {SampleRates} | Bits: {BitsPerSample}-bit | Latency: {Latency}ms | Exclusive: {(SupportsExclusiveMode ? "Yes" : "No")}";
     }

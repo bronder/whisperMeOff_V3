@@ -6,8 +6,9 @@ Hold a hotkey, speak your mind, and watch your words appear — automatically pa
 
 ## Features
 
-- **Voice Recording**: Hold `Ctrl+Shift+R` to start recording, release to transcribe
+- **Voice Recording**: Hold `Ctrl+Shift+R` to start recording, release to transcribe (or toggle mode)
 - **Recording Overlay**: Visual spectrum analyzer VU meter shows real-time audio levels during recording with colorful animated bars
+- **Session Stats**: Today's transcription count, word count, audio duration, processing time, and words-per-minute (WPM) tracking
 - **Auto-Paste**: Automatically pastes transcribed text to the previously active window
 - **Whisper.cpp Powered**: State-of-the-art local speech recognition using OpenAI's Whisper models (tiny to large)
 - **Whisper Translation**: Translate non-English speech to English directly with Whisper (for supported languages)

@@ -10,7 +10,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>whisperMeOff</AssemblyName>
     <RootNamespace>whisperMeOff</RootNamespace>
-    <Version>1.6.0</Version>
+    <Version>1.7.0</Version>
     <Company>whisperMeOff</Company>
     <Product>whisperMeOff</Product>
     <Description>Offline voice-to-text transcription with auto-paste</Description>
@@ -43,6 +43,7 @@
     <Resource Include="flatrobot.ico" />
     <Resource Include="flatrobot_red.ico" />
     <Resource Include="flatrobot_blue.ico" />
+    <Resource Include="flatrobot_white.ico" />
   </ItemGroup>
 
   <ItemGroup>

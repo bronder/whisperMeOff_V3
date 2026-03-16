@@ -33,15 +33,18 @@
                 </Setter>
             </Style>
             
-            <!-- Custom Tooltip Style -->
+            <!-- Custom Tooltip Style - White background, black text -->
             <Style TargetType="ToolTip">
-                <Setter Property="Background" Value="#2D2D30"/>
-                <Setter Property="Foreground" Value="White"/>
-                <Setter Property="BorderBrush" Value="#3F3F46"/>
+                <Setter Property="Background" Value="White"/>
+                <Setter Property="Foreground" Value="Black"/>
+                <Setter Property="BorderBrush" Value="#CCCCCC"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding" Value="10,6"/>
                 <Setter Property="FontSize" Value="12"/>
-                <Setter Property="MaxWidth" Value="300"/>
+                <Setter Property="MaxWidth" Value="400"/>
+                <Setter Property="HasDropShadow" Value="True"/>
+                <Setter Property="Placement" Value="Top"/>
+                <Setter Property="TextBlock.TextWrapping" Value="Wrap"/>
             </Style>
             
             <!-- Toggle Switch Style for CheckBox -->
@@ -130,6 +133,40 @@
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding" Value="10,8"/>
                 <Setter Property="FontSize" Value="14"/>
+            </Style>
+            
+            <!-- Chip Button Style for suggested words -->
+            <Style x:Key="ChipButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="{DynamicResource SecondaryButtonBrush}"/>
+                <Setter Property="Foreground" Value="{DynamicResource TextBrush}"/>
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="Padding" Value="12,6"/>
+                <Setter Property="FontSize" Value="12"/>
+                <Setter Property="Cursor" Value="Hand"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="12"
+                                    Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource PrimaryButtonBrush}"/>
+                                    <Setter TargetName="border" Property="BorderBrush" Value="{DynamicResource PrimaryButtonBrush}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource AccentButtonPressedBrush}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
             </Style>
         </ResourceDictionary>
     </Application.Resources>

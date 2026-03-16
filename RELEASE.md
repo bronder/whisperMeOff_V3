@@ -2,6 +2,30 @@
 
 ## Latest Release
 
+### Version 1.7.0
+
+#### Features
+- **Session Stats Dashboard**: New stats strip on Home page showing today's totals
+  - Transcription count (clickable - navigates to History)
+  - Total words processed
+  - Average audio duration
+  - Average processing time
+  - Words per minute (WPM) - useful for evaluating Whisper accuracy
+
+- **Processing Time Tracking**: Added processing_time column to database
+  - Measures time taken to transcribe (excluding audio duration)
+  - Helps evaluate model/hardware performance
+  - Useful when switching between Whisper models
+
+- **Dynamic Quick Start Instructions**: Updated Home page instructions
+  - Instructions now adapt based on recording mode (Push-to-Talk vs Toggle)
+  - Shows correct workflow for selected mode
+  - Updates in real-time when mode is changed in Settings
+
+#### Bug Fixes
+- Fixed database query for today's transcriptions (date comparison)
+- Added database migration for processing_time column on existing databases
+
 ### Version 1.6.0
 
 #### Features

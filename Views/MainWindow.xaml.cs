@@ -115,6 +115,8 @@ public partial class MainWindow : Window
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
+        // Stop pre-recording buffer
+        App.Audio.StopPreBuffer();
         Close();
     }
 
@@ -182,9 +184,15 @@ public partial class MainWindow : Window
 
         // Load audio devices
         LoadAudioDevices();
-      
+       
         // Load settings to UI
         LoadSettingsToUI();
+        
+        // Start pre-recording buffer (300ms buffer before trigger) if enabled
+        if (App.Settings.General.PreRecordingBuffer)
+        {
+            App.Audio.StartPreBuffer();
+        }
         
         // Update preset button visual state based on current settings
         if (App.Settings?.Whisper?.ModelSize != null)
@@ -238,7 +246,11 @@ public partial class MainWindow : Window
 
         foreach (var device in devices)
         {
-            MicrophoneComboBox.Items.Add(new ComboBoxItem { Content = device.Name, Tag = device.Id });
+            MicrophoneComboBox.Items.Add(new ComboBoxItem { 
+                Content = device.Name, 
+                Tag = device.Id,
+                ToolTip = device.FormatInfo // Store format info in tooltip
+            });
         }
 
         // Select current device
@@ -251,6 +263,56 @@ public partial class MainWindow : Window
                 MicrophoneComboBox.SelectedIndex = i;
                 break;
             }
+        }
+        
+        // Update device info display
+        UpdateMicrophoneDeviceInfo();
+    }
+
+    private void RefreshMicrophones_Click(object sender, RoutedEventArgs e)
+    {
+        LoadAudioDevices();
+        WhisperStatusText.Text = "Microphone list refreshed";
+    }
+
+    private void UpdateMicrophoneDeviceInfo()
+    {
+        if (MicrophoneComboBox.SelectedItem is ComboBoxItem selectedItem)
+        {
+            var deviceId = selectedItem.Tag?.ToString();
+            if (!string.IsNullOrEmpty(deviceId))
+            {
+                var devices = App.Audio.GetAvailableDevices();
+                var device = devices.FirstOrDefault(d => d.Id == deviceId);
+                if (device != null)
+                {
+                    MicrophoneDeviceInfo.Text = device.FormatInfo;
+                    MicrophoneDeviceInfo.Visibility = Visibility.Visible;
+                    
+                    // Update diagnostics
+                    AudioDiagnosticsText.Text = device.DiagnosticsInfo;
+                    return;
+                }
+            }
+        }
+        MicrophoneDeviceInfo.Visibility = Visibility.Collapsed;
+        AudioDiagnosticsText.Text = "Select a microphone to see diagnostics";
+    }
+
+    private void PreBufferCheckbox_Changed(object sender, RoutedEventArgs e)
+    {
+        var isEnabled = PreBufferCheckbox.IsChecked == true;
+        App.Settings.General.PreRecordingBuffer = isEnabled;
+        App.Settings.Save();
+        
+        // Start or stop the pre-buffer based on setting
+        if (isEnabled)
+        {
+            App.Audio.StartPreBuffer();
+        }
+        else
+        {
+            App.Audio.StopPreBuffer();
         }
     }
 
@@ -281,11 +343,10 @@ public partial class MainWindow : Window
         if (!string.IsNullOrEmpty(downloadPath))
         {
             ModelDownloadPathTextBox.Text = downloadPath;
-            DownloadPathSummaryText.Text = $"Using: {downloadPath}";
         }
         else
         {
-            DownloadPathSummaryText.Text = $"Default: {App.WhisperModelsPath}";
+            // Keep default in textbox
         }
 
         // Llama Model Download Path
@@ -293,12 +354,17 @@ public partial class MainWindow : Window
         if (!string.IsNullOrEmpty(llamaDownloadPath))
         {
             LlamaDownloadPathTextBox.Text = llamaDownloadPath;
-            LlamaDownloadPathSummaryText.Text = $"Using: {llamaDownloadPath}";
         }
         else
         {
-            LlamaDownloadPathSummaryText.Text = $"Default: {App.LlamaModelsPath}";
+            // Keep default in textbox
         }
+
+        // Download Paths Expander state
+        DownloadPathsExpander.IsExpanded = App.Settings.General.DownloadPathsExpanded;
+
+        // Pre-recording buffer
+        PreBufferCheckbox.IsChecked = App.Settings.General.PreRecordingBuffer;
 
         // Model path
         var modelPath = App.Whisper.GetModelPath();
@@ -435,12 +501,8 @@ public partial class MainWindow : Window
         HotkeyDisplay.Text = App.Settings.General.HotkeyTriggerKey.ToUpper();
         HotkeyStatusText.Text = $"Ctrl+Shift+{App.Settings.General.HotkeyTriggerKey.ToUpper()}";
         
-        // Update Quick Start hotkey display
-        var quickStartHotkeyRun = FindName("QuickStartHotkeyRun") as System.Windows.Documents.Run;
-        if (quickStartHotkeyRun != null)
-        {
-            quickStartHotkeyRun.Text = App.Settings.General.HotkeyTriggerKey.ToUpper();
-        }
+        // Update Quick Start hotkey display and instructions based on recording mode
+        UpdateQuickStartInstructions();
         
         // Theme
         ThemeComboBox.SelectedIndex = App.Theme.GetCurrentThemeIndex();
@@ -465,7 +527,7 @@ public partial class MainWindow : Window
         MainTabControl.SelectedIndex = 1; // Audio tab (or could be Settings tab index)
     }
 
-    public void UpdateLastTranscription(string text)
+    public async void UpdateLastTranscription(string text, double audioDuration = 0, double processingTime = 0)
     {
         System.Diagnostics.Debug.WriteLine($"[DEBUG] UpdateLastTranscription called with: '{text}'");
         Dispatcher.Invoke(() =>
@@ -475,6 +537,7 @@ public partial class MainWindow : Window
             if (string.IsNullOrEmpty(text))
             {
                 LastTranscriptionText.Text = "No transcriptions yet";
+                LastTranscriptionStats.Text = "";
             }
             else
             {
@@ -482,6 +545,32 @@ public partial class MainWindow : Window
             }
             System.Diagnostics.Debug.WriteLine($"[DEBUG] LastTranscriptionText.Text is now: '{LastTranscriptionText.Text}'");
         });
+        
+        // Try to get the latest transcription's duration from database
+        try
+        {
+            var records = await App.Database.GetTranscriptionsAsync(1);
+            if (records.Any())
+            {
+                var latest = records.First();
+                var wordCount = text.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length;
+                
+                var statsText = $"{wordCount} word{(wordCount != 1 ? "s" : "")}";
+                if (latest.Duration > 0)
+                {
+                    statsText += $" · {latest.Duration:F1}s audio";
+                }
+                
+                Dispatcher.Invoke(() =>
+                {
+                    LastTranscriptionStats.Text = statsText;
+                });
+            }
+        }
+        catch
+        {
+            // Ignore errors getting stats
+        }
     }
 
     private async Task LoadHistoryAsync()
@@ -508,6 +597,52 @@ public partial class MainWindow : Window
         
         // Show/hide empty state based on item count
         UpdateEmptyState(items.Count);
+        
+        // Update today's session stats
+        _ = UpdateSessionStatsAsync();
+    }
+    
+    private async Task UpdateSessionStatsAsync()
+    {
+        try
+        {
+            var todayRecords = await App.Database.GetTodayTranscriptionsAsync();
+            
+            var transcriptionCount = todayRecords.Count;
+            var totalWords = todayRecords.Sum(r => 
+                r.Text.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length);
+            
+            // Calculate average audio duration and processing time
+            var avgDuration = transcriptionCount > 0 ? todayRecords.Where(r => r.Duration.HasValue).Average(r => r.Duration ?? 0) : 0;
+            var avgProcessingTime = transcriptionCount > 0 ? todayRecords.Where(r => r.ProcessingTime.HasValue).Average(r => r.ProcessingTime ?? 0) : 0;
+            
+            // Calculate words per minute (based on audio duration)
+            var totalDuration = todayRecords.Where(r => r.Duration.HasValue).Sum(r => r.Duration ?? 0);
+            var wpm = totalDuration > 0 ? totalWords / (totalDuration / 60.0) : 0;
+            
+            var statsText = $"Today: {transcriptionCount} transcription{(transcriptionCount != 1 ? "s" : "")} · {totalWords:N0} words";
+            if (transcriptionCount > 0)
+            {
+                if (avgDuration > 0)
+                    statsText += $" · Avg. {avgDuration:F1}s audio";
+                if (avgProcessingTime > 0)
+                    statsText += $" · {avgProcessingTime:F1}s processing";
+                if (wpm > 0)
+                    statsText += $" · {wpm:F0} wpm";
+            }
+            
+            Dispatcher.Invoke(() =>
+            {
+                if (SessionStatsText != null)
+                {
+                    SessionStatsText.Text = statsText;
+                }
+            });
+        }
+        catch
+        {
+            // Ignore errors getting stats
+        }
     }
     
     private void UpdateEmptyState(int itemCount)
@@ -559,7 +694,14 @@ public partial class MainWindow : Window
     {
         MainTabControl.SelectedIndex = 1;
     }
-
+    
+    private void SessionStatsButton_Click(object sender, RoutedEventArgs e)
+    {
+        // Navigate to History tab and filter to today
+        MainTabControl.SelectedIndex = 2;
+        // TODO: Implement date filtering in History tab - for now just navigate to History
+    }
+    
     private async void PresetFastest_Click(object sender, RoutedEventArgs e)
     {
         var modelSize = "tiny";
@@ -695,6 +837,35 @@ public partial class MainWindow : Window
         LoggingService.Debug("[Presets] Applied Most Accurate preset - Medium model");
     }
 
+    private void UpdateQuickStartInstructions()
+    {
+        try
+        {
+            var hotkey = App.Settings?.General?.HotkeyTriggerKey?.ToUpper() ?? "R";
+            var isPushToTalk = App.Settings?.General?.PushToTalkMode ?? true;
+            
+            if (QuickStartInstruction1 == null || QuickStartInstruction3 == null)
+                return;
+            
+            if (isPushToTalk)
+            {
+                // Push to Talk mode: hold to record, release to transcribe
+                QuickStartInstruction1.Text = $"1. Hold Ctrl+Shift+{hotkey} to start recording";
+                QuickStartInstruction3.Text = "3. Release to transcribe - text automatically appears in your target app";
+            }
+            else
+            {
+                // Toggle mode: press to start, press again to stop
+                QuickStartInstruction1.Text = $"1. Press Ctrl+Shift+{hotkey} to start/stop recording";
+                QuickStartInstruction3.Text = "3. Press again to stop and transcribe - text automatically appears in your target app";
+            }
+        }
+        catch
+        {
+            // Ignore errors updating instructions
+        }
+    }
+    
     private void UpdatePresetButtons(string selectedSize)
     {
         // Reset all buttons to secondary style
@@ -790,6 +961,7 @@ public partial class MainWindow : Window
     private async Task ProcessTranscriptionAsync(string audioFile)
     {
         App.IsTranscribing = true;
+        var processingStopwatch = System.Diagnostics.Stopwatch.StartNew();
         
         try
         {
@@ -797,6 +969,9 @@ public partial class MainWindow : Window
             var text = await App.Whisper.TranscribeAsync(audioFile) ?? string.Empty;
             //LoggingService.Debug($"[DEBUG] Whisper transcription complete: {text}");
             LoggingService.Info("[Whisper] Whisper transcription complete: " + text);
+            
+            processingStopwatch.Stop();
+            var processingTime = processingStopwatch.Elapsed.TotalSeconds;
 
             LoggingService.Debug($"[DEBUG] llama Enabled: {App.Settings.Llama.Enabled}, Llama Loaded: {App.Llama.IsLoaded}");
 
@@ -854,13 +1029,14 @@ public partial class MainWindow : Window
                 }
             });
 
-            await App.Database.AddTranscriptionAsync(text ?? string.Empty, App.Audio.LastRecordingDuration,
+            await App.Database.AddTranscriptionAsync(text ?? string.Empty, App.Audio.LastRecordingDuration, processingTime,
                 App.Settings.Whisper.ModelPath, App.Settings.Whisper.Language);
 
             // UI updates must run on the UI thread
             await Dispatcher.InvokeAsync(async () =>
             {
-                UpdateLastTranscription(text ?? string.Empty);
+                var duration = App.Audio.LastRecordingDuration;
+                UpdateLastTranscription(text ?? string.Empty, duration, 0);
                 await LoadHistoryAsync();
             });
 
@@ -886,6 +1062,7 @@ public partial class MainWindow : Window
         {
             App.Settings.Audio.DeviceId = item.Tag?.ToString() ?? "";
             App.Settings.Save();
+            UpdateMicrophoneDeviceInfo();
         }
     }
 
@@ -930,6 +1107,234 @@ public partial class MainWindow : Window
     {
         App.Settings.Whisper.CustomVocabulary = CustomVocabularyTextBox.Text;
         App.Settings.Save();
+        RefreshWordChips();
+    }
+    
+    private void RefreshWordChips()
+    {
+        var filter = WordFilterTextBox?.Text ?? "";
+        WordChipsPanel.Children.Clear();
+        
+        var words = CustomVocabularyTextBox.Text
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w.Trim())
+            .Where(w => !string.IsNullOrEmpty(w))
+            .ToList();
+        
+        // Apply filter
+        if (!string.IsNullOrWhiteSpace(filter))
+        {
+            words = words.Where(w => w.Contains(filter, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+        
+        WordCountText.Text = $"{words.Count} word{(words.Count != 1 ? "s" : "")}";
+        
+        var duplicates = words.GroupBy(w => w.ToLowerInvariant())
+            .Where(g => g.Count() > 1)
+            .Select(g => g.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        
+        foreach (var word in words)
+        {
+            var chip = CreateWordChip(word, duplicates.Contains(word.ToLowerInvariant()));
+            WordChipsPanel.Children.Add(chip);
+        }
+        
+        // Also refresh suggested words state
+        RefreshSuggestedWords();
+    }
+    
+    private void WordFilterTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        RefreshWordChips();
+    }
+    
+    private void ReplacementFilterTextBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        var filter = ReplacementFilterTextBox?.Text ?? "";
+        
+        if (string.IsNullOrWhiteSpace(filter))
+        {
+            ReplacementsListBox.ItemsSource = App.Settings.Whisper.WordReplacements;
+        }
+        else
+        {
+            var filtered = App.Settings.Whisper.WordReplacements
+                .Where(r => r.Source.Contains(filter, StringComparison.OrdinalIgnoreCase) || 
+                           r.Replacement.Contains(filter, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+            ReplacementsListBox.ItemsSource = filtered;
+        }
+    }
+    
+    private void AddSuggestedWord_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button button && button.Tag is string newWord)
+        {
+            var words = CustomVocabularyTextBox.Text
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(w => w.Trim())
+                .Where(w => !string.IsNullOrEmpty(w))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            
+            // Add word if not already present
+            if (!words.Contains(newWord))
+            {
+                var currentText = CustomVocabularyTextBox.Text;
+                var newText = string.IsNullOrWhiteSpace(currentText) 
+                    ? newWord 
+                    : currentText.TrimEnd() + Environment.NewLine + newWord;
+                CustomVocabularyTextBox.Text = newText;
+                App.Settings.Whisper.CustomVocabulary = newText;
+                App.Settings.Save();
+                RefreshWordChips();
+            }
+            
+            // Refresh suggested words to show checkmarks
+            RefreshSuggestedWords();
+        }
+    }
+    
+    private void RefreshSuggestedWords()
+    {
+        var words = CustomVocabularyTextBox.Text
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w.Trim())
+            .Where(w => !string.IsNullOrEmpty(w))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        
+        // Update each suggested word button
+        UpdateSuggestedWordButton(SuggestedDocker, "Docker", words);
+        UpdateSuggestedWordButton(SuggestedKubectl, "kubectl", words);
+        UpdateSuggestedWordButton(SuggestedJSON, "JSON", words);
+        UpdateSuggestedWordButton(SuggestedAsync, "async", words);
+        UpdateSuggestedWordButton(SuggestedEnum, "enum", words);
+        UpdateSuggestedWordButton(SuggestedAPI, "API", words);
+        UpdateSuggestedWordButton(SuggestedSDK, "SDK", words);
+        UpdateSuggestedWordButton(SuggestedAWS, "AWS", words);
+        UpdateSuggestedWordButton(SuggestedKubernetes, "Kubernetes", words);
+        UpdateSuggestedWordButton(SuggestedCICD, "CI/CD", words);
+        UpdateSuggestedWordButton(SuggestedMiddleware, "middleware", words);
+        UpdateSuggestedWordButton(SuggestedBool, "bool", words);
+        UpdateSuggestedWordButton(SuggestedNullable, "nullable", words);
+        UpdateSuggestedWordButton(SuggestedWebSocket, "WebSocket", words);
+        UpdateSuggestedWordButton(SuggestedLocalhost, "localhost", words);
+        UpdateSuggestedWordButton(SuggestedGit, "git", words);
+    }
+    
+    private void UpdateSuggestedWordButton(System.Windows.Controls.Button button, string word, HashSet<string> existingWords)
+    {
+        if (button == null) return;
+        
+        if (existingWords.Contains(word))
+        {
+            button.Content = $"✓ {word}";
+            button.IsEnabled = false;
+            button.Opacity = 0.6;
+        }
+        else
+        {
+            button.Content = word;
+            button.IsEnabled = true;
+            button.Opacity = 1.0;
+        }
+    }
+    
+    private System.Windows.Controls.Border CreateWordChip(string word, bool isDuplicate)
+    {
+        var chip = new System.Windows.Controls.Border
+        {
+            Background = isDuplicate 
+                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(251, 191, 36)) // Yellow for duplicate
+                : (System.Windows.Media.Brush)FindResource("AccentBrush"),
+            CornerRadius = new System.Windows.CornerRadius(12),
+            Padding = new System.Windows.Thickness(8, 4, 4, 4),
+            Margin = new System.Windows.Thickness(0, 0, 6, 6)
+        };
+        
+        var stack = new System.Windows.Controls.StackPanel
+        {
+            Orientation = System.Windows.Controls.Orientation.Horizontal
+        };
+        
+        var text = new System.Windows.Controls.TextBlock
+        {
+            Text = word,
+            Foreground = System.Windows.Media.Brushes.White,
+            VerticalAlignment = System.Windows.VerticalAlignment.Center,
+            Margin = new System.Windows.Thickness(0, 0, 8, 0)
+        };
+        stack.Children.Add(text);
+        
+        var closeBtn = new System.Windows.Controls.Button
+        {
+            Content = "×",
+            Tag = word,
+            Padding = new System.Windows.Thickness(4, 0, 4, 0),
+            Background = System.Windows.Media.Brushes.Transparent,
+            BorderThickness = new System.Windows.Thickness(0),
+            Foreground = System.Windows.Media.Brushes.White,
+            Cursor = System.Windows.Input.Cursors.Hand,
+            FontSize = 14,
+            FontWeight = System.Windows.FontWeights.Bold
+        };
+        closeBtn.Click += RemoveWordChip_Click;
+        stack.Children.Add(closeBtn);
+        
+        chip.Child = stack;
+        return chip;
+    }
+    
+    private void RemoveWordChip_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.Button btn && btn.Tag is string wordToRemove)
+        {
+            var words = CustomVocabularyTextBox.Text
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(w => w.Trim())
+                .Where(w => !string.IsNullOrEmpty(w) && w != wordToRemove)
+                .ToList();
+            
+            CustomVocabularyTextBox.Text = string.Join(Environment.NewLine, words);
+            App.Settings.Save();
+            RefreshWordChips();
+            RefreshSuggestedWords();
+        }
+    }
+    
+    private void AddWord_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        AddWordToVocabulary();
+    }
+    
+    private void AddWordTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter)
+        {
+            AddWordToVocabulary();
+            e.Handled = true;
+        }
+    }
+    
+    private void AddWordToVocabulary()
+    {
+        var newWord = AddWordTextBox.Text.Trim();
+        if (string.IsNullOrEmpty(newWord)) return;
+        
+        var words = CustomVocabularyTextBox.Text
+            .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(w => w.Trim())
+            .Where(w => !string.IsNullOrEmpty(w))
+            .ToList();
+        
+        if (!words.Contains(newWord, StringComparer.OrdinalIgnoreCase))
+        {
+            words.Add(newWord);
+            CustomVocabularyTextBox.Text = string.Join(Environment.NewLine, words);
+            RefreshWordChips();
+        }
+        
+        AddWordTextBox.Text = "";
     }
 
     private void AddReplacement_Click(object sender, RoutedEventArgs e)
@@ -973,6 +1378,57 @@ public partial class MainWindow : Window
                 ReplacementsListBox.ItemsSource = App.Settings.Whisper.WordReplacements;
             }
         }
+    }
+    
+    private void TestReplacements_Click(object sender, RoutedEventArgs e)
+    {
+        ApplyReplacementsAndShowOutput();
+    }
+    
+    private void TestReplacementInput_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        ApplyReplacementsAndShowOutput();
+    }
+    
+    private void ApplyReplacementsAndShowOutput()
+    {
+        var input = TestReplacementInput?.Text ?? "";
+        
+        if (string.IsNullOrEmpty(input))
+        {
+            TestReplacementOutput.Text = "";
+            return;
+        }
+        
+        var result = input;
+        
+        foreach (var replacement in App.Settings.Whisper.WordReplacements)
+        {
+            try
+            {
+                if (replacement.IsRegex)
+                {
+                    var options = replacement.CaseSensitive 
+                        ? System.Text.RegularExpressions.RegexOptions.None 
+                        : System.Text.RegularExpressions.RegexOptions.IgnoreCase;
+                    result = System.Text.RegularExpressions.Regex.Replace(result, replacement.Source, replacement.Replacement, options);
+                }
+                else
+                {
+                    var comparison = replacement.CaseSensitive 
+                        ? StringComparison.Ordinal 
+                        : StringComparison.OrdinalIgnoreCase;
+                    result = result.Replace(replacement.Source, replacement.Replacement, comparison);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Warn($"[Replacements] Error applying replacement '{replacement.Source}': {ex.Message}");
+            }
+        }
+        
+        // Show result in output textbox
+        TestReplacementOutput.Text = result;
     }
 
     private void SelectModel_Click(object sender, RoutedEventArgs e)
@@ -1085,7 +1541,6 @@ public partial class MainWindow : Window
             ModelDownloadPathTextBox.Text = dialog.SelectedPath;
             App.Settings.General.ModelDownloadPath = dialog.SelectedPath;
             App.Settings.Save();
-            DownloadPathSummaryText.Text = $"Using: {dialog.SelectedPath}";
             WhisperStatusText.Text = "Download path changed - restart to apply";
         }
     }
@@ -1115,9 +1570,20 @@ public partial class MainWindow : Window
             LlamaDownloadPathTextBox.Text = dialog.SelectedPath;
             App.Settings.General.LlamaDownloadPath = dialog.SelectedPath;
             App.Settings.Save();
-            LlamaDownloadPathSummaryText.Text = $"Using: {dialog.SelectedPath}";
             LlamaStatusText.Text = "Download path changed - restart to apply";
         }
+    }
+
+    private void DownloadPathsExpander_Expanded(object sender, RoutedEventArgs e)
+    {
+        App.Settings.General.DownloadPathsExpanded = true;
+        App.Settings.Save();
+    }
+
+    private void DownloadPathsExpander_Collapsed(object sender, RoutedEventArgs e)
+    {
+        App.Settings.General.DownloadPathsExpanded = false;
+        App.Settings.Save();
     }
 
     private void LlamaDownloadPathTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -1126,14 +1592,30 @@ public partial class MainWindow : Window
         var newPath = LlamaDownloadPathTextBox.Text;
         if (!string.IsNullOrEmpty(newPath) && System.IO.Directory.Exists(newPath))
         {
-            LlamaDownloadPathSummaryText.Text = $"Using: {newPath}";
             LlamaPathValidIcon.Visibility = Visibility.Visible;
             
-            // Count GGUF model files
-            var modelCount = System.IO.Directory.GetFiles(newPath, "*.gguf").Length;
+            // Count GGUF model files and calculate size
+            var files = System.IO.Directory.GetFiles(newPath, "*.gguf");
+            var modelCount = files.Length;
+            long totalSize = 0;
+            foreach (var file in files)
+            {
+                try { totalSize += new System.IO.FileInfo(file).Length; }
+                catch { }
+            }
+            
+            // Format size
+            string sizeText;
+            if (totalSize >= 1024L * 1024 * 1024)
+                sizeText = $"{totalSize / (1024.0 * 1024 * 1024):F1} GB";
+            else if (totalSize >= 1024 * 1024)
+                sizeText = $"{totalSize / (1024.0 * 1024):F0} MB";
+            else
+                sizeText = $"{totalSize / 1024.0:F0} KB";
+            
             if (modelCount > 0)
             {
-                LlamaModelCountText.Text = $"{modelCount} model{(modelCount != 1 ? "s" : "")}";
+                LlamaModelCountText.Text = $"{modelCount} model{(modelCount != 1 ? "s" : "")} · {sizeText}";
                 LlamaModelCountBadge.Visibility = Visibility.Visible;
             }
             else
@@ -1145,14 +1627,6 @@ public partial class MainWindow : Window
         {
             LlamaPathValidIcon.Visibility = Visibility.Collapsed;
             LlamaModelCountBadge.Visibility = Visibility.Collapsed;
-            if (!string.IsNullOrEmpty(newPath))
-            {
-                LlamaDownloadPathSummaryText.Text = $"New path will be created: {newPath}";
-            }
-            else
-            {
-                LlamaDownloadPathSummaryText.Text = $"Default: {App.LlamaModelsPath}";
-            }
         }
     }
 
@@ -1174,29 +1648,63 @@ public partial class MainWindow : Window
         var newPath = ModelDownloadPathTextBox.Text;
         if (!string.IsNullOrEmpty(newPath) && System.IO.Directory.Exists(newPath))
         {
-            DownloadPathSummaryText.Text = $"Using: {newPath}";
             WhisperPathValidIcon.Visibility = Visibility.Visible;
+            WhisperPathWarningIcon.Visibility = Visibility.Collapsed;
             
-            // Count model files
-            var modelCount = System.IO.Directory.GetFiles(newPath, "*.bin").Length;
+            // Count model files and calculate size
+            var files = System.IO.Directory.GetFiles(newPath, "*.*")
+                .Where(f => f.EndsWith(".bin") || f.EndsWith(".gguf") || f.EndsWith(".txt") || f.EndsWith(".json"))
+                .ToArray();
+            
+            var modelCount = files.Length;
+            long totalSize = 0;
+            foreach (var file in files)
+            {
+                try { totalSize += new System.IO.FileInfo(file).Length; }
+                catch { }
+            }
+            
+            // Format size
+            string sizeText;
+            if (totalSize >= 1024L * 1024 * 1024)
+                sizeText = $"{totalSize / (1024.0 * 1024 * 1024):F1} GB";
+            else if (totalSize >= 1024 * 1024)
+                sizeText = $"{totalSize / (1024.0 * 1024):F0} MB";
+            else
+                sizeText = $"{totalSize / 1024.0:F0} KB";
+            
             if (modelCount > 0)
             {
-                WhisperModelCountText.Text = $"{modelCount} model{(modelCount != 1 ? "s" : "")}";
+                WhisperModelCountText.Text = $"{modelCount} model{(modelCount != 1 ? "s" : "")} · {sizeText}";
                 WhisperModelCountBadge.Visibility = Visibility.Visible;
             }
             else
             {
                 WhisperModelCountBadge.Visibility = Visibility.Collapsed;
             }
+            
+            // Check disk space
+            try
+            {
+                var drive = new System.IO.DriveInfo(System.IO.Path.GetPathRoot(newPath));
+                if (drive.IsReady)
+                {
+                    var freeSpaceGB = drive.AvailableFreeSpace / (1024.0 * 1024 * 1024);
+                    if (freeSpaceGB < 10)
+                    {
+                        WhisperPathWarningIcon.Visibility = Visibility.Visible;
+                        WhisperPathWarningIcon.ToolTip = $"Only {freeSpaceGB:F1} GB free on {drive.Name} - may need more space for models";
+                        WhisperPathValidIcon.Visibility = Visibility.Collapsed;
+                    }
+                }
+            }
+            catch { }
         }
         else
         {
             WhisperPathValidIcon.Visibility = Visibility.Collapsed;
+            WhisperPathWarningIcon.Visibility = Visibility.Collapsed;
             WhisperModelCountBadge.Visibility = Visibility.Collapsed;
-            if (!string.IsNullOrEmpty(newPath))
-            {
-                DownloadPathSummaryText.Text = $"New path will be created: {newPath}";
-            }
         }
     }
 
@@ -1634,6 +2142,9 @@ public partial class MainWindow : Window
     {
         App.Settings.General.PushToTalkMode = PushToTalkCheckbox.IsChecked ?? true;
         App.Settings.Save();
+        
+        // Update Quick Start instructions to reflect the new mode
+        UpdateQuickStartInstructions();
     }
 
     private async void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
@@ -1682,6 +2193,58 @@ public partial class MainWindow : Window
                     });
                 }
             });
+        }
+    }
+    
+    private void CopyLastTranscription_Click(object sender, RoutedEventArgs e)
+    {
+        var text = LastTranscriptionText?.Text ?? "";
+        if (!string.IsNullOrEmpty(text) && text != "No transcriptions yet")
+        {
+            App.Clipboard.SetText(text);
+        }
+    }
+    
+    // Dashboard click handlers - navigate to relevant tabs
+    private void WhisperStatus_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // Switch to Whisper tab (index 3)
+        MainTabControl.SelectedIndex = 3;
+    }
+    
+    private void LlamaStatus_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // Switch to Llama tab (index 4)
+        MainTabControl.SelectedIndex = 4;
+    }
+    
+    private void MicrophoneStatus_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // Switch to Audio tab (index 2)
+        MainTabControl.SelectedIndex = 2;
+    }
+    
+    private void PresetStatus_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // Switch to General tab (index 1)
+        MainTabControl.SelectedIndex = 1;
+    }
+    
+    private void HotkeyStatus_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // Switch to General tab (index 1)
+        MainTabControl.SelectedIndex = 1;
+    }
+    
+    private async void LoadLlama_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        // Load Llama model
+        if (!string.IsNullOrEmpty(App.Settings.Llama.ModelPath))
+        {
+            await App.Llama.InitializeAsync(App.Settings.Llama.ModelPath);
+            // Update status
+            LlamaStatusText.Text = "Ready";
+            LlamaLoadLink.Visibility = Visibility.Collapsed;
         }
     }
 

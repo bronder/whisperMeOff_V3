@@ -37,11 +37,24 @@ public class DatabaseService : IDisposable
                     text TEXT NOT NULL,
                     timestamp TEXT NOT NULL,
                     duration REAL,
+                    processing_time REAL,
                     model TEXT,
                     language TEXT
                 );
                 CREATE INDEX IF NOT EXISTS idx_transcriptions_timestamp ON transcriptions (timestamp DESC);
+            ";
+            createTableCmd.ExecuteNonQuery();
+            
+            // Migration: Add processing_time column if it doesn't exist (for existing databases)
+            try {
+                var migrateCmd = _connection.CreateCommand();
+                migrateCmd.CommandText = "ALTER TABLE transcriptions ADD COLUMN processing_time REAL";
+                migrateCmd.ExecuteNonQuery();
+            } catch {
+                // Column already exists, ignore
+            }
 
+            createTableCmd.CommandText = @"
                 -- Transformation profiles for user-defined transformation settings
                 CREATE TABLE IF NOT EXISTS transformation_profiles (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,7 +110,7 @@ public class DatabaseService : IDisposable
     /// <param name="model">The Whisper model used.</param>
     /// <param name="language">The detected or selected language code.</param>
     /// <returns>The ID of the inserted record, or -1 on failure.</returns>
-    public async Task<long> AddTranscriptionAsync(string text, double duration, string? model, string? language)
+    public async Task<long> AddTranscriptionAsync(string text, double duration, double processingTime, string? model, string? language)
     {
         if (_connection == null) return -1;
 
@@ -105,13 +118,14 @@ public class DatabaseService : IDisposable
         {
             var cmd = _connection.CreateCommand();
             cmd.CommandText = @"
-                INSERT INTO transcriptions (text, timestamp, duration, model, language)
-                VALUES ($text, $timestamp, $duration, $model, $language);
+                INSERT INTO transcriptions (text, timestamp, duration, processing_time, model, language)
+                VALUES ($text, $timestamp, $duration, $processing_time, $model, $language);
                 SELECT last_insert_rowid();
             ";
             cmd.Parameters.AddWithValue("$text", text);
             cmd.Parameters.AddWithValue("$timestamp", DateTime.UtcNow.ToString("o"));
             cmd.Parameters.AddWithValue("$duration", duration);
+            cmd.Parameters.AddWithValue("$processing_time", processingTime);
             cmd.Parameters.AddWithValue("$model", model ?? (object)DBNull.Value);
             cmd.Parameters.AddWithValue("$language", language ?? (object)DBNull.Value);
 
@@ -138,7 +152,7 @@ public class DatabaseService : IDisposable
         try
         {
             var cmd = _connection.CreateCommand();
-            cmd.CommandText = "SELECT id, text, timestamp, duration, model, language FROM transcriptions ORDER BY timestamp DESC LIMIT $limit";
+            cmd.CommandText = "SELECT id, text, timestamp, duration, processing_time, model, language FROM transcriptions ORDER BY timestamp DESC LIMIT $limit";
             cmd.Parameters.AddWithValue("$limit", limit);
 
             using var reader = await cmd.ExecuteReaderAsync();
@@ -150,8 +164,54 @@ public class DatabaseService : IDisposable
                     Text = reader.GetString(1),
                     Timestamp = reader.GetString(2),
                     Duration = reader.IsDBNull(3) ? null : reader.GetDouble(3),
-                    Model = reader.IsDBNull(4) ? null : reader.GetString(4),
-                    Language = reader.IsDBNull(5) ? null : reader.GetString(5)
+                    ProcessingTime = reader.IsDBNull(4) ? null : reader.GetDouble(4),
+                    Model = reader.IsDBNull(5) ? null : reader.GetString(5),
+                    Language = reader.IsDBNull(6) ? null : reader.GetString(6)
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error(ex, "Get transcriptions error");
+        }
+        
+        return records;
+    }
+    
+    /// <summary>
+    /// Gets transcriptions from today for session stats calculation.
+    /// </summary>
+    public async Task<List<TranscriptionRecord>> GetTodayTranscriptionsAsync()
+    {
+        var records = new List<TranscriptionRecord>();
+        if (_connection == null) return records;
+
+        try
+        {
+            // Get today's date in UTC for comparison with ISO 8601 timestamps
+            var todayUtc = DateTime.UtcNow.Date;
+            var tomorrowUtc = todayUtc.AddDays(1);
+            
+            var cmd = _connection.CreateCommand();
+            cmd.CommandText = @"SELECT id, text, timestamp, duration, processing_time, model, language 
+                              FROM transcriptions 
+                              WHERE timestamp >= $todayUtc AND timestamp < $tomorrowUtc 
+                              ORDER BY timestamp DESC";
+            cmd.Parameters.AddWithValue("$todayUtc", todayUtc.ToString("o"));
+            cmd.Parameters.AddWithValue("$tomorrowUtc", tomorrowUtc.ToString("o"));
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                records.Add(new TranscriptionRecord
+                {
+                    Id = reader.GetInt64(0),
+                    Text = reader.GetString(1),
+                    Timestamp = reader.GetString(2),
+                    Duration = reader.IsDBNull(3) ? null : reader.GetDouble(3),
+                    ProcessingTime = reader.IsDBNull(4) ? null : reader.GetDouble(4),
+                    Model = reader.IsDBNull(5) ? null : reader.GetString(5),
+                    Language = reader.IsDBNull(6) ? null : reader.GetString(6)
                 });
             }
         }
@@ -175,7 +235,7 @@ public class DatabaseService : IDisposable
         try
         {
             var cmd = _connection.CreateCommand();
-            cmd.CommandText = "SELECT id, text, timestamp, duration, model, language FROM transcriptions WHERE id = $id";
+            cmd.CommandText = "SELECT id, text, timestamp, duration, processing_time, model, language FROM transcriptions WHERE id = $id";
             cmd.Parameters.AddWithValue("$id", id);
 
             using var reader = await cmd.ExecuteReaderAsync();
@@ -187,8 +247,9 @@ public class DatabaseService : IDisposable
                     Text = reader.GetString(1),
                     Timestamp = reader.GetString(2),
                     Duration = reader.IsDBNull(3) ? null : reader.GetDouble(3),
-                    Model = reader.IsDBNull(4) ? null : reader.GetString(4),
-                    Language = reader.IsDBNull(5) ? null : reader.GetString(5)
+                    ProcessingTime = reader.IsDBNull(4) ? null : reader.GetDouble(4),
+                    Model = reader.IsDBNull(5) ? null : reader.GetString(5),
+                    Language = reader.IsDBNull(6) ? null : reader.GetString(6)
                 };
             }
         }
@@ -290,7 +351,7 @@ public class DatabaseService : IDisposable
         try
         {
             var cmd = _connection.CreateCommand();
-            cmd.CommandText = "SELECT id, text, timestamp, duration, model, language FROM transcriptions WHERE text LIKE $query ORDER BY timestamp DESC LIMIT 50";
+            cmd.CommandText = "SELECT id, text, timestamp, duration, processing_time, model, language FROM transcriptions WHERE text LIKE $query ORDER BY timestamp DESC LIMIT 50";
             cmd.Parameters.AddWithValue("$query", $"%{query}%");
 
             using var reader = await cmd.ExecuteReaderAsync();
@@ -302,8 +363,9 @@ public class DatabaseService : IDisposable
                     Text = reader.GetString(1),
                     Timestamp = reader.GetString(2),
                     Duration = reader.IsDBNull(3) ? null : reader.GetDouble(3),
-                    Model = reader.IsDBNull(4) ? null : reader.GetString(4),
-                    Language = reader.IsDBNull(5) ? null : reader.GetString(5)
+                    ProcessingTime = reader.IsDBNull(4) ? null : reader.GetDouble(4),
+                    Model = reader.IsDBNull(5) ? null : reader.GetString(5),
+                    Language = reader.IsDBNull(6) ? null : reader.GetString(6)
                 });
             }
         }
@@ -964,6 +1026,9 @@ public class TranscriptionRecord
 
     /// <summary>Recording duration in seconds.</summary>
     public double? Duration { get; set; }
+    
+    /// <summary>Processing time in seconds (time to transcribe).</summary>
+    public double? ProcessingTime { get; set; }
 
     /// <summary>The Whisper model used for transcription.</summary>
     public string? Model { get; set; }

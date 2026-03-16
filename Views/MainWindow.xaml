@@ -125,26 +125,34 @@
                             <StackPanel>
                                 <TextBlock Text="Quick Start" FontSize="16" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"/>
-                                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0">
-                                    <Run Text="1. Hold"/>
-                                    <Run Text=" Ctrl+Shift+" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/><Run x:Name="QuickStartHotkeyRun" Text="R" FontWeight="Bold" Foreground="{DynamicResource AccentBrush}"/>
-                                    <Run Text=" to stop recording and transcribe"/>
-                                </TextBlock>
-                                <TextBlock Text="2. Speak your text" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"/>
-                                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0">
-                                    <Run Text="3. Release to transcribe - text automatically appears in your target app"/>
-                                </TextBlock>
+                                <TextBlock x:Name="QuickStartInstruction1" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0"/>
+                                <TextBlock x:Name="QuickStartInstruction2" Text="2. Speak your text" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"/>
+                                <TextBlock x:Name="QuickStartInstruction3" TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0"/>
                             </StackPanel>
                         </Border>
 
                         <!-- Last Transcription -->
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
-                                <TextBlock Text="Last Transcription" FontSize="16" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Last Transcription" FontSize="16" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <Button x:Name="CopyLastTranscriptionBtn" Grid.Column="1" Content="📋 Copy"
+                                            Click="CopyLastTranscription_Click"
+                                            Style="{DynamicResource SecondaryButtonStyle}" 
+                                            Padding="10,4" FontSize="12"/>
+                                </Grid>
                                 <TextBlock x:Name="LastTranscriptionText" Text="No transcriptions yet"
                                            TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextBrush}"
                                            Margin="0,10,0,0" MaxHeight="100"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <TextBlock x:Name="LastTranscriptionStats" Text=""
+                                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
@@ -161,36 +169,92 @@
                                      Background="{DynamicResource CardBrush}"
                                      Foreground="{DynamicResource AccentBrush}"/>
 
-                        <!-- Model Status -->
+                        <!-- Today's Session Stats -->
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="15,10" Margin="0,15,0,0"
+                                BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1">
+                            <Button x:Name="SessionStatsButton" Click="SessionStatsButton_Click" 
+                                    Background="Transparent" BorderThickness="0"
+                                    Padding="0" Margin="0"
+                                    Cursor="Hand" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock x:Name="SessionStatsText" Text="Today: 0 transcriptions · 0 words"
+                                               Foreground="{DynamicResource AccentBrush}" FontSize="12" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Button>
+                        </Border>
+
+                        <!-- Model Status - Dashboard -->
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
                                 <TextBlock Text="Status" FontSize="16" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"/>
                                 <Grid Margin="0,10,0,0">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="100"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
+                                    <!-- Whisper Status - Clickable -->
                                     <TextBlock Text="Whisper:" Grid.Row="0" Grid.Column="0"
                                                Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                    <TextBlock Text="Not loaded" x:Name="WhisperStatusText" Grid.Row="0" Grid.Column="1"
-                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                                        <TextBlock x:Name="WhisperStatusText" Text="Not loaded" 
+                                                   Foreground="{DynamicResource TextBrush}" Cursor="Hand"
+                                                   MouseLeftButtonDown="WhisperStatus_Click"
+                                                   ToolTipService.ToolTip="Click to go to Whisper settings"/>
+                                        <TextBlock x:Name="WhisperModelText" Text=" — tiny.en" 
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="5,0,0,0"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
 
+                                    <!-- Llama Status - Clickable with warning -->
                                     <TextBlock Text="Llama:" Grid.Row="1" Grid.Column="0" Margin="0,5,0,0"
                                                Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                    <TextBlock Text="Disabled" x:Name="LlamaStatusText" Grid.Row="1" Grid.Column="1" Margin="0,5,0,0"
-                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" Margin="0,5,0,0">
+                                        <TextBlock x:Name="LlamaStatusText" Text="Disabled" 
+                                                   Foreground="{DynamicResource TextBrush}" Cursor="Hand"
+                                                   MouseLeftButtonDown="LlamaStatus_Click"
+                                                   ToolTipService.ToolTip="Click to go to Llama settings"/>
+                                        <TextBlock x:Name="LlamaLoadLink" Text=" — Load now →" 
+                                                   Foreground="#FFC107" Cursor="Hand" FontWeight="SemiBold"
+                                                   MouseLeftButtonDown="LoadLlama_Click"
+                                                   Visibility="Collapsed"
+                                                   ToolTipService.ToolTip="Click to load Llama model now"/>
+                                        <TextBlock x:Name="LlamaModelText" Text=" — qwen2.5" 
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="5,0,0,0"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
 
-                                    <TextBlock Text="Hotkey:" Grid.Row="2" Grid.Column="0" Margin="0,5,0,0"
+                                    <!-- Microphone - Clickable -->
+                                    <TextBlock Text="Mic:" Grid.Row="2" Grid.Column="0" Margin="0,5,0,0"
                                                Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                    <TextBlock Text="Ctrl+Shift+R" x:Name="HotkeyStatusText" Grid.Row="2" Grid.Column="1" Margin="0,5,0,0"
-                                               Foreground="{DynamicResource TextBrush}"/>
+                                    <TextBlock x:Name="MicrophoneStatusText" Text="Default" Grid.Row="2" Grid.Column="1" Margin="0,5,0,0"
+                                               Foreground="{DynamicResource TextBrush}" Cursor="Hand"
+                                               MouseLeftButtonDown="MicrophoneStatus_Click"
+                                               ToolTipService.ToolTip="Click to change microphone"/>
+
+                                    <!-- Preset - Clickable -->
+                                    <TextBlock Text="Preset:" Grid.Row="3" Grid.Column="0" Margin="0,5,0,0"
+                                               Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                    <TextBlock x:Name="PresetStatusText" Text="Balanced" Grid.Row="3" Grid.Column="1" Margin="0,5,0,0"
+                                               Foreground="{DynamicResource TextBrush}" Cursor="Hand"
+                                               MouseLeftButtonDown="PresetStatus_Click"
+                                               ToolTipService.ToolTip="Click to change preset"/>
+
+                                    <!-- Hotkey - Clickable -->
+                                    <TextBlock Text="Hotkey:" Grid.Row="4" Grid.Column="0" Margin="0,5,0,0"
+                                               Foreground="{DynamicResource SecondaryTextBrush}"/>
+                                    <TextBlock x:Name="HotkeyStatusText" Text="Ctrl+Shift+R" Grid.Row="4" Grid.Column="1" Margin="0,5,0,0"
+                                               Foreground="{DynamicResource TextBrush}" Cursor="Hand"
+                                               MouseLeftButtonDown="HotkeyStatus_Click"
+                                               ToolTipService.ToolTip="Click to change hotkey"/>
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -393,11 +457,12 @@
                         </Expander>
 
                         <!-- Download Paths -->
-                        <Expander Header="Model Download Paths" IsExpanded="False" Margin="0,10,0,0"
-                                  Background="{DynamicResource CardBrush}" Padding="0">
+                        <Expander x:Name="DownloadPathsExpander" Header="Model Download Paths" Margin="0,10,0,0"
+                                  Background="{DynamicResource CardBrush}" Padding="0"
+                                  Expanded="DownloadPathsExpander_Expanded" Collapsed="DownloadPathsExpander_Collapsed">
                             <StackPanel>
                                 <!-- Whisper Model Download Path -->
-                                <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0">
+                                <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20,20,20,10">
                                     <StackPanel>
                                         <TextBlock Text="Whisper Model Download Path" FontSize="14" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextBrush}"
@@ -409,7 +474,7 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="90"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBox x:Name="ModelDownloadPathTextBox" Grid.Column="0" 
                                                      VerticalContentAlignment="Center" Padding="5"
@@ -418,12 +483,14 @@
                                             <TextBlock x:Name="WhisperPathValidIcon" Grid.Column="1" Text="✓" FontSize="16" 
                                                        Foreground="#4ADE80" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="Collapsed"
                                                        ToolTipService.ToolTip="Path is valid"/>
-                                            <Border x:Name="WhisperModelCountBadge" Grid.Column="2" Background="{DynamicResource AccentBrush}" 
+                                            <TextBlock x:Name="WhisperPathWarningIcon" Grid.Column="1" Text="⚠" FontSize="16" 
+                                                       Foreground="#FBBF24" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="Collapsed"/>
+                                            <Border x:Name="WhisperModelCountBadge" Grid.Column="2" Background="{DynamicResource AccentBrush}"  
                                                     CornerRadius="10" Padding="8,3" Margin="8,0,0,0" Visibility="Collapsed">
                                                 <TextBlock x:Name="WhisperModelCountText" Text="0 models" FontSize="11" Foreground="White"/>
                                             </Border>
                                             <Button x:Name="BrowseDownloadPathBtn" Content="Browse..." Grid.Column="3" 
-                                                    Click="BrowseDownloadPath_Click" Margin="10,0,0,0"
+                                                    Click="BrowseDownloadPath_Click" Margin="10,0,0,0" MinWidth="80"
                                                     Style="{DynamicResource SecondaryButtonStyle}"/>
                                         </Grid>
                                         <!-- Compact Path Summary -->
@@ -432,15 +499,12 @@
                                                     CornerRadius="10" Padding="8,3" Visibility="Collapsed">
                                                 <TextBlock x:Name="WhisperPathSummaryText" Text="0 models" FontSize="11" Foreground="White"/>
                                             </Border>
-                                            <TextBlock x:Name="DownloadPathSummaryText" Margin="8,0,0,0" 
-                                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"
-                                                       TextTrimming="CharacterEllipsis" MaxWidth="400"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
 
                                 <!-- Llama Model Download Path -->
-                                <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,10,0,0">
+                                <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20,10,20,20">
                                     <StackPanel>
                                         <TextBlock Text="Llama Model Download Path" FontSize="14" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource TextBrush}"
@@ -452,7 +516,7 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="90"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBox x:Name="LlamaDownloadPathTextBox" Grid.Column="0" 
                                                      VerticalContentAlignment="Center" Padding="5"
@@ -466,7 +530,7 @@
                                                 <TextBlock x:Name="LlamaModelCountText" Text="0 models" FontSize="11" Foreground="White"/>
                                             </Border>
                                             <Button x:Name="BrowseLlamaDownloadPathBtn" Content="Browse..." Grid.Column="3" 
-                                                    Click="BrowseLlamaDownloadPath_Click" Margin="10,0,0,0"
+                                                    Click="BrowseLlamaDownloadPath_Click" Margin="10,0,0,0" MinWidth="80"
                                                     Style="{DynamicResource SecondaryButtonStyle}"/>
                                         </Grid>
                                         <!-- Compact Path Summary -->
@@ -475,15 +539,11 @@
                                                     CornerRadius="10" Padding="8,3" Visibility="Collapsed">
                                                 <TextBlock x:Name="LlamaPathSummaryText" Text="0 models" FontSize="11" Foreground="White"/>
                                             </Border>
-                                            <TextBlock x:Name="LlamaDownloadPathSummaryText" Margin="8,0,0,0" 
-                                                       Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11"
-                                                       TextTrimming="CharacterEllipsis" MaxWidth="400"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
                             </StackPanel>
-                        </Expander>
-
+                        </Expander> 
                         <!-- System Integration -->
                         <Expander Header="System Integration" IsExpanded="True" Margin="0,10,0,0"
                                   Background="{DynamicResource CardBrush}" Padding="0">
@@ -564,12 +624,57 @@
                         <!-- Microphone Selection -->
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
-                                <TextBlock Text="Microphone" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"
-                                           ToolTipService.ToolTip="Select which microphone to use for recording"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Microphone" FontSize="14" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               ToolTipService.ToolTip="Select which microphone to use for recording"/>
+                                    <Button x:Name="RefreshMicrophonesBtn" Grid.Column="1" Content="🔄" 
+                                            Click="RefreshMicrophones_Click"
+                                            Style="{DynamicResource SecondaryButtonStyle}" 
+                                            Padding="8,4" ToolTipService.ToolTip="Refresh device list"/>
+                                </Grid>
                                 <ComboBox x:Name="MicrophoneComboBox" Margin="0,10,0,0"
                                           SelectionChanged="MicrophoneComboBox_SelectionChanged"
                                           ToolTipService.ToolTip="Choose your preferred recording device"/>
+                                
+                                <!-- Device Info -->
+                                <TextBlock x:Name="MicrophoneDeviceInfo" Margin="0,8,0,0"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="12"
+                                           Visibility="Collapsed"/>
+                                
+                                <!-- Pre-Recording Buffer Toggle -->
+                                <Grid Margin="0,15,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="Pre-recording buffer" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}"/>
+                                        <TextBlock Text="Capture 300ms before trigger to avoid clipping first word"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,3,0,0"
+                                                   TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                    <CheckBox x:Name="PreBufferCheckbox" Grid.Column="1"
+                                              Style="{DynamicResource ToggleSwitchStyle}"
+                                              Checked="PreBufferCheckbox_Changed" Unchecked="PreBufferCheckbox_Changed"
+                                              ToolTipService.ToolTip="When enabled, captures audio before you release the trigger so the first word isn't clipped"/>
+                                </Grid>
+                                
+                                <!-- Audio Diagnostics -->
+                                <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="15" Margin="0,15,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Audio Diagnostics" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        <TextBlock x:Name="AudioDiagnosticsText" 
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" 
+                                                   FontSize="12" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -845,7 +950,7 @@
                                 
                                 <!-- Language Selection -->
                                 <StackPanel x:Name="LlamaTranslationOptionsPanel" Orientation="Horizontal" Margin="0,15,0,0"
-                                            IsEnabled="{Binding ElementName=LlamaTranslateCheckbox, Path=IsChecked, Mode=OneWay}">
+                                            Visibility="{Binding ElementName=LlamaTranslateCheckbox, Path=IsChecked, Converter={StaticResource BoolToVisibilityConverter}}">
                                     <TextBlock Text="Translate to:" VerticalAlignment="Center" 
                                                Foreground="{DynamicResource TextBrush}" Margin="0,0,10,0"/>
                                     <ComboBox x:Name="LlamaTargetLanguageComboBox" Width="150"
@@ -884,10 +989,12 @@
                                 
                                 <!-- Model Metadata Badges -->
                                 <StackPanel x:Name="LlamaModelBadgesPanel" Orientation="Horizontal" Margin="0,8,0,0" Visibility="Collapsed">
-                                    <Border x:Name="QuantizationBadge" Background="{DynamicResource InfoBadgeBrush}" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
+                                    <Border x:Name="QuantizationBadge" Background="{DynamicResource InfoBadgeBrush}" CornerRadius="4" Padding="6,2" Margin="0,0,6,0"
+                                            ToolTipService.ToolTip="Quantization: How the model is compressed. FP16 = full precision, Q4-Q8 = progressively more compressed (smaller file, less RAM, slightly less accurate)">
                                         <TextBlock x:Name="QuantizationBadgeText" Text="" FontSize="11" Foreground="White"/>
                                     </Border>
-                                    <Border x:Name="SizeBadge" Background="{DynamicResource ValidBadgeBrush}" CornerRadius="4" Padding="6,2" Margin="0,0,6,0">
+                                    <Border x:Name="SizeBadge" Background="{DynamicResource ValidBadgeBrush}" CornerRadius="4" Padding="6,2" Margin="0,0,6,0"
+                                            ToolTipService.ToolTip="Model size in billions of parameters. Larger = more accurate but requires more RAM (approximately 2GB per 1B parameters in FP16)">
                                         <TextBlock x:Name="SizeBadgeText" Text="" FontSize="11" Foreground="White"/>
                                     </Border>
                                     <Border x:Name="RAMBadge" Background="{DynamicResource AccentBrush}" CornerRadius="4" Padding="6,2">
@@ -1002,45 +1109,124 @@
                         <!-- Custom Vocabulary Input -->
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20">
                             <StackPanel>
-                                <TextBlock Text="Word List" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"
-                                           ToolTipService.ToolTip="Enter words or phrases that Whisper should recognize"/>
-                                <TextBlock Text="Enter words or phrases (one per line) to improve recognition"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"
-                                           ToolTipService.ToolTip="Whisper will be more likely to correctly recognize these words"/>
-                                <TextBox x:Name="CustomVocabularyTextBox" 
-                                         AcceptsReturn="True" 
-                                         TextWrapping="Wrap"
-                                         Height="150"
-                                         VerticalScrollBarVisibility="Auto"
-                                         TextChanged="CustomVocabularyTextBox_TextChanged"
-                                         Padding="5"
-                                         ToolTipService.ToolTip="Add one word or phrase per line"/>
-                                <TextBlock Text="These words will be more likely to be recognized correctly. Each word or phrase should be on a separate line."
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="Word List" FontSize="14" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}"
+                                                   ToolTipService.ToolTip="Enter words or phrases that Whisper should recognize"/>
+                                        <TextBlock Text="Add words or phrases to improve recognition"
+                                                   Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"
+                                                   ToolTipService.ToolTip="Whisper will be more likely to correctly recognize these words"/>
+                                    </StackPanel>
+                                    <TextBlock x:Name="WordCountText" Grid.Column="1" 
+                                               Text="0 words" FontSize="12"
+                                               Foreground="{DynamicResource SecondaryTextBrush}" 
+                                               VerticalAlignment="Top" Margin="0,5,0,0"/>
+                                </Grid>
+                                
+                                <!-- Hidden storage for vocabulary -->
+                                <TextBox x:Name="CustomVocabularyTextBox" Visibility="Collapsed"
+                                         TextChanged="CustomVocabularyTextBox_TextChanged"/>
+                                
+                                <!-- Filter word list -->
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
+                                    <TextBlock Text="🔍" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBox x:Name="WordFilterTextBox" 
+                                             Padding="8,6" MinWidth="200"
+                                             ToolTipService.ToolTip="Filter words..."
+                                             TextChanged="WordFilterTextBox_TextChanged"/>
+                                </StackPanel>
+                                
+                                <!-- Chip Input Area -->
+                                <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="6" Padding="8">
+                                    <StackPanel>
+                                        <!-- Word Chips Display -->
+                                        <WrapPanel x:Name="WordChipsPanel"/>
+                                        
+                                        <!-- Input Field -->
+                                        <Grid Margin="0,8,0,0">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBox x:Name="AddWordTextBox" 
+                                                     Padding="8,6"
+                                                     KeyDown="AddWordTextBox_KeyDown"
+                                                     ToolTipService.ToolTip="Type a word and press Enter to add"/>
+                                            <Button Grid.Column="1" Content="Add" 
+                                                    Click="AddWord_Click"
+                                                    Style="{DynamicResource PrimaryButtonStyle}" 
+                                                    Margin="8,0,0,0" Padding="12,6"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                                
+                                <TextBlock Text="Type a word or phrase and press Enter or click Add. Click X on a chip to remove."
                                            Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,10,0,0"
                                            TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
 
-                        <!-- Example Vocabulary -->
+                        <!-- Suggested For You -->
                         <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
                             <StackPanel>
-                                <TextBlock Text="Example Usage" FontSize="14" FontWeight="SemiBold"
+                                <TextBlock Text="Suggested for you" FontSize="14" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"/>
-                                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,10,0,0">
-                                    <Run FontWeight="SemiBold">Technical terms:</Run><Run> API, SDK, JSON, XML</Run>
-                                </TextBlock>
-                                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0">
-                                    <Run FontWeight="SemiBold">Names:</Run><Run> John, Sarah, Michael</Run>
-                                </TextBlock>
-                                <TextBlock TextWrapping="Wrap" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,0">
-                                    <Run FontWeight="SemiBold">Phrases:</Run><Run> Thank you, Best regards, Looking forward</Run>
-                                </TextBlock>
+                                <TextBlock Text="Click to add common dev/tech terms to your vocabulary"
+                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10" FontSize="11"/>
+                                
+                                <!-- Suggested chips -->
+                                <WrapPanel x:Name="SuggestedWordsPanel">
+                                    <Button x:Name="SuggestedDocker" Content="Docker" Tag="Docker" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedKubectl" Content="kubectl" Tag="kubectl" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedJSON" Content="JSON" Tag="JSON" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedAsync" Content="async" Tag="async" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedEnum" Content="enum" Tag="enum" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedAPI" Content="API" Tag="API" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedSDK" Content="SDK" Tag="SDK" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedAWS" Content="AWS" Tag="AWS" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedKubernetes" Content="Kubernetes" Tag="Kubernetes" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedCICD" Content="CI/CD" Tag="CI/CD" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedMiddleware" Content="middleware" Tag="middleware" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedBool" Content="bool" Tag="bool" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedNullable" Content="nullable" Tag="nullable" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedWebSocket" Content="WebSocket" Tag="WebSocket" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedLocalhost" Content="localhost" Tag="localhost" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                    <Button x:Name="SuggestedGit" Content="git" Tag="git" Click="AddSuggestedWord_Click"
+                                            Style="{StaticResource ChipButtonStyle}" Margin="0,0,8,8"/>
+                                </WrapPanel>
                             </StackPanel>
                         </Border>
 
+                        <!-- Section Divider -->
+                        <StackPanel Margin="0,25,0,15">
+                            <TextBlock Text="▌ Post-Processing" FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource AccentBrush}"
+                                       Margin="0,0,0,5"/>
+                            <Rectangle Height="1" Fill="{DynamicResource BorderBrush}"/>
+                        </StackPanel>
+
                         <!-- Word Replacements -->
-                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,0,0,0">
                             <StackPanel>
                                 <TextBlock Text="Word Replacements" FontSize="14" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"
@@ -1051,21 +1237,46 @@
 
                                 <!-- Add new replacement row -->
                                 <Grid Margin="0,0,0,10">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBox x:Name="NewReplacementSourceBox" Grid.Column="0" 
-                                             VerticalContentAlignment="Center" Padding="5" Margin="0,0,5,0"
-                                             ToolTipService.ToolTip="When you say..."/>
-                                    <TextBox x:Name="NewReplacementTargetBox" Grid.Column="1" 
-                                             VerticalContentAlignment="Center" Padding="5" Margin="5,0,5,0"
-                                             ToolTipService.ToolTip="Replace with..."/>
-                                    <Button x:Name="AddReplacementBtn" Grid.Column="2" Content="Add" 
+                                    
+                                    <!-- Labels -->
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Spoken:" FontSize="11" 
+                                               Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,3"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="2" Text="Replace with:" FontSize="11" 
+                                               Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,3"/>
+                                    
+                                    <!-- Input fields -->
+                                    <TextBox x:Name="NewReplacementSourceBox" Grid.Row="1" Grid.Column="0" 
+                                             VerticalContentAlignment="Center" Padding="8,6" Margin="0,0,5,0"
+                                             ToolTipService.ToolTip="When you say..." Text="Ken Kilty"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text=" → " 
+                                               Foreground="{DynamicResource SecondaryTextBrush}"
+                                               VerticalAlignment="Center" Margin="5,0"/>
+                                    <TextBox x:Name="NewReplacementTargetBox" Grid.Row="1" Grid.Column="2" 
+                                             VerticalContentAlignment="Center" Padding="8,6" Margin="5,0,5,0"
+                                             ToolTipService.ToolTip="Replace with..." Text="Ken FagBoi Kitly the 3rd"/>
+                                    <Button x:Name="AddReplacementBtn" Grid.Row="1" Grid.Column="3" Content="Add" 
                                             Click="AddReplacement_Click"
-                                            Style="{DynamicResource PrimaryButtonStyle}" Padding="15,5"/>
+                                            Style="{DynamicResource PrimaryButtonStyle}" Padding="15,6" Margin="5,0,0,0"/>
                                 </Grid>
+
+                                <!-- Filter replacements -->
+                                <StackPanel Orientation="Horizontal" Margin="0,10,0,5">
+                                    <TextBlock Text="🔍" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBox x:Name="ReplacementFilterTextBox"
+                                             Padding="8,6" MinWidth="200"
+                                             ToolTipService.ToolTip="Filter replacements..."
+                                             TextChanged="ReplacementFilterTextBox_TextChanged"/>
+                                </StackPanel>
 
                                 <!-- Replacements List -->
                                 <ListBox x:Name="ReplacementsListBox" 
@@ -1076,32 +1287,82 @@
                                         <DataTemplate>
                                             <Grid Margin="0,3">
                                                 <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="*"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding Source}" 
+                                                
+                                                <!-- Drag handle -->
+                                                <TextBlock Grid.Column="0" Text="⠿" 
+                                                           Foreground="{DynamicResource SecondaryTextBrush}"
+                                                           VerticalAlignment="Center" Margin="0,0,8,0"
+                                                           Cursor="Hand" ToolTipService.ToolTip="Drag to reorder"/>
+                                                
+                                                <TextBlock Grid.Column="1" Text="{Binding Source}" 
                                                            Foreground="{DynamicResource TextBrush}"
                                                            VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="1" Text=" → " 
+                                                <TextBlock Grid.Column="2" Text=" → " 
                                                            Foreground="{DynamicResource SecondaryTextBrush}"
                                                            VerticalAlignment="Center" Margin="5,0"/>
-                                                <TextBlock Grid.Column="2" Text="{Binding Replacement}" 
-                                                           Foreground="{DynamicResource AccentBrush}"
-                                                           VerticalAlignment="Center"/>
-                                                <Button Grid.Column="3" Content="✕" 
+                                                
+                                                <!-- Replacement with light blue background -->
+                                                <Border Grid.Column="3" Background="#E3F2FD" CornerRadius="3" Padding="6,2" Margin="0,0,5,0">
+                                                    <TextBlock Text="{Binding Replacement}" 
+                                                               Foreground="#1565C0"
+                                                               VerticalAlignment="Center"/>
+                                                </Border>
+                                                
+                                                <!-- Case sensitive toggle -->
+                                                <ToggleButton x:Name="CaseToggle" Grid.Column="4" 
+                                                             Width="36" Height="22"
+                                                             IsChecked="{Binding CaseSensitive}"
+                                                             Margin="0,0,3,0"
+                                                             ToolTipService.ToolTip="Case sensitive match">
+                                                    <TextBlock Text="Aa" FontSize="10" FontWeight="Bold"/>
+                                                </ToggleButton>
+                                                <!-- Regex toggle -->
+                                                <ToggleButton x:Name="RegexToggle" Grid.Column="5" 
+                                                             Width="36" Height="22"
+                                                             IsChecked="{Binding IsRegex}"
+                                                             Margin="0,0,10,0"
+                                                             ToolTipService.ToolTip="Use regex pattern">
+                                                    <TextBlock Text=".*" FontSize="10" FontWeight="Bold"/>
+                                                </ToggleButton>
+                                                
+                                                <Button Grid.Column="7" Content="✕" 
                                                         Click="RemoveReplacement_Click"
                                                         Tag="{Binding Source}"
                                                         Style="{DynamicResource SecondaryButtonStyle}" 
-                                                        Padding="8,2" Margin="10,0,0,0"/>
+                                                        Padding="8,2"/>
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>
                                 </ListBox>
 
-                                <TextBlock Text="Example: &quot;yaba daba do&quot; → &quot;yum&quot; or &quot;API&quot; → &quot;A P I&quot;"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,10,0,0"/>
+                                <!-- Test replacements - Live Preview -->
+                                <Border Background="{DynamicResource BackgroundBrush}" CornerRadius="6" Padding="15" Margin="0,15,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Test replacements (live preview)" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource TextBrush}" Margin="0,0,0,8"/>
+                                        
+                                        <TextBlock Text="Input:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,0,0,4"/>
+                                        <TextBox x:Name="TestReplacementInput" Grid.Row="0"
+                                                 Text=""
+                                                 Padding="8" MinHeight="50" TextWrapping="Wrap"
+                                                 AcceptsReturn="True"
+                                                 TextChanged="TestReplacementInput_TextChanged"/>
+                                        
+                                        <TextBlock Text="Output:" FontSize="11" Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,12,0,4"/>
+                                        <TextBox x:Name="TestReplacementOutput" Grid.Row="1"
+                                                 IsReadOnly="True" Padding="8" MinHeight="50" TextWrapping="Wrap"
+                                                 Background="{DynamicResource CardBrush}"/>
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
                     </StackPanel>

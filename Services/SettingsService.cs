@@ -228,6 +228,8 @@ public class WordReplacement
 {
     public string Source { get; set; } = "";
     public string Replacement { get; set; } = "";
+    public bool CaseSensitive { get; set; } = false;
+    public bool IsRegex { get; set; } = false;
 }
 
 public class LlamaSettings
@@ -256,6 +258,9 @@ public class GeneralSettings
     public int ClipboardRestoreDelayMs { get; set; } = 1000;
     public bool PushToTalkMode { get; set; } = true; // true = hold to talk, false = toggle
     public bool MinimizeToTray { get; set; } = false; // minimize to system tray instead of taskbar
+    public bool HasCompletedOnboarding { get; set; } = false; // tracks if first-run wizard was completed
+    public bool DownloadPathsExpanded { get; set; } = false; // tracks expander state
+    public bool PreRecordingBuffer { get; set; } = true; // capture 300ms before trigger to avoid clipping
 }
 
 public class TransformationSettings
