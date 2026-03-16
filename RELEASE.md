@@ -2,6 +2,10 @@
 
 ## Latest Release
 
+### Version 1.7.2
+
+---
+
 ### Version 1.7.1
 
 ---
@@ -288,7 +292,7 @@
 
 ### Installation Steps
 
-1. Download the appropriate `publish-1.3.0.zip` from the latest release
+1. Download the appropriate `publish-1.7.2.zip` from the latest release
 2. Extract the zip to your desired location
 3. Run `whisperMeOff.exe`
 4. Download a Whisper model from the Whisper tab
