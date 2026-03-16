@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Threading;
 
 namespace whisperMeOff.Services;
@@ -170,6 +171,9 @@ LoggingService.Debug("Window ready timeout, attempting paste anyway");
 
     private void SimulatePaste()
     {
+        // Give clipboard time to update after SetText
+        Thread.Sleep(50);
+        
         // Key down Ctrl+V
         keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYDOWN, UIntPtr.Zero);
         keybd_event(VK_V, 0, KEYEVENTF_KEYDOWN, UIntPtr.Zero);
