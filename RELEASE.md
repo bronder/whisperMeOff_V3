@@ -2,6 +2,24 @@
 
 ## Latest Release
 
+### Version 1.7.4
+
+#### Bug Fixes
+- **Hotkey Service Thread Safety**: Fixed potential deadlock in HotkeyService
+  - Keyboard hook callback now properly marshals events to UI thread using Dispatcher
+  - Prevents cross-thread access violations when callback fires on system hook thread
+- **Token Encryption Security**: Fixed token encryption vulnerability in SettingsService
+  - Encryption failures no longer silently return plain text
+  - Failed encryption now throws exception and clears token to prevent exposure
+  - Decryption failures return empty string instead of potentially corrupted data
+
+#### Features
+- **Separate Today's and Total Stats**: Stats display now shows today's stats and total stats on separate lines
+  - Today's stats: transcription count, words, avg audio, processing time, WPM
+  - Total stats: all-time transcription count, words, WPM
+
+---
+
 ### Version 1.7.3
 
 #### Bug Fixes
@@ -313,7 +331,7 @@
 
 ### Installation Steps
 
-1. Download the appropriate `publish-1.7.3.zip` from the latest release
+1. Download the appropriate `publish-1.7.4.zip` from the latest release
 2. Extract the zip to your desired location
 3. Run `whisperMeOff.exe`
 4. Download a Whisper model from the Whisper tab

@@ -8,44 +8,75 @@ This is a well-structured WPF application (~107K LOC) for voice-to-text transcri
 
 ## Critical Issues
 
-### 3. Potential Deadlock in Hotkey Service ⚠️ NOT YET FIXED
+### 3. Potential Deadlock in Hotkey Service ✅ FIXED
 
 **Location:** [`Services/HotkeyService.cs:72-91`](Services/HotkeyService.cs:72)
 
-```csharp
-_messageWindow.Loaded += (s, e) =>
-{
-    var helper = new WindowInteropHelper(_messageWindow);
-    _windowHandle = helper.Handle;
-    // ...
-    _keyboardHookId = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardProc, moduleHandle, 0);
-    RegisterCurrentHotkey();
-};
-_messageWindow.Show();
-```
+**Issue:** The keyboard hook callback fires on different threads (system hook thread), causing cross-thread access violations when raising events that may access UI elements.
 
-**Issue:** The keyboard hook is registered on the UI thread but callback may fire on different threads, causing cross-thread access violations. Also, the hook is never unregistered (`UnhookWindowsHookEx` not called in `Dispose`).
+**Fix Applied:** Added dispatcher-based marshaling for cross-thread event invocation:
 
-**Status:** ⚠️ Not yet fixed - needs proper cleanup in Dispose method
-
-## Security Issues
-
-### 4. Token Encryption Vulnerability
-
-**Location:** [`Services/SettingsService.cs:141-157`](Services/SettingsService.cs:141)
+1. Added `_dispatcher` field to capture the message window's dispatcher
+2. Initialized dispatcher in the `Loaded` event handler
+3. Created `RaiseHotkeyPressed()` and `RaiseHotkeyReleased()` helper methods that use `Dispatcher.BeginInvoke` to marshal events to the UI thread when called from a different thread
 
 ```csharp
-private static string Encrypt(string plainText)
+private void RaiseHotkeyPressed()
 {
-    // ...
-    var encryptedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
-    return Convert.ToBase64String(encryptedBytes);
+    if (_dispatcher != null && !_dispatcher.CheckAccess())
+    {
+        // Marshal to UI thread
+        _dispatcher.BeginInvoke(new Action(() => HotkeyPressed?.Invoke(this, EventArgs.Empty)));
+    }
+    else
+    {
+        HotkeyPressed?.Invoke(this, EventArgs.Empty);
+    }
 }
 ```
 
+Note: The `Dispose` method already properly calls `UnhookWindowsHookEx(_keyboardHookId)` for cleanup.
+
+**Status:** ✅ Fixed - Events are now properly marshaled to UI thread to prevent cross-thread access violations
+
+## Security Issues
+
+### 4. Token Encryption Vulnerability ✅ FIXED
+
+**Location:** [`Services/SettingsService.cs:141-157`](Services/SettingsService.cs:141)
+
 **Issue:** Using `DataProtectionScope.CurrentUser` means encrypted tokens are bound to the current Windows user. If a user profile is deleted or corrupted, tokens become unrecoverable. Additionally, the fallback to plain text on encryption failure (line 155) silently exposes credentials.
 
-**Recommendation:** Add logging when encryption fails and consider implementing a backup/reset mechanism for corrupted tokens.
+**Fix Applied:**
+
+1. **Encrypt method** - Now throws `InvalidOperationException` instead of returning plain text on encryption failure:
+   ```csharp
+   catch (Exception ex)
+   {
+       LoggingService.Error($"[Settings] Encryption failed - token will not be stored: {ex.Message}");
+       throw new InvalidOperationException("Failed to encrypt sensitive data. Token will not be saved.", ex);
+   }
+   ```
+
+2. **Save method** - Catches the exception and clears the token to prevent plain text storage:
+   ```csharp
+   catch (InvalidOperationException ex)
+   {
+       LoggingService.Error($"[Settings] Failed to encrypt token - clearing token to prevent exposure: {ex.Message}");
+       settings.Llama.HuggingFaceToken = string.Empty;
+   }
+   ```
+
+3. **Decrypt method** - Now returns empty string on decryption failure instead of returning potentially corrupted data:
+   ```csharp
+   catch (Exception ex)
+   {
+       LoggingService.Error($"[Decrypt] Failed - data may be corrupted or from different user: {ex.Message}");
+       return string.Empty;
+   }
+   ```
+
+**Status:** ✅ Fixed - Tokens are no longer silently exposed in plain text on encryption/decryption failures
 
 ---
 
@@ -219,13 +250,13 @@ Also added:
 
 | Category | Count | Severity | Fixed |
 |----------|-------|----------|-------|
-| Critical | 1 | High | 0 |
-| Security | 1 | High | 0 |
+| Critical | 1 | High | 1 |
+| Security | 1 | High | 1 |
 | Code Quality | 2 | Medium | 1 |
 | Performance | 1 | Medium | 1 |
 | Maintainability | 3 | Medium | 3 |
 
-**Total Issues Remaining:** 3 (plus 1 critical)
+**Total Issues Remaining:** 1 (code quality)
 
 **Recent Fixes (2026-03-17):**
 - Issue #15: CancellationToken support added
@@ -235,6 +266,8 @@ Also added:
 - Issue #12: Database pooling enabled
 - Issue #13: Circular dependency fixed
 - Issue #14: Input validation added
+- Issue #3: Hotkey service cross-thread event marshaling fixed
+- Issue #4: Token encryption vulnerability fixed - tokens no longer silently exposed
 
 ---
 
@@ -296,12 +329,12 @@ The following issues were resolved before this review session:
 
 ## Recommendations Priority
 
-1. **High:** Fix deadlock in Hotkey Service (issue #3) - ⚠️ NOT YET FIXED
-2. **High:** Address token encryption vulnerability (issue #4)
-3. **Medium:** Extract MainWindow into ViewModel (issue #6) - requires larger refactoring
+1. **Medium:** Extract MainWindow into ViewModel (issue #6) - requires larger refactoring
 
 ### Completed Recommendations ✅
 
+- Fix deadlock in Hotkey Service (issue #3) - ✅ DONE
+- Address token encryption vulnerability (issue #4) - ✅ DONE
 - Add CancellationToken support (issue #15) - ✅ DONE
 - Fix async/await anti-patterns (issue #9) - ✅ DONE  
 - Add input validation to public APIs (issue #14) - ✅ DONE

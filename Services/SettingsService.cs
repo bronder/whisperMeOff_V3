@@ -119,9 +119,18 @@ public class SettingsService
                 }
                 else
                 {
-                    var beforeEncrypt = token;
-                    settings.Llama.HuggingFaceToken = Encrypt(token);
-                    LoggingService.Debug($"Token encrypted: {beforeEncrypt?.Length ?? 0} -> {settings.Llama.HuggingFaceToken?.Length ?? 0} chars");
+                    try
+                    {
+                        var beforeEncrypt = token;
+                        settings.Llama.HuggingFaceToken = Encrypt(token);
+                        LoggingService.Debug($"Token encrypted: {beforeEncrypt?.Length ?? 0} -> {settings.Llama.HuggingFaceToken?.Length ?? 0} chars");
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        // Encryption failed - do not save the token in plain text
+                        LoggingService.Error($"[Settings] Failed to encrypt token - clearing token to prevent exposure: {ex.Message}");
+                        settings.Llama.HuggingFaceToken = string.Empty;
+                    }
                 }
             }
 
@@ -151,8 +160,9 @@ public class SettingsService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn($"[Settings] Encryption error: {ex.Message}");
-            return plainText; // Return plain text if encryption fails
+            // Log as ERROR - do NOT silently return plain text as it exposes credentials
+            LoggingService.Error($"[Settings] Encryption failed - token will not be stored: {ex.Message}");
+            throw new InvalidOperationException("Failed to encrypt sensitive data. Token will not be saved.", ex);
         }
     }
 
@@ -166,7 +176,13 @@ public class SettingsService
 
         try
         {
-            // Check if it's encrypted (starts with base64 indicator)
+            // Check if it's valid base64 - if not, it's likely plain text (not encrypted)
+            if (!IsBase64String(encryptedText))
+            {
+                LoggingService.Debug($"[Decrypt] Text is not base64 encoded, returning as-is (likely plain text)");
+                return encryptedText;
+            }
+            
             var plainBytes = Convert.FromBase64String(encryptedText);
             var decryptedBytes = ProtectedData.Unprotect(plainBytes, null, DataProtectionScope.CurrentUser);
             var result = Encoding.UTF8.GetString(decryptedBytes);
@@ -175,8 +191,10 @@ public class SettingsService
         }
         catch (Exception ex)
         {
-            LoggingService.Warn($"[Decrypt] Failed: {ex.Message}, returning as-is ({encryptedText.Length} chars)");
-            return encryptedText;
+            // Decryption failed - could be corrupted data or from different user profile
+            // Log as error and return empty to prevent potential data leakage
+            LoggingService.Error($"[Decrypt] Failed - data may be corrupted or from different user: {ex.Message}");
+            return string.Empty;
         }
     }
 

@@ -243,6 +243,39 @@ public class DatabaseService : IDisposable
     }
 
     /// <summary>
+    /// Gets total statistics across all transcriptions.
+    /// </summary>
+    public async Task<(int totalCount, int totalWords, double totalDuration)> GetTotalStatsAsync()
+    {
+        if (_connection == null) return (0, 0, 0);
+
+        try
+        {
+            var cmd = _connection.CreateCommand();
+            cmd.CommandText = @"SELECT 
+                COUNT(*) as total_count,
+                COALESCE(SUM(LENGTH(text) - LENGTH(REPLACE(text, ' ', '')) + 1), 0) as total_words,
+                COALESCE(SUM(duration), 0) as total_duration
+              FROM transcriptions";
+            
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                var totalCount = reader.GetInt32(0);
+                var totalWords = reader.GetInt32(1);
+                var totalDuration = reader.GetDouble(2);
+                return (totalCount, totalWords, totalDuration);
+            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error(ex, "Get total stats error");
+        }
+
+        return (0, 0, 0);
+    }
+
+    /// <summary>
     /// Gets a single transcription by ID.
     /// </summary>
     /// <param name="id">The transcription ID.</param>

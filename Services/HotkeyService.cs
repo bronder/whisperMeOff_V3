@@ -40,6 +40,7 @@ public class HotkeyService : IDisposable
     private LowLevelKeyboardProc? _keyboardProc;
     private bool _isHotkeyPressed;
     private System.Windows.Window? _messageWindow; // Separate window for hotkey messages
+    private System.Windows.Threading.Dispatcher? _dispatcher; // For marshaling cross-thread calls to UI thread
 
     public event EventHandler? HotkeyPressed;
     public event EventHandler? HotkeyReleased;
@@ -71,6 +72,9 @@ public class HotkeyService : IDisposable
             // Use Dispatcher to ensure window handle is created on UI thread
             _messageWindow.Loaded += (s, e) =>
             {
+                // Capture dispatcher for cross-thread event marshaling
+                _dispatcher = _messageWindow.Dispatcher;
+                
                 var helper = new WindowInteropHelper(_messageWindow);
                 _windowHandle = helper.Handle;
                 
@@ -147,7 +151,8 @@ public class HotkeyService : IDisposable
                 {
                     LoggingService.Debug("Hotkey released");
                     _isHotkeyPressed = false;
-                    HotkeyReleased?.Invoke(this, EventArgs.Empty);
+                    // Marshal event to UI thread to prevent cross-thread access violations
+                    RaiseHotkeyReleased();
                 }
             }
             // Check if our trigger key was pressed
@@ -162,6 +167,19 @@ public class HotkeyService : IDisposable
         }
         return CallNextHookEx(_keyboardHookId, nCode, wParam, lParam);
     }
+    
+    private void RaiseHotkeyReleased()
+    {
+        if (_dispatcher != null && !_dispatcher.CheckAccess())
+        {
+            // Marshal to UI thread
+            _dispatcher.BeginInvoke(new Action(() => HotkeyReleased?.Invoke(this, EventArgs.Empty)));
+        }
+        else
+        {
+            HotkeyReleased?.Invoke(this, EventArgs.Empty);
+        }
+    }
 
     [DllImport("user32.dll")]
     private static extern short GetAsyncKeyState(int vKey);
@@ -175,11 +193,25 @@ public class HotkeyService : IDisposable
             // Record the previous window for auto-paste
             _previousWindow = GetForegroundWindow();
 
-            HotkeyPressed?.Invoke(this, EventArgs.Empty);
+            // Marshal event to UI thread to prevent cross-thread access violations
+            RaiseHotkeyPressed();
             handled = true;
         }
 
         return IntPtr.Zero;
+    }
+    
+    private void RaiseHotkeyPressed()
+    {
+        if (_dispatcher != null && !_dispatcher.CheckAccess())
+        {
+            // Marshal to UI thread
+            _dispatcher.BeginInvoke(new Action(() => HotkeyPressed?.Invoke(this, EventArgs.Empty)));
+        }
+        else
+        {
+            HotkeyPressed?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     [DllImport("user32.dll")]

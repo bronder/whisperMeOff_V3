@@ -638,36 +638,54 @@ public partial class MainWindow : Window
     {
         try
         {
+            // Get today's stats
             var todayRecords = await App.Database.GetTodayTranscriptionsAsync();
             
-            var transcriptionCount = todayRecords.Count;
-            var totalWords = todayRecords.Sum(r => 
+            var todayCount = todayRecords.Count;
+            var todayWords = todayRecords.Sum(r => 
                 r.Text.Split(new[] { ' ', '\n', '\r', '\t' }, StringSplitOptions.RemoveEmptyEntries).Length);
             
-            // Calculate average audio duration and processing time
-            var avgDuration = transcriptionCount > 0 ? todayRecords.Where(r => r.Duration.HasValue).Average(r => r.Duration ?? 0) : 0;
-            var avgProcessingTime = transcriptionCount > 0 ? todayRecords.Where(r => r.ProcessingTime.HasValue).Average(r => r.ProcessingTime ?? 0) : 0;
+            // Calculate today's average audio duration and processing time
+            var avgDuration = todayCount > 0 ? todayRecords.Where(r => r.Duration.HasValue).Average(r => r.Duration ?? 0) : 0;
+            var avgProcessingTime = todayCount > 0 ? todayRecords.Where(r => r.ProcessingTime.HasValue).Average(r => r.ProcessingTime ?? 0) : 0;
             
-            // Calculate words per minute (based on audio duration)
+            // Calculate today's words per minute
             var totalDuration = todayRecords.Where(r => r.Duration.HasValue).Sum(r => r.Duration ?? 0);
-            var wpm = totalDuration > 0 ? totalWords / (totalDuration / 60.0) : 0;
+            var wpm = totalDuration > 0 ? todayWords / (totalDuration / 60.0) : 0;
             
-            var statsText = $"Today: {transcriptionCount} transcription{(transcriptionCount != 1 ? "s" : "")} · {totalWords:N0} words";
-            if (transcriptionCount > 0)
+            // Get total stats
+            var (totalCount, totalWords, totalDurationAll) = await App.Database.GetTotalStatsAsync();
+            
+            // Build today's stats text
+            var todayText = $"Today: {todayCount} transcriptions · {todayWords:N0} words";
+            if (todayCount > 0)
             {
                 if (avgDuration > 0)
-                    statsText += $" · Avg. {avgDuration:F1}s audio";
+                    todayText += $" · Avg. {avgDuration:F1}s";
                 if (avgProcessingTime > 0)
-                    statsText += $" · {avgProcessingTime:F1}s processing";
+                    todayText += $" · {avgProcessingTime:F1}s";
                 if (wpm > 0)
-                    statsText += $" · {wpm:F0} wpm";
+                    todayText += $" · {wpm:F0} wpm";
+            }
+            
+            // Build total stats text
+            var totalText = $"Total: {totalCount:N0} transcriptions · {totalWords:N0} words";
+            if (totalCount > 0 && totalDurationAll > 0)
+            {
+                var totalWpm = totalWords / (totalDurationAll / 60.0);
+                if (totalWpm > 0)
+                    totalText += $" · {totalWpm:F0} wpm";
             }
             
             Dispatcher.Invoke(() =>
             {
                 if (SessionStatsText != null)
                 {
-                    SessionStatsText.Text = statsText;
+                    SessionStatsText.Text = todayText;
+                }
+                if (TotalStatsText != null)
+                {
+                    TotalStatsText.Text = totalText;
                 }
             });
         }
