@@ -401,34 +401,65 @@
                                                ToolTipService.ToolTip="Choose your preferred color scheme for the application"/>
                                     <TextBlock Text="Choose between light and dark visual themes"
                                                Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
-                                    <ComboBox x:Name="ThemeComboBox" Width="220" HorizontalAlignment="Left"
-                                              SelectionChanged="ThemeComboBox_SelectionChanged"
-                                              Background="{DynamicResource CardBrush}"
-                                              Foreground="{DynamicResource TextBrush}"
-                                              ToolTipService.ToolTip="Select Light, Dark, or one of the colorful themes">
+                                     <ComboBox x:Name="ThemeComboBox" Width="220" HorizontalAlignment="Left"
+                                               SelectionChanged="ThemeComboBox_SelectionChanged"
+                                               Background="{DynamicResource CardBrush}"
+                                               Foreground="{DynamicResource TextBrush}"
+                                               ToolTipService.ToolTip="Select Light, Dark, or one of the colorful themes">
+                                        <!-- Light Themes (A-Z) -->
                                         <ComboBoxItem>
                                             <StackPanel Orientation="Horizontal">
-                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#DDD" BorderThickness="1">
-                                                    <Border.Background>
-                                                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                                            <GradientStop Color="#FFFFFF" Offset="0"/>
-                                                            <GradientStop Color="#F5F5F5" Offset="1"/>
-                                                        </LinearGradientBrush>
-                                                    </Border.Background>
-                                                </Border>
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#40A02B" BorderThickness="1" Background="#FAFAFA"/>
+                                                <TextBlock Text="AyuLight"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#04A5E5" BorderThickness="1" Background="#EFF1F3"/>
+                                                <TextBlock Text="CatppuccinLatte"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#0071E3" BorderThickness="1" Background="#FFFFFF"/>
+                                                <TextBlock Text="Daylight"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#8FA0B7" BorderThickness="1" Background="#FDF6E7"/>
+                                                <TextBlock Text="EverforestLight"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#0969DA" BorderThickness="1" Background="#FFFFFF"/>
+                                                <TextBlock Text="GitHubLight"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#DDD" BorderThickness="1" Background="#F5F5F5"/>
                                                 <TextBlock Text="Light"/>
                                             </StackPanel>
                                         </ComboBoxItem>
                                         <ComboBoxItem>
                                             <StackPanel Orientation="Horizontal">
-                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#444" BorderThickness="1" Background="#252526"/>
-                                                <TextBlock Text="Dark"/>
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#519ABA" BorderThickness="1" Background="#FAFAFA"/>
+                                                <TextBlock Text="OneLight"/>
                                             </StackPanel>
                                         </ComboBoxItem>
                                         <ComboBoxItem>
                                             <StackPanel Orientation="Horizontal">
-                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#5E81AC" BorderThickness="1" Background="#2E3440"/>
-                                                <TextBlock Text="Nord"/>
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#268BD2" BorderThickness="1" Background="#FDF6E3"/>
+                                                <TextBlock Text="SolarizedLight"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <!-- Dark Themes (A-Z) -->
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#444" BorderThickness="1" Background="#252526"/>
+                                                <TextBlock Text="Dark"/>
                                             </StackPanel>
                                         </ComboBoxItem>
                                         <ComboBoxItem>
@@ -451,8 +482,26 @@
                                         </ComboBoxItem>
                                         <ComboBoxItem>
                                             <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#82AAFF" BorderThickness="1" Background="#011627"/>
+                                                <TextBlock Text="NightOwl"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#5E81AC" BorderThickness="1" Background="#2E3440"/>
+                                                <TextBlock Text="Nord"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
                                                 <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#FF79C6" BorderThickness="1" Background="#1A1A2E"/>
                                                 <TextBlock Text="Synthwave"/>
+                                            </StackPanel>
+                                        </ComboBoxItem>
+                                        <ComboBoxItem>
+                                            <StackPanel Orientation="Horizontal">
+                                                <Border Width="24" Height="16" CornerRadius="2" Margin="0,0,8,0" BorderBrush="#7AA2F7" BorderThickness="1" Background="#1A1B26"/>
+                                                <TextBlock Text="TokyoNight"/>
                                             </StackPanel>
                                         </ComboBoxItem>
                                     </ComboBox>

@@ -178,6 +178,37 @@
                         <TextBlock Text="🎨 Theme" FontSize="16" FontWeight="Bold" Foreground="#1E1E1E" Margin="0,0,0,15"/>
                         <ComboBox x:Name="ThemeComboBox" FontSize="14" Padding="10,8"
                                   SelectionChanged="ThemeComboBox_SelectionChanged">
+                            <!-- Light Themes (A-Z) -->
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Rectangle Width="20" Height="14" Fill="#FAFAFA" Stroke="#40A02B" Margin="0,0,8,0"/>
+                                    <TextBlock Text="AyuLight"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Rectangle Width="20" Height="14" Fill="#EFF1F3" Stroke="#04A5E5" Margin="0,0,8,0"/>
+                                    <TextBlock Text="CatppuccinLatte"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Rectangle Width="20" Height="14" Fill="#FFFFFF" Stroke="#0071E3" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Daylight"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Rectangle Width="20" Height="14" Fill="#FDF6E7" Stroke="#8FA0B7" Margin="0,0,8,0"/>
+                                    <TextBlock Text="EverforestLight"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Rectangle Width="20" Height="14" Fill="#FFFFFF" Stroke="#0969DA" Margin="0,0,8,0"/>
+                                    <TextBlock Text="GitHubLight"/>
+                                </StackPanel>
+                            </ComboBoxItem>
                             <ComboBoxItem>
                                 <StackPanel Orientation="Horizontal">
                                     <Rectangle Width="20" Height="14" Fill="#FFFFFF" Stroke="#CCCCCC" Margin="0,0,8,0"/>
@@ -186,14 +217,21 @@
                             </ComboBoxItem>
                             <ComboBoxItem>
                                 <StackPanel Orientation="Horizontal">
-                                    <Rectangle Width="20" Height="14" Fill="#1E1E1E" Stroke="#444444" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Dark"/>
+                                    <Rectangle Width="20" Height="14" Fill="#FAFAFA" Stroke="#519ABA" Margin="0,0,8,0"/>
+                                    <TextBlock Text="OneLight"/>
                                 </StackPanel>
                             </ComboBoxItem>
                             <ComboBoxItem>
                                 <StackPanel Orientation="Horizontal">
-                                    <Rectangle Width="20" Height="14" Fill="#2E3440" Stroke="#4C566A" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Nord"/>
+                                    <Rectangle Width="20" Height="14" Fill="#FDF6E3" Stroke="#268BD2" Margin="0,0,8,0"/>
+                                    <TextBlock Text="SolarizedLight"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <!-- Dark Themes (A-Z) -->
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Rectangle Width="20" Height="14" Fill="#1E1E1E" Stroke="#444444" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Dark"/>
                                 </StackPanel>
                             </ComboBoxItem>
                             <ComboBoxItem>
@@ -216,8 +254,26 @@
                             </ComboBoxItem>
                             <ComboBoxItem>
                                 <StackPanel Orientation="Horizontal">
+                                    <Rectangle Width="20" Height="14" Fill="#011627" Stroke="#82AAFF" Margin="0,0,8,0"/>
+                                    <TextBlock Text="NightOwl"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Rectangle Width="20" Height="14" Fill="#2E3440" Stroke="#4C566A" Margin="0,0,8,0"/>
+                                    <TextBlock Text="Nord"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal">
                                     <Rectangle Width="20" Height="14" Fill="#1A142A" Stroke="#FF6BC8" Margin="0,0,8,0"/>
                                     <TextBlock Text="Synthwave"/>
+                                </StackPanel>
+                            </ComboBoxItem>
+                            <ComboBoxItem>
+                                <StackPanel Orientation="Horizontal">
+                                    <Rectangle Width="20" Height="14" Fill="#1A1B26" Stroke="#7AA2F7" Margin="0,0,8,0"/>
+                                    <TextBlock Text="TokyoNight"/>
                                 </StackPanel>
                             </ComboBoxItem>
                         </ComboBox>

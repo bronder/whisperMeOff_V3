@@ -7,7 +7,11 @@ using Application = System.Windows.Application;
 public class ThemeService
 {
     private const string ThemeFolder = "Themes";
-    private static readonly string[] AvailableThemes = { "Light", "Dark", "Nord", "Dracula", "Gruvbox", "Monokai", "Synthwave" };
+    // Light themes (A-Z), then Dark themes (A-Z)
+    private static readonly string[] AvailableThemes = { 
+        "AyuLight", "CatppuccinLatte", "Daylight", "EverforestLight", "GitHubLight", "Light", "OneLight", "SolarizedLight",
+        "Dark", "Dracula", "Gruvbox", "Monokai", "NightOwl", "Nord", "Synthwave", "TokyoNight" 
+    };
     
     public string CurrentTheme { get; private set; } = "Light";
     
