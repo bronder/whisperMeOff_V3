@@ -41,15 +41,11 @@ Hold a hotkey, speak your mind, and watch your words appear — automatically pa
 
 ## Screenshots
 
-### Theme Previews
+### App Screens
 <table>
 <tr>
 <td><img src="docs/screenshots/main.png" width="300"></td>
 </tr>
-</table>
-
-### App Screens
-<table>
 <tr>
 <td><img src="docs/screenshots/audio.png" width="300"></td>
 <td><img src="docs/screenshots/whisper.png" width="300"></td>
