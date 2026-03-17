@@ -44,44 +44,31 @@ Hold a hotkey, speak your mind, and watch your words appear — automatically pa
 ### Theme Previews
 <table>
 <tr>
-<td><img src="docs/screenshots/main-light.png" width="300"></td>
-<td><img src="docs/screenshots/main-dark.png" width="300"></td>
-</tr>
-<tr>
-<td align="center"><b>Light</b></td>
-<td align="center"><b>Dark</b></td>
-</tr>
-<tr>
-<td><img src="docs/screenshots/main-nord.png" width="300"></td>
-<td><img src="docs/screenshots/main-synthwave.png" width="300"></td>
-</tr>
-<tr>
-<td align="center"><b>Nord</b></td>
-<td align="center"><b>Synthwave</b></td>
+<td><img src="docs/screenshots/main.png" width="300"></td>
 </tr>
 </table>
 
 ### App Screens
 <table>
 <tr>
-<td><img src="docs/screenshots/audio-light.png" width="300"></td>
-<td><img src="docs/screenshots/whisper-light.png" width="300"></td>
+<td><img src="docs/screenshots/audio.png" width="300"></td>
+<td><img src="docs/screenshots/whisper.png" width="300"></td>
 </tr>
 <tr>
 <td align="center"><b>Audio Settings</b></td>
 <td align="center"><b>Whisper Settings</b></td>
 </tr>
 <tr>
-<td><img src="docs/screenshots/llama-light.png" width="300"></td>
-<td><img src="docs/screenshots/general-light.png" width="300"></td>
+<td><img src="docs/screenshots/llama.png" width="300"></td>
+<td><img src="docs/screenshots/general.png" width="300"></td>
 </tr>
 <tr>
 <td align="center"><b>Llama Settings</b></td>
 <td align="center"><b>General Settings</b></td>
 </tr>
 <tr>
-<td><img src="docs/screenshots/history-light.png" width="300"></td>
-<td><img src="docs/screenshots/main-list.png" width="300"></td>
+<td><img src="docs/screenshots/history.png" width="300"></td>
+<td><img src="docs/screenshots/main.png" width="300"></td>
 </tr>
 <tr>
 <td align="center"><b>History</b></td>
