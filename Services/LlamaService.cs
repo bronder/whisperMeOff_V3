@@ -194,7 +194,7 @@ public class LlamaService : ILlamaService
     /// Uses a grammar correction prompt with temperature=0 for deterministic results.
     /// Falls back to original text if the result is significantly different or empty.
     /// </remarks>
-    public async Task<string> FormatTextAsync(string rawText)
+    public async Task<string> FormatTextAsync(string rawText, CancellationToken cancellationToken = default)
     {
         if (!_isLoaded || _executor == null)
         {
@@ -204,6 +204,9 @@ public class LlamaService : ILlamaService
 
         try
         {
+            // Check for cancellation
+            cancellationToken.ThrowIfCancellationRequested();
+            
             LoggingService.Debug($"[LLAMA] Formatting text: {rawText.Length} chars");
             
             // Simplified prompt format that most models understand better
@@ -304,7 +307,7 @@ public class LlamaService : ILlamaService
     /// Supports 26+ languages with built-in name mapping.
     /// Falls back to original text if result is too short or empty.
     /// </remarks>
-    public async Task<string> TranslateTextAsync(string rawText, string targetLanguage = "en")
+    public async Task<string> TranslateTextAsync(string rawText, string targetLanguage = "en", CancellationToken cancellationToken = default)
     {
         if (!_isLoaded || _executor == null)
         {
@@ -314,6 +317,9 @@ public class LlamaService : ILlamaService
 
         try
         {
+            // Check for cancellation
+            cancellationToken.ThrowIfCancellationRequested();
+            
             LoggingService.Debug($"[LLAMA] Translating text to {targetLanguage}: {rawText.Length} chars");
             
             // Language name mapping for common languages
@@ -514,8 +520,9 @@ public class LlamaService : ILlamaService
     /// Transforms text based on the specified transformation request.
     /// </summary>
     /// <param name="request">The transformation request containing text and transformation type.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
     /// <returns>A transformation result containing the transformed text and quality metrics.</returns>
-    public async Task<TransformationResult> TransformTextAsync(TransformationRequest request)
+    public async Task<TransformationResult> TransformTextAsync(TransformationRequest request, CancellationToken cancellationToken = default)
     {
         if (!_isLoaded)
         {
@@ -530,6 +537,9 @@ public class LlamaService : ILlamaService
 
         try
         {
+            // Check for cancellation
+            cancellationToken.ThrowIfCancellationRequested();
+            
             // Build the prompt using BuildPrompt to include preservation instructions
             var prompt = TransformationPrompts.BuildPrompt(request);
 
@@ -584,8 +594,9 @@ public class LlamaService : ILlamaService
     /// </summary>
     /// <param name="text">The text to transform.</param>
     /// <param name="profile">The transformation profile to use.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
     /// <returns>A transformation result containing the transformed text and quality metrics.</returns>
-    public async Task<TransformationResult> TransformWithProfileAsync(string text, TransformationProfile profile)
+    public async Task<TransformationResult> TransformWithProfileAsync(string text, TransformationProfile profile, CancellationToken cancellationToken = default)
     {
         if (!_isLoaded)
         {
@@ -600,6 +611,9 @@ public class LlamaService : ILlamaService
 
         try
         {
+            // Check for cancellation
+            cancellationToken.ThrowIfCancellationRequested();
+            
             // Build prompt from profile settings
             var prompt = BuildProfilePrompt(text, profile);
             
@@ -654,8 +668,9 @@ public class LlamaService : ILlamaService
     /// </summary>
     /// <param name="text">The text to transform.</param>
     /// <param name="transformations">List of transformation requests to apply in order.</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
     /// <returns>A transformation result containing the final transformed text and aggregated quality metrics.</returns>
-    public async Task<TransformationResult> TransformBatchAsync(string text, List<TransformationRequest> transformations)
+    public async Task<TransformationResult> TransformBatchAsync(string text, List<TransformationRequest> transformations, CancellationToken cancellationToken = default)
     {
         if (!_isLoaded)
         {
@@ -673,8 +688,11 @@ public class LlamaService : ILlamaService
         
         foreach (var request in transformations)
         {
+            // Check for cancellation
+            cancellationToken.ThrowIfCancellationRequested();
+            
             request.Text = currentText;
-            var result = await TransformTextAsync(request);
+            var result = await TransformTextAsync(request, cancellationToken);
             
             if (!result.Success)
             {

@@ -30,9 +30,29 @@ public partial class App : System.Windows.Application
     public static HotkeyService Hotkey { get; private set; } = null!;
     public static ClipboardService Clipboard { get; private set; } = null!;
     public static ModelDownloadService ModelDownload { get; private set; } = null!;
-    
+
+    // Lazy initialization to avoid circular dependency
     private static TextTransformationService? _transform;
-    public static TextTransformationService Transform => _transform ??= new TextTransformationService((ILlamaService)Llama);
+    private static readonly object _transformLock = new();
+
+    public static TextTransformationService Transform
+    {
+        get
+        {
+            if (_transform == null)
+            {
+                lock (_transformLock)
+                {
+                    // Double-check after acquiring lock
+                    if (_transform == null)
+                    {
+                        _transform = new TextTransformationService((ILlamaService)Llama);
+                    }
+                }
+            }
+            return _transform;
+        }
+    }
     
     // Track whether a transcription is in progress
     public static bool IsTranscribing { get; set; } = false;
@@ -201,13 +221,30 @@ public partial class App : System.Windows.Application
         // Start the app
         _mainWindow.Show();
 
-        // Initialize async services (fire and forget - these load ML models)
+        // Initialize async services with proper error handling
         _ = Task.Run(async () =>
         {
-            await Whisper.InitializeAsync();
-            if (Settings.Llama.Enabled && !string.IsNullOrEmpty(Settings.Llama.ModelPath))
+            try
             {
-                await Llama.InitializeAsync(Settings.Llama.ModelPath);
+                await Whisper.InitializeAsync();
+                if (Settings.Llama.Enabled && !string.IsNullOrEmpty(Settings.Llama.ModelPath))
+                {
+                    await Llama.InitializeAsync(Settings.Llama.ModelPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Error(ex, "Failed to initialize ML services");
+                // Notify user on UI thread
+                Dispatcher.Invoke(() =>
+                {
+                    System.Windows.MessageBox.Show(
+                        "Failed to load ML models. Please check the logs for details.\n\n" +
+                        "The application will continue, but transcription may not work.",
+                        "ML Model Error",
+                        System.Windows.MessageBoxButton.OK,
+                        System.Windows.MessageBoxImage.Warning);
+                });
             }
         });
         }
@@ -568,15 +605,17 @@ public partial class App : System.Windows.Application
 
     public void ExitApplication()
     {
-        // Cleanup
-        Audio.Dispose();
-        Whisper.Dispose();
-        Llama.Dispose();
-        Hotkey.Dispose();
-        Database.Dispose();
+        // Cleanup - dispose all IDisposable services
+        Audio?.Dispose();
+        Whisper?.Dispose();
+        Llama?.Dispose();
+        Hotkey?.Dispose();
+        Database?.Dispose();
+        ModelDownload?.Dispose();
         _notifyIcon?.Dispose();
         _recordingOverlay?.Close();
 
+        LoggingService.Info("Application cleanup complete");
         Shutdown();
     }
 

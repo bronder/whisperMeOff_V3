@@ -1,51 +1,38 @@
 namespace whisperMeOff.Services;
 
 /// <summary>
-/// Audio recording constants
+/// Application-wide constants for consistent configuration values.
 /// </summary>
-public static class AudioConstants
+public static class AppConstants
 {
+    // Audio settings
+    public const int PreBufferMs = 300;
     public const int SampleRate = 16000;
     public const int BitsPerSample = 16;
     public const int Channels = 1;
-    public const int WaveFormatTag = 1; // PCM
-}
 
-/// <summary>
-/// Llama model constants
-/// </summary>
-public static class LlamaConstants
-{
+    // Hotkey settings
+    public const int DefaultHotkeyId = 9000;
+    public const uint HotkeyModifiers = 0x0002 | 0x0004; // CTRL + SHIFT
+
+    // UI settings
+    public const double DefaultTemperature = 0.7;
+    public const int DefaultMaxTokens = 4096;
+    public const int DefaultQualityThreshold = 70;
+    public const int DefaultMaxTextLength = 10000;
+    public const int DefaultHistoryRetentionDays = 30;
+
+    // Timeouts
+    public const int RecordingStopTimeoutMs = 5000;
+    public const int ClipboardRestoreDelayMs = 1000;
+    public const int WindowReadyTimeoutMs = 500;
+
+    // Model settings
+    public const long MinModelSizeBytes = 100 * 1024 * 1024; // 100 MB
+    public const long MaxFileSizeBytes = 500 * 1024 * 1024; // 500 MB
     public const int DefaultContextSize = 2048;
-    public const int DefaultGpuLayerCount = 35;
-    public const int MaxTokens = 256;
-    public const int TranslationMaxTokens = 512;
-    public const float DefaultTemperature = 0.0f;
-    public const float TranslationTemperature = 0.1f;
-    public const float RepeatPenalty = 1.0f;
-    public const int MinModelSizeMb = 100;
-    public const int MaxOutputMultiplier = 3;
-    public const int TranslationOutputMultiplier = 4;
-}
+    public const int DefaultGpuLayers = 35;
 
-/// <summary>
-/// Application timing constants
-/// </summary>
-public static class TimingConstants
-{
-    public const int ClipboardRestoreDelayMs = 50;
-    public const int ClipboardRestoreDelayLongMs = 1000;
-    public const int RecordingStopTimeoutSeconds = 5;
-    public const int ModelDownloadTimeoutMinutes = 30;
-}
-
-/// <summary>
-/// Model file constants
-/// </summary>
-public static class ModelConstants
-{
-    public const string WhisperDefaultModel = "ggml-small.bin";
-    public const string WhisperDefaultSize = "medium";
-    public const int MinModelFileSizeBytes = 1024 * 1024; // 1 MB
-    public const int BufferSize = 8192;
+    // Logging
+    public const int MaxLogArchiveDays = 7;
 }

@@ -1,5 +1,6 @@
 using NAudio.Wave;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace whisperMeOff.Services;
 
@@ -26,10 +27,7 @@ public class AudioService : IDisposable
     private readonly byte[] _preBuffer; // Circular buffer for pre-recording
     private int _preBufferWritePos;
     private bool _isPreBuffering;
-    private const int PreBufferMs = 300; // 300ms pre-buffer
-    private const int SampleRate = 16000;
-    private const int BytesPerSample = 2; // 16-bit
-    private readonly int _preBufferSize;
+    private readonly int _preBufferSize = (AppConstants.SampleRate * AppConstants.BitsPerSample * AppConstants.PreBufferMs) / 1000;
 
     /// <summary>
     /// Raised when recording starts.
@@ -69,9 +67,7 @@ public class AudioService : IDisposable
     /// </summary>
     public AudioService()
     {
-        // Pre-buffer size: 300ms at 16kHz, 16-bit, mono = 9600 bytes
-        // Add some extra margin
-        _preBufferSize = (SampleRate * BytesPerSample * PreBufferMs) / 1000;
+        // Pre-buffer size is now calculated at field initialization from AppConstants
         _preBuffer = new byte[_preBufferSize];
     }
 
@@ -89,7 +85,7 @@ public class AudioService : IDisposable
             
             _preBufferWaveIn = new WaveInEvent
             {
-                WaveFormat = new WaveFormat(SampleRate, 16, 1)
+                WaveFormat = new WaveFormat(AppConstants.SampleRate, 16, 1)
             };
             _preBufferWaveIn.DataAvailable += OnPreBufferDataAvailable;
             _preBufferWaveIn.StartRecording();
@@ -145,7 +141,10 @@ public class AudioService : IDisposable
             _preBufferWaveIn?.Dispose();
             _preBufferWaveIn = null;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            LoggingService.Warn($"[Audio] Error cleaning up pre-buffer: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -278,21 +277,28 @@ public class AudioService : IDisposable
                 _audioBuffer.Write(e.Buffer, 0, e.BytesRecorded);
                 LoggingService.Trace($"Wrote {e.BytesRecorded} bytes to buffer");
 
-                // Calculate RMS level
+                // Calculate peak audio level using Span<T> for better performance
+                // This runs ~20 times/second for 16kHz mono, so efficiency matters
                 float maxLevel = 0;
-                for (int i = 0; i < e.BytesRecorded; i += 2)
+                var sampleCount = e.BytesRecorded / 2;
+                if (sampleCount > 0)
                 {
-                    short sample = BitConverter.ToInt16(e.Buffer, i);
-                    float level = Math.Abs(sample / 32768f);
-                    if (level > maxLevel) maxLevel = level;
+                    Span<byte> bufferSpan = e.Buffer;
+                    Span<short> samples = MemoryMarshal.Cast<byte, short>(bufferSpan.Slice(0, sampleCount * 2));
+
+                    foreach (var sample in samples)
+                    {
+                        float level = Math.Abs(sample / 32768f);
+                        if (level > maxLevel) maxLevel = level;
+                    }
                 }
 
                 AudioLevelChanged?.Invoke(this, maxLevel);
             }
-            catch
+            catch (Exception ex)
             {
 #if DEBUG
-                LoggingService.Debug($"[DEBUG] Error in OnDataAvailable");
+                LoggingService.Debug($"[DEBUG] Error in OnDataAvailable: {ex.Message}");
 #endif
                 // Ignore errors during data capture
             }
@@ -305,17 +311,21 @@ public class AudioService : IDisposable
         LoggingService.Debug($"[DEBUG] OnRecordingStoppedInternal called. _isRecording={_isRecording}, _audioBuffer.Length={_audioBuffer?.Length}");
 #endif
         LastRecordingDuration = (DateTime.Now - _recordingStartTime).TotalSeconds;
-        
-        // Only invoke if we were actually recording
-        if (_isRecording)
+
+        // Use lock to prevent race condition with StopRecordingAsync
+        lock (_lock)
         {
-            _isRecording = false;
-            RecordingStopped?.Invoke(this, EventArgs.Empty);
-            
-            // Signal the waiting task that recording has stopped
-            _recordingStoppedSource?.TrySetResult(true);
+            // Only invoke if we were actually recording
+            if (_isRecording)
+            {
+                _isRecording = false;
+                RecordingStopped?.Invoke(this, EventArgs.Empty);
+
+                // Signal the waiting task that recording has stopped
+                _recordingStoppedSource?.TrySetResult(true);
+            }
         }
-        
+
         // DO NOT call Cleanup() here! StopRecordingAsync will handle cleanup after saving audio.
         // Calling Cleanup() here was setting _audioBuffer = null before we could save it.
     }
@@ -333,12 +343,23 @@ public class AudioService : IDisposable
 #if DEBUG
         LoggingService.Debug($"[DEBUG] StopRecordingAsync called. _isRecording={_isRecording}, _disposed={_disposed}");
 #endif
-        if (!_isRecording || _disposed) 
+
+        TaskCompletionSource<bool>? tcs = null;
+
+        // Use lock to prevent race condition with concurrent stop calls
+        lock (_lock)
         {
+            if (!_isRecording || _disposed)
+            {
 #if DEBUG
-            LoggingService.Debug("[DEBUG] StopRecordingAsync returning null - not recording or disposed");
+                LoggingService.Debug("[DEBUG] StopRecordingAsync returning null - not recording or disposed");
 #endif
-            return null;
+                return null;
+            }
+
+            // Create a completion source for this specific stop request
+            tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _recordingStoppedSource = tcs;
         }
 
         try
@@ -366,14 +387,12 @@ public class AudioService : IDisposable
             }
 
             // Wait for the recording to fully stop using proper synchronization
-            // Create a completion source to wait for recording to stop
             using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-            _recordingStoppedSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-            
-            // Wait for the recording to fully stop using proper synchronization
+
+            // Wait on the specific TCS we created (not the field, to avoid race condition)
             try
             {
-                await _recordingStoppedSource.Task.WaitAsync(TimeSpan.FromSeconds(5), timeoutCts.Token);
+                await tcs!.Task.WaitAsync(TimeSpan.FromSeconds(5), timeoutCts.Token);
             }
             catch (TimeoutException)
             {
@@ -384,16 +403,19 @@ public class AudioService : IDisposable
                 // Timeout was canceled, recording likely stopped
             }
 
-            // Copy audio buffer - we now write raw PCM and will add WAV header manually
+            // Copy audio buffer - use lock to avoid race with callback
             MemoryStream? pcmData = null;
-            if (_audioBuffer != null && _audioBuffer.Length > 0)
+            lock (_lock)
             {
-                pcmData = new MemoryStream();
-                _audioBuffer.Seek(0, SeekOrigin.Begin);
-                _audioBuffer.CopyTo(pcmData);
+                if (_audioBuffer != null && _audioBuffer.Length > 0)
+                {
+                    pcmData = new MemoryStream();
+                    _audioBuffer.Seek(0, SeekOrigin.Begin);
+                    _audioBuffer.CopyTo(pcmData);
 #if DEBUG
-                LoggingService.Debug($"[DEBUG] Copied PCM data: {pcmData.Length} bytes");
+                    LoggingService.Debug($"[DEBUG] Copied PCM data: {pcmData.Length} bytes");
 #endif
+                }
             }
 
             // Now save with proper WAV header

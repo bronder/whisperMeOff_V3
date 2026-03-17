@@ -10,6 +10,7 @@ namespace whisperMeOff.Views;
 public partial class MainWindow : Window
 {
     private bool _isProcessing = false;
+    private CancellationTokenSource? _transcriptionCts;
     private bool _isMultiSelectMode = false;
     
     public bool IsMultiSelectMode
@@ -585,31 +586,52 @@ public partial class MainWindow : Window
 
     private async Task LoadHistoryAsync()
     {
-        var records = await App.Database.GetTranscriptionsAsync();
-        
-        // Group by date and session
-        var items = records.Select(r => new TranscriptionListItem
+        try
         {
-            Id = r.Id,
-            Text = r.Text,
-            OriginalText = r.Text,
-            Timestamp = r.Timestamp,
-            Duration = r.Duration,
-            DisplayTime = DateTime.Parse(r.Timestamp).ToString("h:mm tt"),
-            DateHeader = GetDateHeader(DateTime.Parse(r.Timestamp)),
-            SessionId = GetSessionId(DateTime.Parse(r.Timestamp))
-        }).ToList();
-        
-        // Apply grouping
-        var groupedItems = ApplyGrouping(items);
-        
-        HistoryListBox.ItemsSource = groupedItems;
-        
-        // Show/hide empty state based on item count
-        UpdateEmptyState(items.Count);
-        
-        // Update today's session stats
-        _ = UpdateSessionStatsAsync();
+            // Get records from database
+            var records = await App.Database.GetTranscriptionsAsync();
+            LoggingService.Debug($"[HISTORY] Loaded {records.Count} records from database");
+
+            // Group by date and session
+            var items = records.Select(r => new TranscriptionListItem
+            {
+                Id = r.Id,
+                Text = r.Text,
+                OriginalText = r.Text,
+                Timestamp = r.Timestamp,
+                Duration = r.Duration,
+                DisplayTime = DateTime.Parse(r.Timestamp).ToString("h:mm tt"),
+                DateHeader = GetDateHeader(DateTime.Parse(r.Timestamp)),
+                SessionId = GetSessionId(DateTime.Parse(r.Timestamp))
+            }).ToList();
+
+            LoggingService.Debug($"[HISTORY] Created {items.Count} list items");
+
+            // Apply grouping
+            var groupedItems = ApplyGrouping(items);
+
+            LoggingService.Debug($"[HISTORY] Grouped items count: {groupedItems.Count}");
+
+            // Update on UI thread using BeginInvoke for async execution
+            await Dispatcher.BeginInvoke(new Action(() =>
+            {
+                LoggingService.Debug("[HISTORY] Updating ListBox ItemsSource");
+                HistoryListBox.ItemsSource = null;  // Clear first
+                HistoryListBox.ItemsSource = groupedItems;
+                LoggingService.Debug($"[HISTORY] ListBox now has {HistoryListBox.Items.Count} items");
+            }), System.Windows.Threading.DispatcherPriority.Background);
+
+            // Show/hide empty state based on item count
+            UpdateEmptyState(items.Count);
+
+            // Update today's session stats
+            _ = UpdateSessionStatsAsync();
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error(ex, "Failed to load history");
+            System.Windows.MessageBox.Show($"Error loading history: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
     
     private async Task UpdateSessionStatsAsync()
@@ -973,10 +995,15 @@ public partial class MainWindow : Window
         App.IsTranscribing = true;
         var processingStopwatch = System.Diagnostics.Stopwatch.StartNew();
         
+        // Create cancellation token for this transcription
+        _transcriptionCts?.Cancel();  // Cancel any previous transcription
+        _transcriptionCts = new CancellationTokenSource();
+        var cancellationToken = _transcriptionCts.Token;
+        
         try
         {
             LoggingService.Debug("[DEBUG] Starting Whisper transcription...");
-            var text = await App.Whisper.TranscribeAsync(audioFile) ?? string.Empty;
+            var text = await App.Whisper.TranscribeAsync(audioFile, cancellationToken) ?? string.Empty;
             //LoggingService.Debug($"[DEBUG] Whisper transcription complete: {text}");
             LoggingService.Info("[Whisper] Whisper transcription complete: " + text);
             
@@ -992,13 +1019,13 @@ public partial class MainWindow : Window
                 {
                     LoggingService.Debug("[DEBUG] Running Llama translation...");
                     var targetLang = App.Settings.Llama.TranslateTo ?? "en";
-                    text = await App.Llama.TranslateTextAsync(text, targetLang);
+                    text = await App.Llama.TranslateTextAsync(text, targetLang, _transcriptionCts?.Token ?? default);
                     LoggingService.Debug($"[LLAMA] Llama translation complete to {targetLang}: {text}");
                 }
                 else
                 {
                     LoggingService.Debug("[DEBUG] Running Llama text formatting...");
-                    text = await App.Llama.FormatTextAsync(text);
+                    text = await App.Llama.FormatTextAsync(text, _transcriptionCts?.Token ?? default);
                     LoggingService.Debug($"[LLAMA] Llama formatting complete: {text}");
                 }
             }
@@ -1056,6 +1083,11 @@ public partial class MainWindow : Window
                 System.IO.File.Delete(audioFile);
             }
         }
+        catch (OperationCanceledException)
+        {
+            LoggingService.Info("Transcription cancelled by user");
+            System.Windows.MessageBox.Show("Transcription was cancelled.", "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
         catch (Exception ex)
         {
             System.Windows.MessageBox.Show($"Transcription error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -1063,6 +1095,8 @@ public partial class MainWindow : Window
         finally
         {
             App.IsTranscribing = false;
+            _transcriptionCts?.Dispose();
+            _transcriptionCts = null;
         }
     }
 
@@ -1611,7 +1645,7 @@ public partial class MainWindow : Window
             foreach (var file in files)
             {
                 try { totalSize += new System.IO.FileInfo(file).Length; }
-                catch { }
+                catch (Exception ex) { LoggingService.Debug($"[UI] Error getting file size: {ex.Message}"); }
             }
             
             // Format size
@@ -1671,7 +1705,7 @@ public partial class MainWindow : Window
             foreach (var file in files)
             {
                 try { totalSize += new System.IO.FileInfo(file).Length; }
-                catch { }
+                catch (Exception ex) { LoggingService.Debug($"[UI] Error getting file size: {ex.Message}"); }
             }
             
             // Format size
@@ -1710,7 +1744,7 @@ public partial class MainWindow : Window
                     }
                 }
             }
-            catch { }
+            catch (Exception ex) { LoggingService.Debug($"[UI] Error checking disk space: {ex.Message}"); }
         }
         else
         {

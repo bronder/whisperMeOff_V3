@@ -2,6 +2,27 @@
 
 ## Latest Release
 
+### Version 1.7.3
+
+#### Bug Fixes
+- **Database Initialization Error**: Fixed connection string error - removed unsupported 'Max Pool Size' keyword from SQLite connection
+- **History Not Updating**: Fixed transcription history not refreshing after recording
+  - Added debug logging throughout database and history loading flow
+  - Improved UI thread handling with Dispatcher.BeginInvoke for async updates
+  - Added error handling with user notification
+- **CancellationToken Support**: Added cancellation support to Whisper and Llama async methods
+  - TranscribeAsync now accepts CancellationToken
+  - FormatTextAsync, TranslateTextAsync, TransformTextAsync all support cancellation
+  - Enables cancellation of long-running transcription operations
+
+#### Code Quality Improvements
+- Added comprehensive debug logging to DatabaseService for troubleshooting
+- Added input validation to public APIs (file size limits, null checks)
+- Fixed async/await anti-patterns with proper error handling
+- Implemented thread-safe lazy initialization for services
+
+---
+
 ### Version 1.7.2
 
 ---
@@ -292,7 +313,7 @@
 
 ### Installation Steps
 
-1. Download the appropriate `publish-1.7.2.zip` from the latest release
+1. Download the appropriate `publish-1.7.3.zip` from the latest release
 2. Extract the zip to your desired location
 3. Run `whisperMeOff.exe`
 4. Download a Whisper model from the Whisper tab

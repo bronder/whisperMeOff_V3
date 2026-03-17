@@ -28,7 +28,7 @@ public class HotkeyService : IDisposable
     private const int WH_KEYBOARD_LL = 13;
     private const int WM_KEYDOWN = 0x0100;
     private const int WM_KEYUP = 0x0101;
-    private const int HOTKEY_ID = 9000;
+    private const int HOTKEY_ID = AppConstants.DefaultHotkeyId;
     private const uint MOD_CONTROL = 0x0002;
     private const uint MOD_SHIFT = 0x0004;
 

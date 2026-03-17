@@ -8,6 +8,14 @@ public class ModelDownloadService : IDisposable
     private readonly HttpClient _httpClient;
     private CancellationTokenSource? _cancellationTokenSource;
 
+    // Base paths for validation
+    private static readonly string[] AllowedBasePaths = new[]
+    {
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+    };
+
     public event EventHandler<DownloadProgressEventArgs>? DownloadProgress;
 
     public ModelDownloadService()
@@ -16,17 +24,70 @@ public class ModelDownloadService : IDisposable
         _httpClient.Timeout = TimeSpan.FromMinutes(30);
     }
 
+    /// <summary>
+    /// Validates that a download path is safe (within allowed directories)
+    /// </summary>
+    private bool IsPathSafe(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+
+        try
+        {
+            var fullPath = Path.GetFullPath(path);
+
+            // Check if path starts with any allowed base path
+            foreach (var basePath in AllowedBasePaths)
+            {
+                var normalizedBase = Path.GetFullPath(basePath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                var normalizedPath = fullPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+                if (normalizedPath.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            // Also allow paths within the app's models directory
+            if (!string.IsNullOrEmpty(App.ModelsPath))
+            {
+                var appBase = Path.GetFullPath(App.ModelsPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                var normalizedAppPath = fullPath.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+                if (normalizedAppPath.StartsWith(appBase, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            LoggingService.Warn($"[ModelDownload] Path validation failed: {path} is not within allowed directories");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error(ex, $"[ModelDownload] Path validation error for: {path}");
+            return false;
+        }
+    }
+
     public async Task<string?> DownloadWhisperModelAsync(string size, IProgress<double>? progress = null)
     {
         try
         {
             var url = GetWhisperDownloadUrl(size);
-            
+
             // Handle large model filename (v3 naming)
-            var fileName = size.ToLowerInvariant() == "large" 
-                ? "ggml-large-v3.bin" 
+            var fileName = size.ToLowerInvariant() == "large"
+                ? "ggml-large-v3.bin"
                 : $"ggml-{size}.bin";
-            
+
+            // Validate the download path for Whisper models
+            var whisperDownloadPath = App.Settings.General.ModelDownloadPath;
+            if (!string.IsNullOrEmpty(whisperDownloadPath) && !IsPathSafe(whisperDownloadPath))
+            {
+                LoggingService.Error($"[ModelDownload] Unsafe Whisper download path rejected: {whisperDownloadPath}");
+                throw new InvalidOperationException($"Download path is not allowed: {whisperDownloadPath}. Path must be within AppData, LocalAppData, or UserProfile directories.");
+            }
+
             var destinationPath = Path.Combine(App.WhisperModelsPath, fileName);
 
             // Check if already exists (also check old large filename for backwards compatibility)
@@ -69,10 +130,18 @@ public class ModelDownloadService : IDisposable
             }
 
             var fileName = Path.GetFileName(fileUrl);
-            
+
             // Use custom Llama download path if set, otherwise use default
             var downloadPath = App.Settings.General.LlamaDownloadPath;
             var modelDir = !string.IsNullOrEmpty(downloadPath) ? downloadPath : App.LlamaModelsPath;
+
+            // Validate the download path to prevent path traversal attacks
+            if (!string.IsNullOrEmpty(downloadPath) && !IsPathSafe(modelDir))
+            {
+                LoggingService.Error($"[ModelDownload] Unsafe download path rejected: {modelDir}");
+                throw new InvalidOperationException($"Download path is not allowed: {modelDir}. Path must be within AppData, LocalAppData, or UserProfile directories.");
+            }
+
             var destinationPath = Path.Combine(modelDir, fileName);
 
             // Check if already exists

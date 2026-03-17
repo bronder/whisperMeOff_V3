@@ -28,7 +28,7 @@ public static class LoggingService
             FileName = Path.Combine(logDir, "whisperMeOff-${shortdate}.log"),
             Layout = "${longdate} [${level:uppercase=true}] ${logger} - ${message} ${exception:format=tostring}",
             ArchiveEvery = NLog.Targets.FileArchivePeriod.Day,
-            MaxArchiveFiles = 7,
+            MaxArchiveFiles = AppConstants.MaxLogArchiveDays,
             KeepFileOpen = false
         };
         

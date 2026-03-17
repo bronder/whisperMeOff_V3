@@ -1,0 +1,23 @@
+fix: resolve database connection error and add cancellation token support
+
+Bug Fixes:
+- Fix SQLite connection string error (remove unsupported 'Max Pool Size' keyword)
+- Fix transcription history not updating after recording
+- Add CancellationToken support to Whisper and Llama async methods
+
+Code Quality:
+- Add input validation to public APIs (file size limits, null checks)
+- Fix async/await anti-patterns with proper error handling
+- Implement thread-safe lazy initialization for services
+- Add comprehensive debug logging to DatabaseService
+
+Files Modified:
+- Services/DatabaseService.cs
+- Services/WhisperService.cs
+- Services/LlamaService.cs
+- Interfaces/IWhisperService.cs
+- Interfaces/ILlamaService.cs
+- Views/MainWindow.xaml.cs
+- CODE_REVIEW_REPORT.md
+- RELEASE.md (v1.7.3)
+- README.md

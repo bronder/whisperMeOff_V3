@@ -24,8 +24,9 @@ public interface IWhisperService : IDisposable
     /// Transcribe an audio file
     /// </summary>
     /// <param name="audioPath">Path to audio file (WAV format)</param>
+    /// <param name="cancellationToken">Cancellation token to cancel the operation</param>
     /// <returns>Transcribed text</returns>
-    Task<string> TranscribeAsync(string audioPath);
+    Task<string> TranscribeAsync(string audioPath, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Reload the model with a different path

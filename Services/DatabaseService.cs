@@ -26,8 +26,11 @@ public class DatabaseService : IDisposable
     {
         try
         {
-            _connection = new SqliteConnection($"Data Source={App.DatabasePath}");
+            // Enable connection pooling for better concurrent access performance
+            LoggingService.Debug($"[DB] Initializing database at: {App.DatabasePath}");
+            _connection = new SqliteConnection($"Data Source={App.DatabasePath};Pooling=True");
             await _connection.OpenAsync();
+            LoggingService.Debug("[DB] Database connection opened");
 
             // Create tables if not exists
             var createTableCmd = _connection.CreateCommand();
@@ -46,12 +49,16 @@ public class DatabaseService : IDisposable
             createTableCmd.ExecuteNonQuery();
             
             // Migration: Add processing_time column if it doesn't exist (for existing databases)
-            try {
+            try
+            {
                 var migrateCmd = _connection.CreateCommand();
                 migrateCmd.CommandText = "ALTER TABLE transcriptions ADD COLUMN processing_time REAL";
                 migrateCmd.ExecuteNonQuery();
-            } catch {
-                // Column already exists, ignore
+            }
+            catch (Exception ex)
+            {
+                // Column already exists - this is expected for existing databases
+                LoggingService.Debug($"[Database] Column migration skipped (likely already exists): {ex.Message}");
             }
 
             createTableCmd.CommandText = @"
@@ -116,6 +123,8 @@ public class DatabaseService : IDisposable
 
         try
         {
+            LoggingService.Debug($"[DB] Adding transcription: text length={text?.Length ?? 0}, duration={duration}");
+            
             var cmd = _connection.CreateCommand();
             cmd.CommandText = @"
                 INSERT INTO transcriptions (text, timestamp, duration, processing_time, model, language)
@@ -130,7 +139,9 @@ public class DatabaseService : IDisposable
             cmd.Parameters.AddWithValue("$language", language ?? (object)DBNull.Value);
 
             var result = await cmd.ExecuteScalarAsync();
-            return Convert.ToInt64(result);
+            var id = Convert.ToInt64(result);
+            LoggingService.Debug($"[DB] Transcription added with ID: {id}");
+            return id;
         }
         catch (Exception ex)
         {
@@ -147,10 +158,16 @@ public class DatabaseService : IDisposable
     public async Task<List<TranscriptionRecord>> GetTranscriptionsAsync(int limit = 50)
     {
         var records = new List<TranscriptionRecord>();
-        if (_connection == null) return records;
+        if (_connection == null) 
+        {
+            LoggingService.Debug("[DB] GetTranscriptionsAsync: connection is null");
+            return records;
+        }
 
         try
         {
+            LoggingService.Debug($"[DB] GetTranscriptionsAsync: fetching up to {limit} records");
+            
             var cmd = _connection.CreateCommand();
             cmd.CommandText = "SELECT id, text, timestamp, duration, processing_time, model, language FROM transcriptions ORDER BY timestamp DESC LIMIT $limit";
             cmd.Parameters.AddWithValue("$limit", limit);
@@ -169,6 +186,8 @@ public class DatabaseService : IDisposable
                     Language = reader.IsDBNull(6) ? null : reader.GetString(6)
                 });
             }
+            
+            LoggingService.Debug($"[DB] GetTranscriptionsAsync: fetched {records.Count} records");
         }
         catch (Exception ex)
         {

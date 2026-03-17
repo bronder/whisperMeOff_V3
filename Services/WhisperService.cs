@@ -160,8 +160,14 @@ public class WhisperService : IDisposable
     /// - Custom vocabulary from settings (used as initial prompt)
     /// - Word replacement rules from settings
     /// </remarks>
-    public async Task<string> TranscribeAsync(string audioPath)
+    public async Task<string> TranscribeAsync(string audioPath, CancellationToken cancellationToken = default)
     {
+        // Validate input parameter
+        if (string.IsNullOrWhiteSpace(audioPath))
+        {
+            throw new ArgumentException("Audio path is required", nameof(audioPath));
+        }
+
         if (!_isInitialized || _factory == null)
         {
             throw new InvalidOperationException("Whisper not initialized");
@@ -179,6 +185,22 @@ public class WhisperService : IDisposable
             {
                 throw new FileNotFoundException($"Audio file not found: {audioPath}");
             }
+
+            // Validate file size to prevent DoS via huge files
+            var fileInfo = new FileInfo(audioPath);
+            const long MaxFileSize = 500 * 1024 * 1024; // 500MB
+            if (fileInfo.Length > MaxFileSize)
+            {
+                throw new InvalidOperationException($"Audio file too large: {fileInfo.Length / (1024 * 1024)} MB. Maximum allowed size is {MaxFileSize / (1024 * 1024)} MB.");
+            }
+
+            if (fileInfo.Length == 0)
+            {
+                throw new InvalidOperationException("Audio file is empty");
+            }
+
+            // Check for cancellation before starting
+            cancellationToken.ThrowIfCancellationRequested();
 
             LoggingService.Info($"Starting transcription of: {audioPath}");
 
@@ -254,7 +276,7 @@ public class WhisperService : IDisposable
             using var fileStream = File.OpenRead(audioPath);
             
             var results = new List<string>();
-            await foreach (var r in processor.ProcessAsync(fileStream, CancellationToken.None))
+            await foreach (var r in processor.ProcessAsync(fileStream, cancellationToken))
             {
                 if (!string.IsNullOrWhiteSpace(r.Text))
                 {

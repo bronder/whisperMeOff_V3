@@ -275,9 +275,9 @@ public class TransformationSettings
     public bool EnableQualityScoring { get; set; } = true;
     public bool EnableBatchProcessing { get; set; } = false;
     public int BatchSize { get; set; } = 5;
-    public double Temperature { get; set; } = 0.7;
-    public int MaxTokens { get; set; } = 4096;
-    public int MaxTextLength { get; set; } = 10000;
+    public double Temperature { get; set; } = AppConstants.DefaultTemperature;
+    public int MaxTokens { get; set; } = AppConstants.DefaultMaxTokens;
+    public int MaxTextLength { get; set; } = AppConstants.DefaultMaxTextLength;
     public bool AutoSaveHistory { get; set; } = true;
-    public int HistoryRetentionDays { get; set; } = 30;
+    public int HistoryRetentionDays { get; set; } = AppConstants.DefaultHistoryRetentionDays;
 }
