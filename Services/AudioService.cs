@@ -72,6 +72,28 @@ public class AudioService : IDisposable
     }
 
     /// <summary>
+    /// Gets the device number for the selected microphone from settings.
+    /// </summary>
+    private int GetSelectedDeviceNumber()
+    {
+        var deviceId = App.Settings?.Audio?.DeviceId ?? "";
+        if (string.IsNullOrEmpty(deviceId))
+        {
+            LoggingService.Trace("Using default microphone (no device selected)");
+            return 0; // Default device
+        }
+        
+        if (int.TryParse(deviceId, out int deviceNumber))
+        {
+            LoggingService.Trace($"Using microphone device #{deviceNumber}");
+            return deviceNumber;
+        }
+        
+        LoggingService.Warn($"Invalid device ID '{deviceId}', using default microphone");
+        return 0;
+    }
+
+    /// <summary>
     /// Starts the pre-recording buffer to capture audio before trigger.
     /// </summary>
     public void StartPreBuffer()
@@ -83,14 +105,16 @@ public class AudioService : IDisposable
             _preBufferWritePos = 0;
             Array.Clear(_preBuffer, 0, _preBuffer.Length);
             
+            int deviceNumber = GetSelectedDeviceNumber();
             _preBufferWaveIn = new WaveInEvent
             {
+                DeviceNumber = deviceNumber,
                 WaveFormat = new WaveFormat(AppConstants.SampleRate, 16, 1)
             };
             _preBufferWaveIn.DataAvailable += OnPreBufferDataAvailable;
             _preBufferWaveIn.StartRecording();
             _isPreBuffering = true;
-            LoggingService.Trace("Pre-buffer started");
+            LoggingService.Trace($"Pre-buffer started on device #{deviceNumber}");
         }
         catch (Exception ex)
         {
@@ -241,11 +265,17 @@ public class AudioService : IDisposable
                 LoggingService.Trace($"Added {preBufferBytes} bytes from pre-buffer to recording");
             }
 
+            // Get selected microphone device number
+            int deviceNumber = GetSelectedDeviceNumber();
+            
             // Use 16kHz, mono, 16-bit PCM as per PRD
             _waveIn = new WaveInEvent
             {
+                DeviceNumber = deviceNumber,
                 WaveFormat = new WaveFormat(16000, 16, 1)
             };
+            
+            LoggingService.Trace($"Recording started on device #{deviceNumber}");
 
             _waveIn.DataAvailable += OnDataAvailable;
             _waveIn.RecordingStopped += OnRecordingStoppedInternal;

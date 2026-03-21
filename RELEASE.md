@@ -2,6 +2,22 @@
 
 ## Latest Release
 
+### Version 1.7.6
+
+#### Bug Fixes
+- **Microphone Selection Fixed**: Selecting a specific microphone in Audio settings now correctly uses that device for recording
+  - Previously, the app always used the Windows default input device regardless of user selection
+  - Both regular recording and pre-buffer now use the selected microphone
+  - Added logging to track which device is being used
+
+#### UI Improvements
+- **Window Border**: Added a 2px themed border around the entire window
+  - Uses the current theme's BorderBrush color
+  - Automatically adapts when switching between light/dark/colorful themes
+  - Corner radius matches the window's existing rounded corners
+
+---
+
 ### Version 1.7.5
 
 #### Bug Fixes

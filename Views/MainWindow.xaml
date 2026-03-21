@@ -14,11 +14,13 @@
         <WindowChrome CaptionHeight="56" ResizeBorderThickness="5" CornerRadius="8" GlassFrameThickness="0" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+    <!-- Outer border using theme's BorderBrush -->
+    <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="2" CornerRadius="6">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
         <!-- Header -->
         <Border Grid.Row="0" Background="{DynamicResource HeaderBrush}" Padding="20,15"
@@ -1880,5 +1882,6 @@
                 </ScrollViewer>
             </TabItem>
         </TabControl>
-    </Grid>
+        </Grid>
+    </Border>
 </Window>
