@@ -73,6 +73,71 @@
                 </Setter>
             </Style>
             
+            <!-- Modern Slider Style -->
+            <Style x:Key="ModernSliderStyle" TargetType="Slider">
+                <Setter Property="Minimum" Value="0"/>
+                <Setter Property="Maximum" Value="100"/>
+                <Setter Property="Height" Value="24"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Slider">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto" MinHeight="{TemplateBinding MinHeight}"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Border x:Name="TrackBackground" Grid.Row="1" Height="6" CornerRadius="3" 
+                                        Background="{DynamicResource SecondaryTextBrush}" Opacity="0.3" 
+                                        VerticalAlignment="Center"/>
+                                <Track x:Name="PART_Track" Grid.Row="1">
+                                    <Track.DecreaseRepeatButton>
+                                        <RepeatButton Command="{x:Static Slider.DecreaseLarge}">
+                                            <RepeatButton.Template>
+                                                <ControlTemplate TargetType="RepeatButton">
+                                                    <Border Height="6" CornerRadius="3,0,0,3" 
+                                                            Background="{DynamicResource AccentBrush}"/>
+                                                </ControlTemplate>
+                                            </RepeatButton.Template>
+                                        </RepeatButton>
+                                    </Track.DecreaseRepeatButton>
+                                    <Track.Thumb>
+                                        <Thumb>
+                                            <Thumb.Template>
+                                                <ControlTemplate TargetType="Thumb">
+                                                    <Ellipse x:Name="thumbEllipse" Width="18" Height="18" 
+                                                             Fill="White" Cursor="Hand">
+                                                        <Ellipse.Effect>
+                                                            <DropShadowEffect ShadowDepth="1" BlurRadius="4" 
+                                                                            Opacity="0.3" Color="Black"/>
+                                                        </Ellipse.Effect>
+                                                    </Ellipse>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter TargetName="thumbEllipse" Property="Width" Value="20"/>
+                                                            <Setter TargetName="thumbEllipse" Property="Height" Value="20"/>
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Thumb.Template>
+                                        </Thumb>
+                                    </Track.Thumb>
+                                    <Track.IncreaseRepeatButton>
+                                        <RepeatButton Command="{x:Static Slider.IncreaseLarge}">
+                                            <RepeatButton.Template>
+                                                <ControlTemplate TargetType="RepeatButton">
+                                                    <Border Background="Transparent"/>
+                                                </ControlTemplate>
+                                            </RepeatButton.Template>
+                                        </RepeatButton>
+                                    </Track.IncreaseRepeatButton>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            
             <!-- Small Button Style -->
             <Style x:Key="SmallButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="{DynamicResource SecondaryButtonBrush}"/>

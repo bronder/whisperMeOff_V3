@@ -537,8 +537,10 @@ public partial class App : System.Windows.Application
             {
                 try
                 {
-                    // Use ClipboardService for proper STA thread handling
-                    var previousClipboard = App.Clipboard.GetText();
+                    // CRITICAL: Use the clipboard that was captured IMMEDIATELY when hotkey was pressed
+                    // This prevents race conditions where other apps (like Teams) modify clipboard
+                    // when our window gains focus
+                    var previousClipboard = Hotkey.GetPreviousClipboard();
                     
                     if (string.IsNullOrEmpty(text))
                     {
@@ -550,17 +552,6 @@ public partial class App : System.Windows.Application
 
                     // Paste to previous window (now uses retry mechanism internally)
                     await App.Clipboard.PasteToWindow(targetWindow);
-
-                    // Restore previous clipboard after delay (if enabled)
-                    if (Settings.General.RestoreClipboard && !string.IsNullOrEmpty(previousClipboard))
-                    {
-                        var delay = Settings.General.ClipboardRestoreDelayMs;
-                        if (delay > 0)
-                        {
-                            await Task.Delay(delay);
-                            App.Clipboard.SetText(previousClipboard);
-                        }
-                    }
                 }
                 catch (Exception ex)
                 {

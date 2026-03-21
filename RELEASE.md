@@ -2,6 +2,16 @@
 
 ## Latest Release
 
+### Version 1.7.5
+
+#### Bug Fixes
+- **Clipboard "you" Bug Fixed**: Fixed issue where the word "you" would appear on clipboard after copy/paste
+  - Removed clipboard restore feature that was overwriting transcribed text with previous clipboard content
+  - Transcribed text now stays on clipboard permanently after transcription
+  - Clipboard is now captured immediately when hotkey is pressed to prevent race conditions with other apps (like Teams) that may modify clipboard when window gains focus
+
+---
+
 ### Version 1.7.4
 
 #### Bug Fixes

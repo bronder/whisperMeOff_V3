@@ -36,6 +36,7 @@ public class HotkeyService : IDisposable
     private HwndSource? _source;
     private string _triggerKey = "r";
     private IntPtr _previousWindow;
+    private string? _previousClipboard; // Captured immediately when hotkey is pressed
     private IntPtr _keyboardHookId = IntPtr.Zero;
     private LowLevelKeyboardProc? _keyboardProc;
     private bool _isHotkeyPressed;
@@ -193,12 +194,59 @@ public class HotkeyService : IDisposable
             // Record the previous window for auto-paste
             _previousWindow = GetForegroundWindow();
 
+            // CRITICAL: Capture clipboard content IMMEDIATELY to prevent race conditions
+            // Other apps (like Teams) may modify clipboard when window loses focus
+            CaptureClipboard();
+
             // Marshal event to UI thread to prevent cross-thread access violations
             RaiseHotkeyPressed();
             handled = true;
         }
 
         return IntPtr.Zero;
+    }
+
+    /// <summary>
+    /// Captures the current clipboard content immediately when hotkey is pressed.
+    /// This must be done in the hook callback to avoid race conditions with other apps.
+    /// </summary>
+    private void CaptureClipboard()
+    {
+        try
+        {
+            // Use a separate thread to read clipboard since we're in a hook callback
+            // and clipboard access requires STA apartment
+            var thread = new System.Threading.Thread(() =>
+            {
+                try
+                {
+                    // Use OleGetClipboard for reliable cross-thread access
+                    if (System.Windows.Clipboard.ContainsText())
+                    {
+                        _previousClipboard = System.Windows.Clipboard.GetText();
+                        LoggingService.Debug($"[Hotkey] Captured previous clipboard: '{_previousClipboard?.Substring(0, Math.Min(50, _previousClipboard.Length))}...'");
+                    }
+                    else
+                    {
+                        _previousClipboard = null;
+                        LoggingService.Debug("[Hotkey] Clipboard does not contain text");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Warn($"[Hotkey] Failed to capture clipboard: {ex.Message}");
+                    _previousClipboard = null;
+                }
+            });
+            thread.SetApartmentState(System.Threading.ApartmentState.STA);
+            thread.Start();
+            thread.Join(100); // Wait max 100ms for clipboard capture
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Warn($"[Hotkey] Clipboard capture error: {ex.Message}");
+            _previousClipboard = null;
+        }
     }
     
     private void RaiseHotkeyPressed()
@@ -240,6 +288,12 @@ public class HotkeyService : IDisposable
     public string GetTriggerKey() => _triggerKey;
 
     public IntPtr GetPreviousWindow() => _previousWindow;
+
+    /// <summary>
+    /// Gets the clipboard content that was captured when the hotkey was pressed.
+    /// Returns null if no text was on the clipboard or if clipboard was not captured.
+    /// </summary>
+    public string? GetPreviousClipboard() => _previousClipboard;
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();

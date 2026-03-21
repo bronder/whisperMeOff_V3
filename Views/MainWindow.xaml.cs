@@ -1053,7 +1053,10 @@ public partial class MainWindow : Window
             {
                 try
                 {
-                    var previousClipboard = App.Clipboard.GetText();
+                    // CRITICAL: Use the clipboard that was captured IMMEDIATELY when hotkey was pressed
+                    // This prevents race conditions where other apps (like Teams) modify clipboard
+                    // when our window gains focus
+                    var previousClipboard = App.Hotkey.GetPreviousClipboard();
                     var previousWindow = App.Hotkey.GetPreviousWindow();
                     
                     if (string.IsNullOrEmpty(text))
@@ -1066,17 +1069,6 @@ public partial class MainWindow : Window
 
                     // Paste to previous window (now uses retry mechanism internally)
                     await App.Clipboard.PasteToWindow(previousWindow);
-
-                    // Restore previous clipboard after delay (if enabled)
-                    if (App.Settings.General.RestoreClipboard && !string.IsNullOrEmpty(previousClipboard))
-                    {
-                        var delay = App.Settings.General.ClipboardRestoreDelayMs;
-                        if (delay > 0)
-                        {
-                            await Task.Delay(delay);
-                            App.Clipboard.SetText(previousClipboard);
-                        }
-                    }
                 }
                 catch (Exception ex)
                 {
