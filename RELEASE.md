@@ -2,6 +2,17 @@
 
 ## Latest Release
 
+### Version 1.7.7
+
+#### Bug Fixes
+- **Whisper SEHException Recovery**: Fixed occasional crashes after running for extended periods
+  - Added transcription serialization via SemaphoreSlim to prevent concurrent Whisper calls
+  - Added automatic factory reinitialization after 100 transcriptions to prevent native resource exhaustion
+  - Added SEHException handling to recover from native library corruption
+  - Transcription now properly releases lock even on error
+
+---
+
 ### Version 1.7.6
 
 #### Bug Fixes

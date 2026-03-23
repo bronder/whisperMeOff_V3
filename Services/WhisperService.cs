@@ -2,6 +2,7 @@ using System.IO;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 using Whisper.net;
 using Whisper.net.LibraryLoader;
 
@@ -24,6 +25,10 @@ public class WhisperService : IDisposable
     private bool _isInitialized;
     private string? _modelPath;
     private WhisperFactory? _factory;
+    private readonly SemaphoreSlim _transcriptionLock = new(1, 1);
+    private int _transcriptionCount;
+    private const int MaxTranscriptionsBeforeReload = 100;
+    private readonly object _reinitLock = new();
 
     /// <summary>
     /// Gets whether the Whisper service has been initialized with a model.
@@ -168,13 +173,22 @@ public class WhisperService : IDisposable
             throw new ArgumentException("Audio path is required", nameof(audioPath));
         }
 
-        if (!_isInitialized || _factory == null)
-        {
-            throw new InvalidOperationException("Whisper not initialized");
-        }
-
+        // Wait for any ongoing transcription to complete (Whisper factory is not thread-safe)
+        await _transcriptionLock.WaitAsync(cancellationToken);
+        
         try
         {
+            // Check if reinitialization is needed due to many transcriptions
+            if (_transcriptionCount >= MaxTranscriptionsBeforeReload && _isInitialized)
+            {
+                LoggingService.Info("[Whisper] Reloading factory to prevent resource exhaustion");
+                ReinitializeFactory();
+            }
+
+            if (!_isInitialized || _factory == null)
+            {
+                throw new InvalidOperationException("Whisper not initialized");
+            }
             var modelPath = GetModelPath();
             if (string.IsNullOrEmpty(modelPath) || !File.Exists(modelPath))
             {
@@ -315,10 +329,22 @@ public class WhisperService : IDisposable
             }
             return transcription;
         }
+        catch (SEHException ex)
+        {
+            // SEHException indicates native library corruption - attempt to recover
+            LoggingService.Error(ex, "Native Whisper library error - attempting recovery");
+            ReinitializeFactory();
+            throw new InvalidOperationException("Whisper transcription failed due to native library error. Please try again.", ex);
+        }
         catch (Exception ex)
         {
             LoggingService.Error(ex, "Transcription error");
             throw;
+        }
+        finally
+        {
+            Interlocked.Increment(ref _transcriptionCount);
+            _transcriptionLock.Release();
         }
     }
 
@@ -342,8 +368,54 @@ public class WhisperService : IDisposable
         Task.Run(async () => await InitializeAsync());
     }
 
+    /// <summary>
+    /// Reinitializes the Whisper factory to prevent resource exhaustion in the native library.
+    /// </summary>
+    private void ReinitializeFactory()
+    {
+        lock (_reinitLock)
+        {
+            if (_transcriptionCount < MaxTranscriptionsBeforeReload)
+            {
+                return; // Already reinitialized by another thread
+            }
+
+            try
+            {
+                LoggingService.Info("[Whisper] Reinitializing factory to prevent native resource exhaustion");
+                _factory?.Dispose();
+                _factory = null;
+                _isInitialized = false;
+                _transcriptionCount = 0;
+
+                // Reload synchronously
+                var modelPath = GetModelPath();
+                if (!string.IsNullOrEmpty(modelPath) && File.Exists(modelPath))
+                {
+                    _modelPath = modelPath;
+                    RuntimeOptions.RuntimeLibraryOrder = [RuntimeLibrary.Vulkan, RuntimeLibrary.Cuda, RuntimeLibrary.Cuda12, RuntimeLibrary.Cpu];
+                    
+                    // Recreate logger (previous one was disposed with factory)
+                    using var whisperLogger = Whisper.net.Logger.LogProvider.AddLogger((level, message) =>
+                    {
+                        LoggingService.Debug($"[Whisper Lib] {level}: {message}");
+                    });
+
+                    _factory = WhisperFactory.FromPath(modelPath);
+                    _isInitialized = true;
+                    LoggingService.Info("[Whisper] Factory reinitialized successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                LoggingService.Error(ex, "[Whisper] Failed to reinitialize factory");
+            }
+        }
+    }
+
     public void Dispose()
     {
         _factory?.Dispose();
+        _transcriptionLock?.Dispose();
     }
 }
