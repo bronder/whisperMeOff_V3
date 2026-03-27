@@ -1603,14 +1603,14 @@ public partial class MainWindow : Window
     {
         var dialog = new System.Windows.Forms.FolderBrowserDialog
         {
-            Description = "Select folder for GGUF model downloads",
+            Description = "Select folder for GGUF model downloads (must be within AppData, LocalAppData, or UserProfile)",
             UseDescriptionForTitle = true,
             ShowNewFolderButton = true
         };
 
-        // Set initial directory to saved path, then default
+        // Set initial directory to saved path if allowed, otherwise use default
         var savedPath = App.Settings.General.LlamaDownloadPath;
-        if (!string.IsNullOrEmpty(savedPath))
+        if (!string.IsNullOrEmpty(savedPath) && IsPathAllowed(savedPath))
         {
             dialog.SelectedPath = savedPath;
         }
@@ -1618,13 +1618,83 @@ public partial class MainWindow : Window
         {
             dialog.SelectedPath = App.LlamaModelsPath;
         }
+        else
+        {
+            // Default to user's Documents folder (which is within UserProfile)
+            dialog.SelectedPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        }
 
         if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
-            LlamaDownloadPathTextBox.Text = dialog.SelectedPath;
-            App.Settings.General.LlamaDownloadPath = dialog.SelectedPath;
+            var selectedPath = dialog.SelectedPath;
+            
+            // Validate the selected path is within allowed directories
+            if (!IsPathAllowed(selectedPath))
+            {
+                System.Windows.MessageBox.Show(
+                    $"The selected path is not allowed:\n\n{selectedPath}\n\n" +
+                    "Please choose a folder within:\n" +
+                    "• AppData (e.g., %APPDATA%)\\whisperMeOff\\Models\\...\n" +
+                    "• LocalAppData (e.g., %LOCALAPPDATA%)\\whisperMeOff\\Models\\...\n" +
+                    "• Your UserProfile (e.g., C:\\Users\\YourName\\...)\\Models\\...",
+                    "Path Not Allowed", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            
+            LlamaDownloadPathTextBox.Text = selectedPath;
+            App.Settings.General.LlamaDownloadPath = selectedPath;
             App.Settings.Save();
             LlamaStatusText.Text = "Download path changed - restart to apply";
+        }
+    }
+
+    /// <summary>
+    /// Checks if a path is within allowed directories for downloads
+    /// </summary>
+    private bool IsPathAllowed(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return false;
+
+        try
+        {
+            var fullPath = System.IO.Path.GetFullPath(path);
+
+            // Check if path starts with any allowed base path
+            string[] allowedBases = new[]
+            {
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
+            };
+
+            foreach (var basePath in allowedBases)
+            {
+                var normalizedBase = System.IO.Path.GetFullPath(basePath).TrimEnd(System.IO.Path.DirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar;
+                var normalizedPath = fullPath.TrimEnd(System.IO.Path.DirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar;
+
+                if (normalizedPath.StartsWith(normalizedBase, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            // Also allow paths within the app's models directory
+            if (!string.IsNullOrEmpty(App.ModelsPath))
+            {
+                var appBase = System.IO.Path.GetFullPath(App.ModelsPath).TrimEnd(System.IO.Path.DirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar;
+                var normalizedAppPath = fullPath.TrimEnd(System.IO.Path.DirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar;
+
+                if (normalizedAppPath.StartsWith(appBase, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        catch
+        {
+            return false;
         }
     }
 
@@ -1921,6 +1991,9 @@ public partial class MainWindow : Window
         }
     }
 
+    private CancellationTokenSource? _llamaDownloadCts;
+    private bool _isDownloading = false;
+
     private async void DownloadLlamaModel_Click(object sender, RoutedEventArgs e)
     {
         var modelId = HuggingFaceModelIdTextBox.Text.Trim();
@@ -1940,9 +2013,14 @@ public partial class MainWindow : Window
 
         // Use Llama-specific progress bar
         LlamaDownloadProgressBar.Visibility = Visibility.Visible;
-        LlamaDownloadStatusText.Visibility = Visibility.Visible;
+        LlamaDownloadControlsPanel.Visibility = Visibility.Visible;
         LlamaDownloadStatusText.Text = "Searching for model...";
         LlamaDownloadProgressBar.Value = 0;
+        CancelLlamaDownloadButton.IsEnabled = true;
+        _isDownloading = true;
+
+        // Create cancellation token for this download
+        _llamaDownloadCts = new CancellationTokenSource();
 
         var progress = new Progress<double>(p =>
         {
@@ -1950,7 +2028,13 @@ public partial class MainWindow : Window
             LlamaDownloadStatusText.Text = $"Downloading... {p:F0}%";
         });
 
-        var path = await App.ModelDownload.DownloadLlamaModelAsync(modelId, progress);
+        var path = await App.ModelDownload.DownloadLlamaModelAsync(modelId, progress, _llamaDownloadCts.Token);
+
+        _isDownloading = false;
+        LlamaDownloadProgressBar.Visibility = Visibility.Collapsed;
+        LlamaDownloadControlsPanel.Visibility = Visibility.Collapsed;
+        _llamaDownloadCts?.Dispose();
+        _llamaDownloadCts = null;
 
         if (!string.IsNullOrEmpty(path))
         {
@@ -1975,15 +2059,53 @@ public partial class MainWindow : Window
                 await App.Llama.InitializeAsync(path);
             }
         }
-        else
+        else if (string.IsNullOrEmpty(path))
         {
             LlamaDownloadStatusText.Text = "Could not find a GGUF file for this model";
-            System.Windows.MessageBox.Show("Could not find a GGUF file for this model.\n\nMake sure the model ID is correct and the model has GGUF files available.", "Download Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            System.Windows.MessageBox.Show(
+                "Could not find a GGUF file for this model.\n\n" +
+                "Note: Not all HuggingFace models have GGUF files. Look for:\n" +
+                "• Models with 'GGUF' in the name (e.g., 'bartowski/gemma-2b-it-GGUF')\n" +
+                "• Models from 'TheBloke' or 'bartowski' repos\n" +
+                "• Quantized models (look for Q4_K_M, Q5_K_S, etc. in the name)",
+                "GGUF Model Not Found", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        else if (path.StartsWith("ERROR:Download path is not allowed"))
+        {
+            LlamaDownloadStatusText.Text = "Download path not allowed";
+            System.Windows.MessageBox.Show(
+                path.Substring(6) + "\n\n" +
+                "To fix this:\n" +
+                "1. Go to Settings > General\n" +
+                "2. Change 'Llama Download Path' to a folder within:\n" +
+                "   • AppData (e.g., %APPDATA%\\whisperMeOff\\Models)\n" +
+                "   • LocalAppData (e.g., %LOCALAPPDATA%\\whisperMeOff\\Models)\n" +
+                "   • Your UserProfile (e.g., C:\\Users\\YourName\\Models)",
+                "Download Path Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        else
+        {
+            LlamaDownloadStatusText.Text = "Download failed";
+            System.Windows.MessageBox.Show(
+                "Download failed: " + path + "\n\n" +
+                "Make sure the model ID is correct and the model has GGUF files available.",
+                "Download Error", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
         await Task.Delay(2000);
         LlamaDownloadProgressBar.Visibility = Visibility.Collapsed;
-        LlamaDownloadStatusText.Visibility = Visibility.Collapsed;
+        LlamaDownloadControlsPanel.Visibility = Visibility.Collapsed;
+    }
+
+    private void CancelLlamaDownload_Click(object sender, RoutedEventArgs e)
+    {
+        if (_llamaDownloadCts != null && _isDownloading)
+        {
+            LoggingService.Info("[UI] Cancelling Llama download...");
+            _llamaDownloadCts.Cancel();
+            CancelLlamaDownloadButton.IsEnabled = false;
+            LlamaDownloadStatusText.Text = "Cancelling...";
+        }
     }
 
     private void HuggingFaceTokenBox_PasswordChanged(object sender, RoutedEventArgs e)

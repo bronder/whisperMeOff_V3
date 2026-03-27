@@ -1105,8 +1105,13 @@
                                 <ProgressBar x:Name="LlamaDownloadProgressBar" Height="8" Margin="0,15,0,0"
                                              Visibility="Collapsed" Background="{DynamicResource CardBrush}"
                                              Foreground="{DynamicResource AccentBrush}"/>
-                                <TextBlock x:Name="LlamaDownloadStatusText" Margin="0,5,0,0"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" Visibility="Collapsed"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,5,0,0" x:Name="LlamaDownloadControlsPanel" Visibility="Collapsed">
+                                    <TextBlock x:Name="LlamaDownloadStatusText"
+                                               Foreground="{DynamicResource SecondaryTextBrush}" VerticalAlignment="Center"/>
+                                    <Button x:Name="CancelLlamaDownloadButton" Content="Cancel"
+                                            Click="CancelLlamaDownload_Click" Margin="10,0,0,0"
+                                            Style="{DynamicResource SecondaryButtonStyle}"/>
+                                </StackPanel>
 
                                 <!-- HuggingFace Token -->
                                 <TextBlock Text="HuggingFace Token (for private models)" FontSize="14" FontWeight="SemiBold"

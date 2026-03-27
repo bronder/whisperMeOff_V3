@@ -2,6 +2,23 @@
 
 ## Latest Release
 
+### Version 1.8.2
+
+#### Bug Fixes
+- **Download Path Error Message**: Improved error message when download path is not allowed, now explains how to fix it by changing to an allowed directory
+
+---
+
+### Version 1.8.1
+
+#### Bug Fixes
+- **HuggingFace GGUF Model Search**: When a model ID like "google/gemma-2b" doesn't have GGUF files directly, the app now searches HuggingFace for GGUF variants and offers to download them automatically
+  - Added `SearchGgufVariantsAsync` to search for GGUF models on HuggingFace
+  - Added `DiscoverGgufFilesInRepoAsync` to check multiple repositories for GGUF files
+  - Improved error message with suggestions for finding GGUF models
+
+---
+
 ### Version 1.8.0
 
 #### Bug Fixes

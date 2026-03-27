@@ -118,7 +118,7 @@ public class ModelDownloadService : IDisposable
         }
     }
 
-    public async Task<string?> DownloadLlamaModelAsync(string modelId, IProgress<double>? progress = null)
+    public async Task<string?> DownloadLlamaModelAsync(string modelId, IProgress<double>? progress = null, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -151,7 +151,9 @@ public class ModelDownloadService : IDisposable
                 return destinationPath;
             }
 
+            // Create internal cancellation token and link with external token
             _cancellationTokenSource = new CancellationTokenSource();
+            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _cancellationTokenSource.Token);
 
             // Add auth header if token is set
             if (!string.IsNullOrEmpty(App.Settings.Llama.HuggingFaceToken))
@@ -160,7 +162,12 @@ public class ModelDownloadService : IDisposable
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", App.Settings.Llama.HuggingFaceToken);
             }
 
-            return await DownloadFileAsync(fileUrl, destinationPath, progress, _cancellationTokenSource.Token);
+            return await DownloadFileAsync(fileUrl, destinationPath, progress, linkedCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            LoggingService.Info("[ModelDownload] Download cancelled by user");
+            return "ERROR:Download cancelled";
         }
         catch (Exception ex)
         {
@@ -171,40 +178,187 @@ public class ModelDownloadService : IDisposable
 
     private async Task<string?> DownloadFileAsync(string url, string destinationPath, IProgress<double>? progress, CancellationToken cancellationToken)
     {
-        using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        response.EnsureSuccessStatusCode();
-
-        var totalBytes = response.Content.Headers.ContentLength ?? -1;
-        var downloadedBytes = 0L;
-
-        using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
-
-        var buffer = new byte[8192];
-        int bytesRead;
-
-        while ((bytesRead = await contentStream.ReadAsync(buffer, cancellationToken)) > 0)
+        try
         {
-            await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
-            downloadedBytes += bytesRead;
+            using var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
 
-            if (totalBytes > 0)
+            var totalBytes = response.Content.Headers.ContentLength ?? -1;
+            var downloadedBytes = 0L;
+
+            using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            using var fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true);
+
+            var buffer = new byte[8192];
+            int bytesRead;
+
+            while ((bytesRead = await contentStream.ReadAsync(buffer, cancellationToken)) > 0)
             {
-                var progressValue = (double)downloadedBytes / totalBytes * 100;
-                progress?.Report(progressValue);
-                DownloadProgress?.Invoke(this, new DownloadProgressEventArgs(progressValue, downloadedBytes, totalBytes));
+                await fileStream.WriteAsync(buffer.AsMemory(0, bytesRead), cancellationToken);
+                downloadedBytes += bytesRead;
+
+                if (totalBytes > 0)
+                {
+                    var progressValue = (double)downloadedBytes / totalBytes * 100;
+                    progress?.Report(progressValue);
+                    DownloadProgress?.Invoke(this, new DownloadProgressEventArgs(progressValue, downloadedBytes, totalBytes));
+                }
             }
-        }
 
-        // Validate file size
-        if (totalBytes > 0 && downloadedBytes < 1024 * 1024)
+            // Validate file size
+            if (totalBytes > 0 && downloadedBytes < 1024 * 1024)
+            {
+                // File too small, probably error page
+                File.Delete(destinationPath);
+                throw new Exception("Downloaded file too small - likely an error page");
+            }
+
+            return destinationPath;
+        }
+        catch (OperationCanceledException)
         {
-            // File too small, probably error page
-            File.Delete(destinationPath);
-            throw new Exception("Downloaded file too small - likely an error page");
+            // Clean up partial file on cancellation
+            if (File.Exists(destinationPath))
+            {
+                LoggingService.Info($"[ModelDownload] Cleaning up partial file: {destinationPath}");
+                try
+                {
+                    File.Delete(destinationPath);
+                }
+                catch (Exception ex)
+                {
+                    LoggingService.Warn($"[ModelDownload] Failed to delete partial file: {ex.Message}");
+                }
+            }
+            throw; // Re-throw to let caller handle
         }
+    }
 
-        return destinationPath;
+    /// <summary>
+    /// Searches HuggingFace for GGUF variants of a model when direct lookup fails.
+    /// </summary>
+    private async Task<string?> SearchGgufVariantsAsync(string ownerRepo)
+    {
+        try
+        {
+            // Extract the model name from owner/repo format (e.g., "google/gemma-2b" -> "gemma-2b")
+            var modelName = ownerRepo.Contains("/") ? ownerRepo.Split('/').Last() : ownerRepo;
+            
+            // Remove common suffixes that might interfere with search
+            modelName = modelName.Replace("-dev", "").Replace("-base", "").Replace("-it", "");
+            
+            LoggingService.Info($"[ModelDownload] Searching for GGUF variants of: {modelName}");
+            
+            // Search for GGUF models on HuggingFace
+            var searchQuery = Uri.EscapeDataString($"{modelName} GGUF");
+            var searchUrl = $"https://huggingface.co/api/models?search={searchQuery}&filter=gguf&sort=downloads&direction=-1&limit=5";
+            
+            _httpClient.DefaultRequestHeaders.Authorization = null; // Public search
+            
+            using var response = await _httpClient.GetAsync(searchUrl);
+            if (!response.IsSuccessStatusCode)
+            {
+                LoggingService.Debug($"[ModelDownload] Search API returned: {response.StatusCode}");
+                return null;
+            }
+            
+            var json = await response.Content.ReadAsStringAsync();
+            var searchResults = System.Text.Json.JsonSerializer.Deserialize<List<HuggingFaceModelInfo>>(json);
+            
+            if (searchResults == null || searchResults.Count == 0)
+            {
+                LoggingService.Debug("[ModelDownload] No GGUF variants found via search");
+                return null;
+            }
+            
+            // Log the results for debugging
+            LoggingService.Info($"[ModelDownload] Found {searchResults.Count} potential GGUF variants:");
+            foreach (var result in searchResults.Take(3))
+            {
+                LoggingService.Info($"[ModelDownload]   - {result.Id} (downloads: {result.Downloads})");
+            }
+            
+            // Try each found model to find one with GGUF files
+            foreach (var model in searchResults.Take(5))
+            {
+                LoggingService.Debug($"[ModelDownload] Checking GGUF files in: {model.Id}");
+                
+                // Check if this model has GGUF files
+                var ggufResult = await DiscoverGgufFilesInRepoAsync(model.Id);
+                if (!string.IsNullOrEmpty(ggufResult) && !ggufResult.StartsWith("ERROR:"))
+                {
+                    LoggingService.Info($"[ModelDownload] Found GGUF file via search: {ggufResult}");
+                    return ggufResult;
+                }
+            }
+            
+            // If we found models but none had GGUF files, suggest the best match
+            var bestMatch = searchResults.First();
+            return $"ERROR:No GGUF files found in '{ownerRepo}'.\n\nDid you mean: {bestMatch.Id}?\nThis model has {bestMatch.Downloads:N0} downloads and may have GGUF variants.";
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Debug($"[ModelDownload] Search for GGUF variants failed: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Checks a specific repository for GGUF files and returns the download URL if found.
+    /// </summary>
+    private async Task<string?> DiscoverGgufFilesInRepoAsync(string ownerRepo)
+    {
+        try
+        {
+            string[] branches = { "main", "master" };
+            string? foundBranch = null;
+            List<HuggingFaceFile>? files = null;
+            
+            foreach (var branch in branches)
+            {
+                var apiUrl = $"https://huggingface.co/api/models/{ownerRepo}/tree/{branch}";
+                
+                using var response = await _httpClient.GetAsync(apiUrl);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    files = System.Text.Json.JsonSerializer.Deserialize<List<HuggingFaceFile>>(json);
+                    if (files != null && files.Count > 0)
+                    {
+                        foundBranch = branch;
+                        break;
+                    }
+                }
+            }
+            
+            if (files == null || foundBranch == null)
+            {
+                return null;
+            }
+            
+            // Find GGUF files
+            var ggufFiles = files.Where(f => 
+                !string.IsNullOrEmpty(f.Path) && 
+                f.Path.EndsWith(".gguf", StringComparison.OrdinalIgnoreCase)).ToList();
+            
+            if (ggufFiles.Count == 0)
+            {
+                return null;
+            }
+            
+            // Select the best GGUF file (prefer Q4_K_M or Q5_K_S)
+            var selectedFile = ggufFiles.FirstOrDefault(f => f.Path.Contains("Q4_K_M", StringComparison.OrdinalIgnoreCase))
+                       ?? ggufFiles.FirstOrDefault(f => f.Path.Contains("Q5_K_S", StringComparison.OrdinalIgnoreCase))
+                       ?? ggufFiles.FirstOrDefault(f => f.Path.Contains("Q5_K_M", StringComparison.OrdinalIgnoreCase))
+                       ?? ggufFiles.First();
+            
+            return $"https://huggingface.co/{ownerRepo}/resolve/{foundBranch}/{selectedFile.Path}";
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Debug($"[ModelDownload] Error checking repo {ownerRepo}: {ex.Message}");
+            return null;
+        }
     }
 
     private async Task<string?> DiscoverLlamaFileUrlAsync(string modelId)
@@ -288,6 +442,13 @@ public class ModelDownloadService : IDisposable
             
             if (ggufFiles.Count == 0) 
             {
+                // Try to search for GGUF variants on HuggingFace
+                var searchResult = await SearchGgufVariantsAsync(ownerRepo);
+                if (!string.IsNullOrEmpty(searchResult))
+                {
+                    return searchResult;
+                }
+                
                 var fileList = string.Join(", ", files.Select(f => f.Path));
                 LoggingService.Warn("No GGUF files found. Available files: " + fileList);
                 LoggingService.Debug($"Total files in response: {files.Count}");
@@ -380,4 +541,16 @@ public class HuggingFaceFile
     
     [System.Text.Json.Serialization.JsonPropertyName("size")]
     public long Size { get; set; }
+}
+
+public class HuggingFaceModelInfo
+{
+    [System.Text.Json.Serialization.JsonPropertyName("id")]
+    public string Id { get; set; } = "";
+    
+    [System.Text.Json.Serialization.JsonPropertyName("downloads")]
+    public long Downloads { get; set; }
+    
+    [System.Text.Json.Serialization.JsonPropertyName("likes")]
+    public long Likes { get; set; }
 }
