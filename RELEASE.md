@@ -2,6 +2,18 @@
 
 ## Latest Release
 
+### Version 1.8.3
+
+#### Bug Fixes
+- **Download Path Validation**: Added validation to folder browser dialog to restrict downloads to allowed directories (AppData, LocalAppData, UserProfile)
+  - Path browser now validates selection before saving
+  - Clear error message explains which directories are allowed
+- **Cancel Download**: Added cancel button during model download
+  - User can cancel download at any time
+  - Partial file is cleaned up when cancelled
+
+---
+
 ### Version 1.8.2
 
 #### Bug Fixes
