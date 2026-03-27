@@ -15,6 +15,7 @@ Hold a hotkey, speak your mind, and watch your words appear — automatically pa
 - **Llama.cpp Text Formatting**: Optional AI-powered formatting cleans up your transcription with proper punctuation and paragraphs
 - **Llama Translation**: Translate transcribed text to 27+ languages using Llama AI
 - **Cancellation Support**: Long-running transcription can be cancelled (internal API support)
+- **Auto-Recovery**: Automatic recovery from GPU hangs or native library errors with timeout protection
 - **100% Offline**: Works completely offline - no internet required after model download
 - **HuggingFace Integration**: Download GGUF quantized models directly from HuggingFace
 - **7 Visual Themes**: Light, Dark, Nord, Dracula, Gruvbox, Monokai, and Synthwave themes

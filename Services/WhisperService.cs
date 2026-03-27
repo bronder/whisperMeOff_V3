@@ -28,7 +28,15 @@ public class WhisperService : IDisposable
     private readonly SemaphoreSlim _transcriptionLock = new(1, 1);
     private int _transcriptionCount;
     private const int MaxTranscriptionsBeforeReload = 100;
-    private readonly object _reinitLock = new();
+    private readonly SemaphoreSlim _reinitLock = new(1, 1);
+    
+    // Recovery tracking to prevent infinite retry loops
+    private int _consecutiveFailures;
+    private const int MaxConsecutiveFailures = 3;
+    
+    // Timeouts to prevent hangs/deadlocks
+    private const int ReinitTimeoutSeconds = 15;
+    private const int TranscriptionTimeoutSeconds = 120;
 
     /// <summary>
     /// Gets whether the Whisper service has been initialized with a model.
@@ -176,13 +184,17 @@ public class WhisperService : IDisposable
         // Wait for any ongoing transcription to complete (Whisper factory is not thread-safe)
         await _transcriptionLock.WaitAsync(cancellationToken);
         
+        // Create a watchdog to prevent indefinite hangs (e.g., GPU deadlock after sleep)
+        using var watchdogCts = new CancellationTokenSource(TimeSpan.FromSeconds(TranscriptionTimeoutSeconds));
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, watchdogCts.Token);
+        
         try
         {
             // Check if reinitialization is needed due to many transcriptions
             if (_transcriptionCount >= MaxTranscriptionsBeforeReload && _isInitialized)
             {
                 LoggingService.Info("[Whisper] Reloading factory to prevent resource exhaustion");
-                ReinitializeFactory();
+                await ReinitializeFactoryAsync(force: false, linkedCts.Token);
             }
 
             if (!_isInitialized || _factory == null)
@@ -284,7 +296,7 @@ public class WhisperService : IDisposable
                 }
             }
 
-            using var processor = builder.Build();
+            await using var processor = builder.Build();
 
             // Open the audio file and process it
             using var fileStream = File.OpenRead(audioPath);
@@ -327,13 +339,41 @@ public class WhisperService : IDisposable
             {
                 LoggingService.Debug("[Whisper] Transcription complete (empty)");
             }
+            
+            // Reset consecutive failures on successful transcription
+            _consecutiveFailures = 0;
             return transcription;
+        }
+        catch (OperationCanceledException ex) when (watchdogCts.IsCancellationRequested)
+        {
+            // Transcription timed out - likely GPU hang after sleep/idle
+            _consecutiveFailures++;
+            LoggingService.Error(ex, $"[Whisper] Transcription timed out after {TranscriptionTimeoutSeconds}s - GPU may be unresponsive (consecutive failures: {_consecutiveFailures}/{MaxConsecutiveFailures})");
+            
+            if (_consecutiveFailures >= MaxConsecutiveFailures)
+            {
+                LoggingService.Error($"[Whisper] Too many consecutive failures ({_consecutiveFailures}) - manual restart required. Please restart the application.");
+                throw new InvalidOperationException($"Whisper transcription timed out {MaxConsecutiveFailures} times in a row. Please restart the application.", ex);
+            }
+            
+            // Attempt recovery
+            await ReinitializeFactoryAsync(force: true, CancellationToken.None);
+            throw new InvalidOperationException($"Whisper transcription timed out after {TranscriptionTimeoutSeconds}s. Please try again.", ex);
         }
         catch (SEHException ex)
         {
             // SEHException indicates native library corruption - attempt to recover
-            LoggingService.Error(ex, "Native Whisper library error - attempting recovery");
-            ReinitializeFactory();
+            _consecutiveFailures++;
+            LoggingService.Error(ex, $"Native Whisper library error (consecutive failures: {_consecutiveFailures}/{MaxConsecutiveFailures}) - attempting recovery");
+            
+            if (_consecutiveFailures >= MaxConsecutiveFailures)
+            {
+                LoggingService.Error($"[Whisper] Too many consecutive failures ({_consecutiveFailures}) - manual restart required. Please restart the application.");
+                throw new InvalidOperationException($"Whisper transcription failed {MaxConsecutiveFailures} times in a row. Please restart the application.", ex);
+            }
+            
+            // Attempt recovery with timeout
+            await ReinitializeFactoryAsync(force: true, linkedCts.Token);
             throw new InvalidOperationException("Whisper transcription failed due to native library error. Please try again.", ex);
         }
         catch (Exception ex)
@@ -370,46 +410,58 @@ public class WhisperService : IDisposable
 
     /// <summary>
     /// Reinitializes the Whisper factory to prevent resource exhaustion in the native library.
+    /// Uses timeout to prevent deadlock when native library is in corrupted state.
     /// </summary>
-    private void ReinitializeFactory()
+    /// <param name="force">If true, reinitializes regardless of transcription count (used after errors)</param>
+    /// <param name="cancellationToken">Cancellation token with timeout</param>
+    private async Task ReinitializeFactoryAsync(bool force = false, CancellationToken cancellationToken = default)
     {
-        lock (_reinitLock)
+        // Use timeout to prevent deadlock if native library is corrupted
+        if (!await _reinitLock.WaitAsync(TimeSpan.FromSeconds(ReinitTimeoutSeconds), cancellationToken))
         {
-            if (_transcriptionCount < MaxTranscriptionsBeforeReload)
+            LoggingService.Error($"[Whisper] Reinitialization timed out after {ReinitTimeoutSeconds}s - library may be deadlocked. Consider restarting the application.");
+            return;
+        }
+        
+        try
+        {
+            // Only skip if not forcing and haven't exceeded the threshold
+            if (!force && _transcriptionCount < MaxTranscriptionsBeforeReload)
             {
-                return; // Already reinitialized by another thread
+                return; // Not yet time to reinitialize
             }
 
-            try
-            {
-                LoggingService.Info("[Whisper] Reinitializing factory to prevent native resource exhaustion");
-                _factory?.Dispose();
-                _factory = null;
-                _isInitialized = false;
-                _transcriptionCount = 0;
+            LoggingService.Info($"[Whisper] Reinitializing factory (force={force}, count={_transcriptionCount})");
+            _factory?.Dispose();
+            _factory = null;
+            _isInitialized = false;
+            _transcriptionCount = 0;
 
-                // Reload synchronously
-                var modelPath = GetModelPath();
-                if (!string.IsNullOrEmpty(modelPath) && File.Exists(modelPath))
+            // Reload synchronously but with timeout-protected lock
+            var modelPath = GetModelPath();
+            if (!string.IsNullOrEmpty(modelPath) && File.Exists(modelPath))
+            {
+                _modelPath = modelPath;
+                RuntimeOptions.RuntimeLibraryOrder = [RuntimeLibrary.Vulkan, RuntimeLibrary.Cuda, RuntimeLibrary.Cuda12, RuntimeLibrary.Cpu];
+                
+                // Recreate logger (previous one was disposed with factory)
+                using var whisperLogger = Whisper.net.Logger.LogProvider.AddLogger((level, message) =>
                 {
-                    _modelPath = modelPath;
-                    RuntimeOptions.RuntimeLibraryOrder = [RuntimeLibrary.Vulkan, RuntimeLibrary.Cuda, RuntimeLibrary.Cuda12, RuntimeLibrary.Cpu];
-                    
-                    // Recreate logger (previous one was disposed with factory)
-                    using var whisperLogger = Whisper.net.Logger.LogProvider.AddLogger((level, message) =>
-                    {
-                        LoggingService.Debug($"[Whisper Lib] {level}: {message}");
-                    });
+                    LoggingService.Debug($"[Whisper Lib] {level}: {message}");
+                });
 
-                    _factory = WhisperFactory.FromPath(modelPath);
-                    _isInitialized = true;
-                    LoggingService.Info("[Whisper] Factory reinitialized successfully");
-                }
+                _factory = WhisperFactory.FromPath(modelPath);
+                _isInitialized = true;
+                LoggingService.Info("[Whisper] Factory reinitialized successfully");
             }
-            catch (Exception ex)
-            {
-                LoggingService.Error(ex, "[Whisper] Failed to reinitialize factory");
-            }
+        }
+        catch (Exception ex)
+        {
+            LoggingService.Error(ex, "[Whisper] Failed to reinitialize factory");
+        }
+        finally
+        {
+            _reinitLock.Release();
         }
     }
 
@@ -417,5 +469,6 @@ public class WhisperService : IDisposable
     {
         _factory?.Dispose();
         _transcriptionLock?.Dispose();
+        _reinitLock?.Dispose();
     }
 }

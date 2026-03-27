@@ -2,6 +2,27 @@
 
 ## Latest Release
 
+### Version 1.8.0
+
+#### Bug Fixes
+- **Whisper SEHException Deadlock Prevention**: Fixed issue where SEHException after system sleep/idle could cause the application to hang indefinitely
+  - Added 120-second watchdog timeout for transcription operations to prevent indefinite hangs
+  - Added 15-second timeout for factory reinitialization to prevent deadlock when native library is corrupted
+  - Changed `_reinitLock` from `object` to `SemaphoreSlim` for proper async timeout support
+  - If watchdog timeout occurs, automatically attempts recovery and reports error
+
+- **Consecutive Failure Tracking**: Added protection against infinite retry loops
+  - After 3 consecutive failures (SEHException or timeout), the app stops auto-recovery and prompts user to restart
+  - Prevents the app from repeatedly trying and failing when GPU is in bad state after sleep
+  - Successful transcription resets failure counter
+
+#### Internal Improvements
+- Converted `ReinitializeFactory` to async `ReinitializeFactoryAsync` with timeout protection
+- Added proper cleanup of `_reinitLock` in `Dispose()` method
+- Enhanced error logging to include consecutive failure count
+
+---
+
 ### Version 1.7.7
 
 #### Bug Fixes
