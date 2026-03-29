@@ -1622,81 +1622,61 @@
                                 <TextBlock Text="Transformation Settings" FontSize="14" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"/>
                                 
-                                <!-- Transformation Type -->
+                                <!-- Tone Direction -->
                                 <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
-                                    <TextBlock Text="Type:" VerticalAlignment="Center" 
-                                               Foreground="{DynamicResource TextBrush}" Width="100"/>
-                                    <ComboBox x:Name="TransformationTypeComboBox" Width="200">
-                                        <ComboBoxItem Content="Grammar" Tag="Grammar"/>
-                                        <ComboBoxItem Content="Tone" Tag="Tone"/>
-                                        <ComboBoxItem Content="Voice" Tag="Voice"/>
-                                        <ComboBoxItem Content="Complexity" Tag="Complexity"/>
-                                        <ComboBoxItem Content="Professionalism" Tag="Professionalism"/>
-                                        <ComboBoxItem Content="Personal Style" Tag="PersonalStyle"/>
-                                        <ComboBoxItem Content="Translation" Tag="Translation"/>
-                                        <ComboBoxItem Content="Custom" Tag="Custom"/>
-                                    </ComboBox>
-                                </StackPanel>
-
-                                <!-- Direction -->
-                                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                                    <TextBlock Text="Direction:" VerticalAlignment="Center" 
+                                    <TextBlock Text="Style:" VerticalAlignment="Center" 
                                                Foreground="{DynamicResource TextBrush}" Width="100"/>
                                     <ComboBox x:Name="TransformationDirectionComboBox" Width="200">
-                                        <ComboBoxItem Content="Default" Tag="Default"/>
-                                        <ComboBoxItem Content="Formal" Tag="Formal"/>
+                                        <ComboBoxItem Content="Formal" Tag="Formal" IsSelected="True"/>
                                         <ComboBoxItem Content="Informal" Tag="Informal"/>
-                                        <ComboBoxItem Content="Active" Tag="Active"/>
-                                        <ComboBoxItem Content="Passive" Tag="Passive"/>
-                                        <ComboBoxItem Content="Simplify" Tag="Simplify"/>
-                                        <ComboBoxItem Content="Elaborate" Tag="Elaborate"/>
-                                        <ComboBoxItem Content="Professional" Tag="Professional"/>
-                                        <ComboBoxItem Content="Casual" Tag="Casual"/>
                                     </ComboBox>
-                                </StackPanel>
-
-                                <!-- Target Language (for Translation) -->
-                                <StackPanel x:Name="TargetLanguagePanel" Orientation="Horizontal" Margin="0,10,0,0" Visibility="Collapsed">
-                                    <TextBlock Text="Target Language:" VerticalAlignment="Center" 
-                                               Foreground="{DynamicResource TextBrush}" Width="100"/>
-                                    <ComboBox x:Name="TransformTargetLanguageComboBox" Width="200">
-                                        <ComboBoxItem Content="English (en)" Tag="en" IsSelected="True"/>
-                                        <ComboBoxItem Content="Spanish (es)" Tag="es"/>
-                                        <ComboBoxItem Content="French (fr)" Tag="fr"/>
-                                        <ComboBoxItem Content="German (de)" Tag="de"/>
-                                        <ComboBoxItem Content="Italian (it)" Tag="it"/>
-                                        <ComboBoxItem Content="Portuguese (pt)" Tag="pt"/>
-                                        <ComboBoxItem Content="Russian (ru)" Tag="ru"/>
-                                        <ComboBoxItem Content="Chinese (zh)" Tag="zh"/>
-                                        <ComboBoxItem Content="Japanese (ja)" Tag="ja"/>
-                                        <ComboBoxItem Content="Korean (ko)" Tag="ko"/>
-                                        <ComboBoxItem Content="Arabic (ar)" Tag="ar"/>
-                                        <ComboBoxItem Content="Hindi (hi)" Tag="hi"/>
-                                    </ComboBox>
-                                </StackPanel>
-
-                                <!-- Preserve Options -->
-                                <StackPanel Margin="0,15,0,0">
-                                    <CheckBox x:Name="PreserveProperNounsCheckBox" Content="Preserve proper nouns (names, places)" 
-                                              IsChecked="True" Style="{DynamicResource ToggleSwitchStyle}"
-                                              Foreground="{DynamicResource TextBrush}"/>
-                                    <CheckBox x:Name="PreserveTechnicalTermsCheckBox" Content="Preserve technical terms" 
-                                              IsChecked="True" Margin="0,10,0,0" Style="{DynamicResource ToggleSwitchStyle}"
-                                              Foreground="{DynamicResource TextBrush}"/>
-                                </StackPanel>
-
-                                <!-- Quality Threshold -->
-                                <StackPanel Margin="0,15,0,0">
-                                    <TextBlock Text="Quality Threshold" Foreground="{DynamicResource TextBrush}"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                                        <Slider x:Name="QualityThresholdSlider" Width="200" Minimum="0" Maximum="100" Value="70"
-                                                TickFrequency="10" IsSnapToTickEnabled="True"
-                                                Style="{DynamicResource ModernSliderStyle}"/>
-                                        <TextBlock x:Name="QualityThresholdValue" Text="70" Margin="10,0,0,0" 
-                                                   VerticalAlignment="Center" Foreground="{DynamicResource AccentBrush}"/>
-                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
+                        </Border>
+
+                        <!-- Custom Prompts Editor -->
+                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
+                            <Expander x:Name="PromptsEditorExpander" Header="AI Prompt Editor (Advanced)" IsExpanded="False">
+                                <StackPanel Margin="0,15,0,0">
+                                    <TextBlock Text="Edit the prompts that AI uses to transform text. Use &#x2018;{text}&#x2019; as a placeholder for the input text."
+                                               Foreground="{DynamicResource SecondaryTextBrush}" TextWrapping="Wrap" Margin="0,0,0,15"/>
+                                    
+                                    <!-- Formal Prompt -->
+                                    <TextBlock Text="Formal Prompt:" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}" Margin="0,0,0,5"/>
+                                    <TextBox x:Name="FormalPromptTextBox"
+                                             AcceptsReturn="True"
+                                             TextWrapping="Wrap"
+                                             Height="80"
+                                             VerticalScrollBarVisibility="Auto"
+                                             Padding="5"
+                                             LostFocus="FormalPromptTextBox_LostFocus"/>
+                                    <TextBlock Text="Default: Make this text more formal. Keep all the same words and meaning. Only change the tone."
+                                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,3,0,15"/>
+
+                                    <!-- Informal Prompt -->
+                                    <TextBlock Text="Informal Prompt:" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}" Margin="0,0,0,5"/>
+                                    <TextBox x:Name="InformalPromptTextBox"
+                                             AcceptsReturn="True"
+                                             TextWrapping="Wrap"
+                                             Height="80"
+                                             VerticalScrollBarVisibility="Auto"
+                                             Padding="5"
+                                             LostFocus="InformalPromptTextBox_LostFocus"/>
+                                    <TextBlock Text="Default: Make this text more informal. Keep all the same words and meaning. Only change the tone."
+                                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,3,0,10"/>
+
+                                    <Button x:Name="SavePromptsButton" Content="Save Prompts"
+                                            Click="SavePromptsButton_Click"
+                                            Style="{DynamicResource PrimaryButtonStyle}"
+                                            Padding="15,5" Margin="0,0,10,0"/>
+                                    <Button x:Name="ResetPromptsButton" Content="Reset to Defaults"
+                                            Click="ResetPromptsButton_Click"
+                                            Style="{DynamicResource SecondaryButtonStyle}"
+                                            Padding="15,5"/>
+                                </StackPanel>
+                            </Expander>
                         </Border>
 
                         <!-- Text Input -->
@@ -1808,74 +1788,6 @@
                                             Click="ApplyToOutputButton_Click"
                                             Style="{DynamicResource PrimaryButtonStyle}"
                                             Margin="10,0,0,0" Padding="15,5"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Profiles Section -->
-                        <Border Background="{DynamicResource CardBrush}" CornerRadius="8" Padding="20" Margin="0,20,0,0">
-                            <StackPanel>
-                                <TextBlock Text="Transformation Profiles" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextBrush}"/>
-                                <TextBlock Text="Save and manage transformation settings as profiles"
-                                           Foreground="{DynamicResource SecondaryTextBrush}" Margin="0,5,0,10"/>
-
-                                <!-- Profile List -->
-                                <ListBox x:Name="TransformationProfilesListBox" 
-                                         Background="Transparent" BorderThickness="0"
-                                         MaxHeight="150"
-                                         SelectionChanged="TransformationProfilesListBox_SelectionChanged"
-                                         ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <Border Background="{DynamicResource CardBrush}" CornerRadius="4" Padding="10" Margin="0,3">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <StackPanel Grid.Column="0">
-                                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
-                                                                   Foreground="{DynamicResource TextBrush}"/>
-                                                        <TextBlock Text="{Binding Description}" FontSize="11"
-                                                                   Foreground="{DynamicResource SecondaryTextBrush}"/>
-                                                    </StackPanel>
-                                                    <Button Grid.Column="1" Content="Load" 
-                                                            Click="LoadProfileButton_Click"
-                                                            Tag="{Binding Id}"
-                                                            Style="{DynamicResource SecondaryButtonStyle}" 
-                                                            Padding="10,3" Margin="5,0"/>
-                                                    <Button Grid.Column="2" Content="Delete" 
-                                                            Click="DeleteProfileButton_Click"
-                                                            Tag="{Binding Id}"
-                                                            Style="{DynamicResource SecondaryButtonStyle}" 
-                                                            Padding="10,3"/>
-                                                </Grid>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-
-                                <!-- Create New Profile -->
-                                <StackPanel Margin="0,15,0,0">
-                                    <TextBlock Text="Create New Profile" Foreground="{DynamicResource TextBrush}"/>
-                                    <Grid Margin="0,10,0,0">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="Auto"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBox x:Name="NewProfileNameBox" Grid.Column="0" 
-                                                 VerticalContentAlignment="Center" Padding="5" Margin="0,0,5,0"
-                                                 ToolTipService.ToolTip="Profile name"/>
-                                        <TextBox x:Name="NewProfileDescriptionBox" Grid.Column="1" 
-                                                 VerticalContentAlignment="Center" Padding="5" Margin="5,0,5,0"
-                                                 ToolTipService.ToolTip="Profile description"/>
-                                        <Button x:Name="CreateProfileButton" Grid.Column="2" Content="Create" 
-                                                Click="CreateProfileButton_Click"
-                                                Style="{DynamicResource PrimaryButtonStyle}" Padding="15,5"/>
-                                    </Grid>
                                 </StackPanel>
                             </StackPanel>
                         </Border>

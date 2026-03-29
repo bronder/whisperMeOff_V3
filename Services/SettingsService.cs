@@ -298,4 +298,8 @@ public class TransformationSettings
     public int MaxTextLength { get; set; } = AppConstants.DefaultMaxTextLength;
     public bool AutoSaveHistory { get; set; } = true;
     public int HistoryRetentionDays { get; set; } = AppConstants.DefaultHistoryRetentionDays;
+    
+    // Custom prompts for formal/informal transformations
+    public string CustomFormalPrompt { get; set; } = "";
+    public string CustomInformalPrompt { get; set; } = "";
 }

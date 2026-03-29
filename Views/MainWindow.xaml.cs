@@ -189,6 +189,9 @@ public partial class MainWindow : Window
         // Load settings to UI
         LoadSettingsToUI();
         
+        // Load custom transformation prompts to UI
+        LoadTransformPromptsToUI();
+        
         // Start pre-recording buffer (300ms buffer before trigger) if enabled
         if (App.Settings.General.PreRecordingBuffer)
         {
@@ -2554,48 +2557,7 @@ public partial class MainWindow : Window
 
     #region Transformation Tab Event Handlers
 
-    private TransformationType _currentTransformationType = TransformationType.Grammar;
-    private TransformationDirection _currentDirection = TransformationDirection.Default;
-
-    private void TransformationTypeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (TransformationTypeComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag)
-        {
-            _currentTransformationType = Enum.Parse<TransformationType>(tag);
-            
-            // Show/hide target language for translation
-            TargetLanguagePanel.Visibility = _currentTransformationType == TransformationType.Translation 
-                ? Visibility.Visible : Visibility.Collapsed;
-            
-            // Update direction ComboBox based on transformation type
-            UpdateDirectionComboBox();
-        }
-    }
-
-    private void UpdateDirectionComboBox()
-    {
-        TransformationDirectionComboBox.Items.Clear();
-        
-        var directions = _currentTransformationType switch
-        {
-            TransformationType.Tone => new[] { "Default", "Formal", "Informal" },
-            TransformationType.Voice => new[] { "Default", "Active", "Passive" },
-            TransformationType.Complexity => new[] { "Default", "Simplify", "Elaborate" },
-            TransformationType.Professionalism => new[] { "Default", "Professional", "Casual" },
-            TransformationType.Grammar => new[] { "Default" },
-            TransformationType.Translation => new[] { "Default" },
-            TransformationType.PersonalStyle => new[] { "Default" },
-            TransformationType.Custom => new[] { "Default" },
-            _ => new[] { "Default" }
-        };
-        
-        foreach (var dir in directions)
-        {
-            TransformationDirectionComboBox.Items.Add(new ComboBoxItem { Content = dir, Tag = dir });
-        }
-        
-        TransformationDirectionComboBox.SelectedIndex = 0;
-    }
+    private TransformationDirection _currentDirection = TransformationDirection.Formal;
 
     private void TransformationDirectionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -2605,9 +2567,105 @@ public partial class MainWindow : Window
         }
     }
 
+    private void FormalPromptTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        // Save custom formal prompt when user finishes editing
+        if (FormalPromptTextBox != null && App.Settings?.Transformation != null)
+        {
+            App.Settings.Transformation.CustomFormalPrompt = FormalPromptTextBox.Text;
+            App.Settings.Save();
+            LoggingService.Debug("[Transform] Custom formal prompt saved");
+        }
+    }
+
+    private void InformalPromptTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        // Save custom informal prompt when user finishes editing
+        if (InformalPromptTextBox != null && App.Settings?.Transformation != null)
+        {
+            App.Settings.Transformation.CustomInformalPrompt = InformalPromptTextBox.Text;
+            App.Settings.Save();
+            LoggingService.Debug("[Transform] Custom informal prompt saved");
+        }
+    }
+
+    /// <summary>
+    /// Saves both custom formal and informal prompts to settings.
+    /// Called before transformation to ensure latest prompts are used.
+    /// </summary>
+    private void SaveCustomPrompts()
+    {
+        if (App.Settings?.Transformation != null)
+        {
+            if (FormalPromptTextBox != null)
+            {
+                App.Settings.Transformation.CustomFormalPrompt = FormalPromptTextBox.Text;
+            }
+            if (InformalPromptTextBox != null)
+            {
+                App.Settings.Transformation.CustomInformalPrompt = InformalPromptTextBox.Text;
+            }
+            App.Settings.Save();
+            LoggingService.Debug("[Transform] Custom prompts saved before transformation");
+        }
+    }
+
+    private void SavePromptsButton_Click(object sender, RoutedEventArgs e)
+    {
+        SaveCustomPrompts();
+        LoggingService.Debug("[Transform] Custom prompts manually saved by user");
+    }
+
+    private void ResetPromptsButton_Click(object sender, RoutedEventArgs e)
+    {
+        // Reset prompts to defaults
+        if (App.Settings?.Transformation != null)
+        {
+            App.Settings.Transformation.CustomFormalPrompt = "";
+            App.Settings.Transformation.CustomInformalPrompt = "";
+            App.Settings.Save();
+        }
+        
+        // Update UI with default prompts
+        var defaultFormalPrompt = "Make this text more formal. Keep all the same words and meaning. Only change the tone.";
+        var defaultInformalPrompt = "Make this text more informal. Keep all the same words and meaning. Only change the tone.";
+        
+        if (FormalPromptTextBox != null)
+            FormalPromptTextBox.Text = defaultFormalPrompt;
+        if (InformalPromptTextBox != null)
+            InformalPromptTextBox.Text = defaultInformalPrompt;
+        
+        LoggingService.Info("[Transform] Prompts reset to defaults");
+    }
+
+    private void LoadTransformPromptsToUI()
+    {
+        // Load custom prompts from settings, or use defaults
+        var customFormal = App.Settings?.Transformation?.CustomFormalPrompt ?? "";
+        var customInformal = App.Settings?.Transformation?.CustomInformalPrompt ?? "";
+        
+        if (FormalPromptTextBox != null)
+        {
+            FormalPromptTextBox.Text = string.IsNullOrWhiteSpace(customFormal) 
+                ? "Make this text more formal. Keep all the same words and meaning. Only change the tone."
+                : customFormal;
+        }
+        
+        if (InformalPromptTextBox != null)
+        {
+            InformalPromptTextBox.Text = string.IsNullOrWhiteSpace(customInformal) 
+                ? "Make this text more informal. Keep all the same words and meaning. Only change the tone."
+                : customInformal;
+        }
+    }
+
     private async void TransformButton_Click(object sender, RoutedEventArgs e)
     {
         LoggingService.Debug("[DEBUG] TransformButton_Click called");
+        
+        // Ensure custom prompts are saved before transformation
+        SaveCustomPrompts();
+        
         var inputText = TransformInputTextBox.Text?.Trim();
         LoggingService.Debug($"[DEBUG] Input text length: {inputText?.Length ?? 0}");
         
@@ -2638,26 +2696,20 @@ public partial class MainWindow : Window
             var request = new TransformationRequest
             {
                 Text = inputText,
-                TransformationType = _currentTransformationType,
+                TransformationType = TransformationType.Tone,
                 Direction = _currentDirection,
-                PreserveProperNouns = PreserveProperNounsCheckBox.IsChecked ?? true,
-                PreserveTechnicalTerms = PreserveTechnicalTermsCheckBox.IsChecked ?? true,
-                MinQualityThreshold = (int)QualityThresholdSlider.Value,
+                PreserveProperNouns = true,
+                PreserveTechnicalTerms = true,
+                MinQualityThreshold = 70,
                 IncludeQualityMetrics = true
             };
             
-            // Add target language for translation
-            if (_currentTransformationType == TransformationType.Translation && 
-                TransformTargetLanguageComboBox.SelectedItem is ComboBoxItem langItem)
-            {
-                request.TargetLanguage = langItem.Tag?.ToString();
-            }
-            
             var result = await App.Transform.TransformAsync(request);
-            LoggingService.Debug($"[DEBUG] TransformAsync completed. Success: {result.Success}, Error: {result.ErrorMessage}");
+            LoggingService.Debug($"[DEBUG] TransformAsync completed. Success: {result.Success}, Error: {result.ErrorMessage}, TransformedText length: {result.TransformedText?.Length ?? -1}");
             
             if (result.Success)
             {
+                LoggingService.Debug($"[DEBUG] Setting output text box with: {(result.TransformedText?.Length > 100 ? result.TransformedText.Substring(0, 100) + "..." : result.TransformedText)}");
                 TransformOutputTextBox.Text = result.TransformedText;
                 
                 // Show quality metrics
@@ -2723,133 +2775,15 @@ public partial class MainWindow : Window
 
     private void ApplyToOutputButton_Click(object sender, RoutedEventArgs e)
     {
-        TransformStatusText.Text = "Transformed text ready. Use Copy to copy it.";
-    }
-
-    private async void TransformationProfilesListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        // Profile selection changed
-    }
-
-    private async void LoadProfileButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is System.Windows.Controls.Button button && button.Tag is string profileId)
+        if (!string.IsNullOrEmpty(TransformOutputTextBox.Text))
         {
-            try
-            {
-                var profile = await App.Transform.GetProfileAsync(profileId);
-                if (profile != null)
-                {
-                    // Set transformation type
-                    _currentTransformationType = profile.TransformationType;
-                    foreach (ComboBoxItem item in TransformationTypeComboBox.Items)
-                    {
-                        if (item.Tag?.ToString() == profile.TransformationType.ToString())
-                        {
-                            TransformationTypeComboBox.SelectedItem = item;
-                            break;
-                        }
-                    }
-                    
-                    // Set direction
-                    _currentDirection = profile.Direction;
-                    foreach (ComboBoxItem item in TransformationDirectionComboBox.Items)
-                    {
-                        if (item.Tag?.ToString() == profile.Direction.ToString())
-                        {
-                            TransformationDirectionComboBox.SelectedItem = item;
-                            break;
-                        }
-                    }
-                    
-                    // Set options
-                    PreserveProperNounsCheckBox.IsChecked = profile.PreserveProperNouns;
-                    PreserveTechnicalTermsCheckBox.IsChecked = profile.PreserveTechnicalTerms;
-                    QualityThresholdSlider.Value = profile.MinQualityThreshold;
-                    
-                    TransformStatusText.Text = $"Loaded profile: {profile.Name}";
-                }
-            }
-            catch (Exception ex)
-            {
-                TransformStatusText.Text = $"Error loading profile: {ex.Message}";
-            }
-        }
-    }
-
-    private async void DeleteProfileButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is System.Windows.Controls.Button button && button.Tag is string profileId)
-        {
-            var result = System.Windows.MessageBox.Show(
-                "Delete this profile? This cannot be undone.",
-                "Confirm",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+            System.Windows.Clipboard.SetText(TransformOutputTextBox.Text);
             
-            if (result == MessageBoxResult.Yes)
-            {
-                try
-                {
-                    await App.Transform.DeleteProfileAsync(profileId);
-                    await LoadTransformationProfilesAsync();
-                    TransformStatusText.Text = "Profile deleted.";
-                }
-                catch (Exception ex)
-                {
-                    TransformStatusText.Text = $"Error deleting profile: {ex.Message}";
-                }
-            }
-        }
-    }
-
-    private async void CreateProfileButton_Click(object sender, RoutedEventArgs e)
-    {
-        var name = NewProfileNameBox.Text?.Trim();
-        if (string.IsNullOrEmpty(name))
-        {
-            TransformStatusText.Text = "Please enter a profile name.";
-            return;
-        }
-        
-        try
-        {
-            var profile = new TransformationProfile
-            {
-                Name = name,
-                Description = NewProfileDescriptionBox.Text?.Trim(),
-                TransformationType = _currentTransformationType,
-                Direction = _currentDirection,
-                PreserveProperNouns = PreserveProperNounsCheckBox.IsChecked ?? true,
-                PreserveTechnicalTerms = PreserveTechnicalTermsCheckBox.IsChecked ?? true,
-                MinQualityThreshold = (int)QualityThresholdSlider.Value
-            };
+            // Clear both fields to indicate transformation was applied
+            TransformInputTextBox.Text = string.Empty;
+            TransformOutputTextBox.Text = string.Empty;
             
-            await App.Transform.CreateProfileAsync(profile);
-            
-            NewProfileNameBox.Text = string.Empty;
-            NewProfileDescriptionBox.Text = string.Empty;
-            
-            await LoadTransformationProfilesAsync();
-            TransformStatusText.Text = $"Profile '{name}' created.";
-        }
-        catch (Exception ex)
-        {
-            TransformStatusText.Text = $"Error creating profile: {ex.Message}";
-        }
-    }
-
-    private async Task LoadTransformationProfilesAsync()
-    {
-        try
-        {
-            if (TransformationProfilesListBox == null) return;
-            var profiles = await App.Transform.GetProfilesAsync();
-            TransformationProfilesListBox.ItemsSource = profiles.ToList();
-        }
-        catch (Exception ex)
-        {
-            LoggingService.Error(ex, "Failed to load transformation profiles");
+            TransformStatusText.Text = "Transformed text applied (copied to clipboard, fields cleared).";
         }
     }
 

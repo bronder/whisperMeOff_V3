@@ -467,7 +467,7 @@ public class LlamaService : ILlamaService
                 if (trimmed.StartsWith("Fix any") || 
                     trimmed.StartsWith("Correct any") ||
                     trimmed.StartsWith("Grammar:") ||
-                    trimmed.StartsWith("Text to transform:") ||
+                    trimmed.StartsWith("Text to") ||
                     trimmed.StartsWith("Input:") ||
                     trimmed.StartsWith("Original:") ||
                     trimmed.StartsWith("Here is") ||
@@ -475,6 +475,9 @@ public class LlamaService : ILlamaService
                     trimmed.StartsWith("Here's") ||
                     trimmed.StartsWith("The") && trimmed.Length < 30 ||  // "The following..."
                     trimmed.StartsWith("Do NOT") ||
+                    trimmed.StartsWith("Do not") ||
+                    trimmed.StartsWith("DON'T") ||
+                    trimmed.StartsWith("Don't") ||
                     trimmed.StartsWith("Human:") ||
                     trimmed.StartsWith("Assistant:") ||
                     trimmed.StartsWith("AI:") ||
@@ -542,27 +545,33 @@ public class LlamaService : ILlamaService
             
             // Build the prompt using BuildPrompt to include preservation instructions
             var prompt = TransformationPrompts.BuildPrompt(request);
+            LoggingService.Debug($"[Transform] Prompt length: {prompt.Length}, Text length: {request.Text.Length}");
+            LoggingService.Debug($"[Transform] Full prompt:\n{prompt}");
 
             var inferenceParams = new InferenceParams
             {
                 MaxTokens = Math.Max(512, request.Text.Length / 2),
-                AntiPrompts = new List<string> { "Human:", "User:", "\n\n" },
-                SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.3f, RepeatPenalty = 1.0f }
+                AntiPrompts = new List<string> { "\n\n", "Human:", "User:", "Input:", "Output:", "Corrected:", "The transformed text is:", "The output is:" },
+                SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.5f, RepeatPenalty = 1.1f }
             };
 
             var result = await Task.Run(async () =>
             {
                 var response = new System.Text.StringBuilder();
+                LoggingService.Debug("[Transform] Starting inference...");
                 await foreach (var text in _executor!.InferAsync(prompt, inferenceParams))
                 {
                     response.Append(text);
                     if (response.Length > request.Text.Length * 3)
                         break;
                 }
+                LoggingService.Debug($"[Transform] Inference complete. Raw response length: {response.Length}");
+                LoggingService.Debug($"[Transform] Raw response:\n{response}");
                 return response.ToString();
             });
 
-            var transformed = CleanupLlamaOutput(result, request.Text);
+            var transformed = CleanupLlamaOutput(result, request.Text) ?? string.Empty;
+            LoggingService.Debug($"[Transform] After cleanup. Transformed length: {transformed?.Length ?? -1}");
             
             // Calculate quality metrics
             var metrics = CalculateQualityMetrics(request.Text, transformed);
@@ -579,6 +588,7 @@ public class LlamaService : ILlamaService
         }
         catch (Exception ex)
         {
+            LoggingService.Error(ex, "[Transform] Exception during transformation");
             return new TransformationResult
             {
                 OriginalText = request.Text,

@@ -23,12 +23,13 @@ Respond ONLY with the transformed text. Do not include any explanations, preambl
 
     /// <summary>
     /// Gets the transformation prompt for a specific transformation type and direction.
+    /// For formal/informal Tone transformations, uses custom prompts if available in settings.
     /// </summary>
     public static string GetTransformationPrompt(TransformationType type, TransformationDirection direction)
     {
         return type switch
         {
-            TransformationType.Tone => GetTonePrompt(direction),
+            TransformationType.Tone => GetTonePromptWithCustom(direction),
             TransformationType.Voice => GetVoicePrompt(direction),
             TransformationType.Complexity => GetComplexityPrompt(direction),
             TransformationType.Professionalism => GetProfessionalismPrompt(direction),
@@ -38,6 +39,33 @@ Respond ONLY with the transformed text. Do not include any explanations, preambl
             TransformationType.Custom => GetCustomPrompt(),
             _ => GetDefaultPrompt()
         };
+    }
+
+    /// <summary>
+    /// Gets the formal/informal prompt using custom prompts from settings if available.
+    /// </summary>
+    public static string GetTonePromptWithCustom(TransformationDirection direction)
+    {
+        // Check if custom prompts are set in App.Settings
+        if (direction == TransformationDirection.Formal)
+        {
+            var customPrompt = App.Settings?.Transformation?.CustomFormalPrompt;
+            if (!string.IsNullOrWhiteSpace(customPrompt))
+            {
+                return customPrompt + "\n\n";
+            }
+        }
+        else if (direction == TransformationDirection.Informal)
+        {
+            var customPrompt = App.Settings?.Transformation?.CustomInformalPrompt;
+            if (!string.IsNullOrWhiteSpace(customPrompt))
+            {
+                return customPrompt + "\n\n";
+            }
+        }
+        
+        // Fall back to default prompts
+        return GetTonePrompt(direction);
     }
 
     private static string GetCustomPrompt()
@@ -55,23 +83,15 @@ Text to transform:";
     {
         return direction switch
         {
-            TransformationDirection.Formal => @"Transform the following text to a more FORMAL tone. 
-- Use formal vocabulary and phrases
-- Avoid contractions and colloquialisms
-- Use proper grammar and sentence structure
-- Maintain professional language
+            TransformationDirection.Formal => @"Make this text more formal. Keep all the same words and meaning. Only change the tone.
 
-Text to transform:",
-            TransformationDirection.Informal => @"Transform the following text to a more INFORMAL/CASUAL tone.
-- Use contractions where appropriate
-- Include casual expressions naturally
-- Keep it friendly but readable
-- Avoid overly stiff language
+",
+            TransformationDirection.Informal => @"Make this text more informal. Keep all the same words and meaning. Only change the tone.
 
-Text to transform:",
-            _ => @"Transform the following text according to the specified tone direction. Maintain the original meaning while adjusting the formality level.
+",
+            _ => @"Adjust the tone of this text. Keep the meaning and all words the same.
 
-Text to transform:"
+"
         };
     }
 
@@ -153,15 +173,9 @@ Text to transform:"
 
     private static string GetGrammarPrompt()
     {
-        return @"Fix any grammatical errors, punctuation issues, and spelling mistakes in the following text.
-- Correct verb tenses and subject-verb agreement
-- Fix punctuation errors
-- Correct spelling mistakes
-- Ensure proper sentence structure
-- Preserve the original meaning and style as much as possible
-- Only change what is incorrect, don't rewrite unnecessarily
+        return @"Correct this text. Keep the meaning the same. Output only the corrected text.
 
-Text to transform:";
+Input:";
     }
 
     private static string GetTranslationPrompt()
@@ -238,7 +252,7 @@ Text to transform:";
             request.PreserveTechnicalTerms,
             termsToPreserve);
 
-        return transformationPrompt + "\n\n" + request.Text + preservationInstructions;
+        return transformationPrompt + "\n\n" + request.Text + preservationInstructions + "\n\nOutput:";
     }
 
     /// <summary>
