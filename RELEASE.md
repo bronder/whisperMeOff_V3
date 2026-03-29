@@ -2,7 +2,7 @@
 
 ## Latest Release
 
-### Version 1.8.3
+### Version 1.8.4
 
 #### Bug Fixes
 - **Download Path Validation**: Added validation to folder browser dialog to restrict downloads to allowed directories (AppData, LocalAppData, UserProfile)
