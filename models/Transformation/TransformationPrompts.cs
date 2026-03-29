@@ -37,6 +37,8 @@ Respond ONLY with the transformed text. Do not include any explanations, preambl
             TransformationType.Translation => GetTranslationPrompt(),
             TransformationType.PersonalStyle => GetPersonalStylePrompt(),
             TransformationType.Custom => GetCustomPrompt(),
+            TransformationType.Creative => GetCreativePromptWithCustom(),
+            TransformationType.Humor => GetHumorPromptWithCustom(),
             _ => GetDefaultPrompt()
         };
     }
@@ -66,6 +68,32 @@ Respond ONLY with the transformed text. Do not include any explanations, preambl
         
         // Fall back to default prompts
         return GetTonePrompt(direction);
+    }
+
+    /// <summary>
+    /// Gets the creative prompt using custom prompt from settings if available.
+    /// </summary>
+    public static string GetCreativePromptWithCustom()
+    {
+        var customPrompt = App.Settings?.Transformation?.CustomCreativePrompt;
+        if (!string.IsNullOrWhiteSpace(customPrompt))
+        {
+            return customPrompt + "\n\n";
+        }
+        return GetCreativePrompt(TransformationDirection.Default);
+    }
+
+    /// <summary>
+    /// Gets the humor prompt using custom prompt from settings if available.
+    /// </summary>
+    public static string GetHumorPromptWithCustom()
+    {
+        var customPrompt = App.Settings?.Transformation?.CustomHumorPrompt;
+        if (!string.IsNullOrWhiteSpace(customPrompt))
+        {
+            return customPrompt + "\n\n";
+        }
+        return GetHumorPrompt(TransformationDirection.Default);
     }
 
     private static string GetCustomPrompt()
@@ -200,6 +228,90 @@ Text to translate:";
 - Make it sound natural to the specified style
 
 Text to transform:";
+    }
+
+    private static string GetCreativePrompt(TransformationDirection direction)
+    {
+        return direction switch
+        {
+            TransformationDirection.Narrative => @"Transform this text into a NARRATIVE storytelling style.
+- Use first-person or third-person storytelling techniques
+- Create a sense of progression and development
+- Build tension, climax, or resolution where appropriate
+- Use vivid language to engage the reader emotionally
+- Make it feel like a story being told
+
+Text to transform:",
+            TransformationDirection.Expository => @"Transform this text into an EXPOSITORY/INFORMATIVE style.
+- Present information clearly and logically
+- Use factual, objective language
+- Organize information with clear structure
+- Explain concepts thoroughly with supporting details
+- Focus on informing and educating the reader
+
+Text to transform:",
+            TransformationDirection.Persuasive => @"Transform this text into a PERSUASIVE style.
+- Use compelling arguments to convince the reader
+- Employ rhetorical techniques and emotional appeals
+- Take a clear stance and advocate strongly for it
+- Anticipate and address counterarguments
+- Motivate the reader to action or agreement
+
+Text to transform:",
+            TransformationDirection.Descriptive => @"Transform this text into a DESCRIPTIVE/EVOCATIVE style.
+- Use rich, vivid sensory details
+- Paint pictures with words
+- Engage the reader's imagination
+- Create atmosphere and mood through language
+- Bring subjects to life through detailed characterization
+
+Text to transform:",
+            _ => @"Transform this text using a creative writing style while preserving the core message and meaning.
+
+Text to transform:"
+        };
+    }
+
+    private static string GetHumorPrompt(TransformationDirection direction)
+    {
+        return direction switch
+        {
+            TransformationDirection.Serious => @"Transform this text to a COMPLETELY SERIOUS tone.
+- Remove all humor, jokes, and playful language
+- Use grave, solemn, and earnest language
+- Focus on the weight and importance of the subject
+- Make it appropriate for solemn occasions or grave topics
+- Maintain the original message but convey it with complete seriousness
+
+Text to transform:",
+            TransformationDirection.Humorous => @"Transform this text to include LIGHT HUMOR and playfulness.
+- Add gentle jokes and witty observations
+- Use playful language and wordplay where natural
+- Keep it light-hearted and fun
+- Avoid offensive or dark humor
+- Make the reader smile while conveying the message
+
+Text to transform:",
+            TransformationDirection.Warm => @"Transform this text to a WARM, FRIENDLY, and APPROACHABLE tone.
+- Add warmth and emotional connection
+- Use friendly, caring language
+- Make the reader feel welcomed and valued
+- Include comforting and supportive phrases
+- Create a sense of closeness and rapport
+
+Text to transform:",
+            TransformationDirection.Ironic => @"Transform this text using IRONIC, TONGUE-IN-CHEEK tone.
+- Add subtle irony and sarcasm where appropriate
+- Say things in a way that suggests the opposite meaning
+- Use dry wit and mock-seriousness
+- Be cleverly critical or mocking
+- Create distance between the literal and intended meaning
+
+Text to transform:",
+            _ => @"Transform this text, adjusting the humor and tone level while preserving the core message.
+
+Text to transform:"
+        };
     }
 
     private static string GetDefaultPrompt()

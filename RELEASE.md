@@ -2,6 +2,27 @@
 
 ## Latest Release
 
+### Version 1.9.0
+
+#### New Features
+- **Creative Transformation**: New transformation style that applies creative writing techniques to text
+  - Narrative: Storytelling style with emotional engagement
+  - Expository: Informative and explanatory style
+  - Persuasive: Argument-driven and convincing style
+  - Descriptive: Evocative and vivid descriptive style
+- **Humor Transformation**: New transformation style that adjusts the humor level of text
+  - Serious: No humor, grave and solemn tone
+  - Humorous: Light, playful humor
+  - Warm: Friendly and approachable tone
+  - Ironic: Tongue-in-cheek, satirical tone
+
+#### UI Improvements
+- Added badge-style buttons for selecting transformation style (Formal, Informal, Creative, Humor)
+- Added custom prompt editors for Creative and Humor transformations
+- Improved styling with rounded badges and consistent visual feedback
+
+---
+
 ### Version 1.8.4
 
 #### Bug Fixes

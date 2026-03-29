@@ -2558,12 +2558,60 @@ public partial class MainWindow : Window
     #region Transformation Tab Event Handlers
 
     private TransformationDirection _currentDirection = TransformationDirection.Formal;
+    private TransformationType _currentType = TransformationType.Tone;
 
-    private void TransformationDirectionComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void StyleBadge_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (TransformationDirectionComboBox.SelectedItem is ComboBoxItem item && item.Tag is string tag)
+        if (sender is Border badge && badge.Tag is string tag)
         {
-            _currentDirection = Enum.Parse<TransformationDirection>(tag);
+            // Reset all badges to unselected state
+            FormalBadge.Background = FindResource("CardBrush") as System.Windows.Media.Brush;
+            FormalBadge.BorderBrush = FindResource("BorderBrush") as System.Windows.Media.Brush;
+            ((TextBlock)FormalBadge.Child).Foreground = FindResource("TextBrush") as System.Windows.Media.Brush;
+            ((TextBlock)FormalBadge.Child).FontWeight = System.Windows.FontWeights.Normal;
+            
+            InformalBadge.Background = FindResource("CardBrush") as System.Windows.Media.Brush;
+            InformalBadge.BorderBrush = FindResource("BorderBrush") as System.Windows.Media.Brush;
+            ((TextBlock)InformalBadge.Child).Foreground = FindResource("TextBrush") as System.Windows.Media.Brush;
+            ((TextBlock)InformalBadge.Child).FontWeight = System.Windows.FontWeights.Normal;
+            
+            CreativeBadge.Background = FindResource("CardBrush") as System.Windows.Media.Brush;
+            CreativeBadge.BorderBrush = FindResource("BorderBrush") as System.Windows.Media.Brush;
+            ((TextBlock)CreativeBadge.Child).Foreground = FindResource("TextBrush") as System.Windows.Media.Brush;
+            ((TextBlock)CreativeBadge.Child).FontWeight = System.Windows.FontWeights.Normal;
+            
+            HumorBadge.Background = FindResource("CardBrush") as System.Windows.Media.Brush;
+            HumorBadge.BorderBrush = FindResource("BorderBrush") as System.Windows.Media.Brush;
+            ((TextBlock)HumorBadge.Child).Foreground = FindResource("TextBrush") as System.Windows.Media.Brush;
+            ((TextBlock)HumorBadge.Child).FontWeight = System.Windows.FontWeights.Normal;
+            
+            // Highlight selected badge
+            badge.Background = FindResource("AccentBrush") as System.Windows.Media.Brush;
+            badge.BorderBrush = FindResource("AccentBrush") as System.Windows.Media.Brush;
+            badge.BorderThickness = new System.Windows.Thickness(1);
+            ((TextBlock)badge.Child).Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Colors.White);
+            ((TextBlock)badge.Child).FontWeight = System.Windows.FontWeights.SemiBold;
+            
+            // Map tag selection to type and direction
+            switch (tag)
+            {
+                case "Formal":
+                    _currentType = TransformationType.Tone;
+                    _currentDirection = TransformationDirection.Formal;
+                    break;
+                case "Informal":
+                    _currentType = TransformationType.Tone;
+                    _currentDirection = TransformationDirection.Informal;
+                    break;
+                case "Creative":
+                    _currentType = TransformationType.Creative;
+                    _currentDirection = TransformationDirection.Default;
+                    break;
+                case "Humor":
+                    _currentType = TransformationType.Humor;
+                    _currentDirection = TransformationDirection.Default;
+                    break;
+            }
         }
     }
 
@@ -2589,6 +2637,28 @@ public partial class MainWindow : Window
         }
     }
 
+    private void CreativePromptTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        // Save custom creative prompt when user finishes editing
+        if (CreativePromptTextBox != null && App.Settings?.Transformation != null)
+        {
+            App.Settings.Transformation.CustomCreativePrompt = CreativePromptTextBox.Text;
+            App.Settings.Save();
+            LoggingService.Debug("[Transform] Custom creative prompt saved");
+        }
+    }
+
+    private void HumorPromptTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        // Save custom humor prompt when user finishes editing
+        if (HumorPromptTextBox != null && App.Settings?.Transformation != null)
+        {
+            App.Settings.Transformation.CustomHumorPrompt = HumorPromptTextBox.Text;
+            App.Settings.Save();
+            LoggingService.Debug("[Transform] Custom humor prompt saved");
+        }
+    }
+
     /// <summary>
     /// Saves both custom formal and informal prompts to settings.
     /// Called before transformation to ensure latest prompts are used.
@@ -2604,6 +2674,14 @@ public partial class MainWindow : Window
             if (InformalPromptTextBox != null)
             {
                 App.Settings.Transformation.CustomInformalPrompt = InformalPromptTextBox.Text;
+            }
+            if (CreativePromptTextBox != null)
+            {
+                App.Settings.Transformation.CustomCreativePrompt = CreativePromptTextBox.Text;
+            }
+            if (HumorPromptTextBox != null)
+            {
+                App.Settings.Transformation.CustomHumorPrompt = HumorPromptTextBox.Text;
             }
             App.Settings.Save();
             LoggingService.Debug("[Transform] Custom prompts saved before transformation");
@@ -2623,17 +2701,25 @@ public partial class MainWindow : Window
         {
             App.Settings.Transformation.CustomFormalPrompt = "";
             App.Settings.Transformation.CustomInformalPrompt = "";
+            App.Settings.Transformation.CustomCreativePrompt = "";
+            App.Settings.Transformation.CustomHumorPrompt = "";
             App.Settings.Save();
         }
         
         // Update UI with default prompts
         var defaultFormalPrompt = "Make this text more formal. Keep all the same words and meaning. Only change the tone.";
         var defaultInformalPrompt = "Make this text more informal. Keep all the same words and meaning. Only change the tone.";
+        var defaultCreativePrompt = "Transform this text using a creative writing style while preserving the core message.";
+        var defaultHumorPrompt = "Transform this text, adjusting the humor and tone level while preserving the core message.";
         
         if (FormalPromptTextBox != null)
             FormalPromptTextBox.Text = defaultFormalPrompt;
         if (InformalPromptTextBox != null)
             InformalPromptTextBox.Text = defaultInformalPrompt;
+        if (CreativePromptTextBox != null)
+            CreativePromptTextBox.Text = defaultCreativePrompt;
+        if (HumorPromptTextBox != null)
+            HumorPromptTextBox.Text = defaultHumorPrompt;
         
         LoggingService.Info("[Transform] Prompts reset to defaults");
     }
@@ -2643,6 +2729,8 @@ public partial class MainWindow : Window
         // Load custom prompts from settings, or use defaults
         var customFormal = App.Settings?.Transformation?.CustomFormalPrompt ?? "";
         var customInformal = App.Settings?.Transformation?.CustomInformalPrompt ?? "";
+        var customCreative = App.Settings?.Transformation?.CustomCreativePrompt ?? "";
+        var customHumor = App.Settings?.Transformation?.CustomHumorPrompt ?? "";
         
         if (FormalPromptTextBox != null)
         {
@@ -2656,6 +2744,20 @@ public partial class MainWindow : Window
             InformalPromptTextBox.Text = string.IsNullOrWhiteSpace(customInformal) 
                 ? "Make this text more informal. Keep all the same words and meaning. Only change the tone."
                 : customInformal;
+        }
+        
+        if (CreativePromptTextBox != null)
+        {
+            CreativePromptTextBox.Text = string.IsNullOrWhiteSpace(customCreative) 
+                ? "Transform this text using a creative writing style while preserving the core message."
+                : customCreative;
+        }
+        
+        if (HumorPromptTextBox != null)
+        {
+            HumorPromptTextBox.Text = string.IsNullOrWhiteSpace(customHumor) 
+                ? "Transform this text, adjusting the humor and tone level while preserving the core message."
+                : customHumor;
         }
     }
 
@@ -2696,7 +2798,7 @@ public partial class MainWindow : Window
             var request = new TransformationRequest
             {
                 Text = inputText,
-                TransformationType = TransformationType.Tone,
+                TransformationType = _currentType,
                 Direction = _currentDirection,
                 PreserveProperNouns = true,
                 PreserveTechnicalTerms = true,

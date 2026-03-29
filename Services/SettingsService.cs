@@ -302,4 +302,6 @@ public class TransformationSettings
     // Custom prompts for formal/informal transformations
     public string CustomFormalPrompt { get; set; } = "";
     public string CustomInformalPrompt { get; set; } = "";
+    public string CustomCreativePrompt { get; set; } = "";
+    public string CustomHumorPrompt { get; set; } = "";
 }

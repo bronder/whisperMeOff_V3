@@ -46,7 +46,17 @@ public enum TransformationType
     /// <summary>
     /// Custom transformation defined by user
     /// </summary>
-    Custom
+    Custom,
+
+    /// <summary>
+    /// Apply creative writing style (narrative, descriptive, etc.)
+    /// </summary>
+    Creative,
+
+    /// <summary>
+    /// Adjust humor/tone level (serious, funny, sarcastic, etc.)
+    /// </summary>
+    Humor
 }
 
 /// <summary>
@@ -97,7 +107,49 @@ public enum TransformationDirection
     /// <summary>
     /// Casual tone
     /// </summary>
-    Casual
+    Casual,
+
+    // Creative writing style directions
+    /// <summary>
+    /// Narrative storytelling style
+    /// </summary>
+    Narrative,
+
+    /// <summary>
+    /// Expository/informative style
+    /// </summary>
+    Expository,
+
+    /// <summary>
+    /// Persuasive/argumentative style
+    /// </summary>
+    Persuasive,
+
+    /// <summary>
+    /// Descriptive/evocative style
+    /// </summary>
+    Descriptive,
+
+    // Humor tone directions
+    /// <summary>
+    /// Serious, no-humor tone
+    /// </summary>
+    Serious,
+
+    /// <summary>
+    /// Light humor, playful tone
+    /// </summary>
+    Humorous,
+
+    /// <summary>
+    /// Warm, friendly, approachable tone
+    /// </summary>
+    Warm,
+
+    /// <summary>
+    /// Ironic, tongue-in-cheek tone
+    /// </summary>
+    Ironic
 }
 
 /// <summary>

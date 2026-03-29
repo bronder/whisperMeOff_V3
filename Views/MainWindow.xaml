@@ -1622,14 +1622,36 @@
                                 <TextBlock Text="Transformation Settings" FontSize="14" FontWeight="SemiBold"
                                            Foreground="{DynamicResource TextBrush}"/>
                                 
-                                <!-- Tone Direction -->
+                                <!-- Style Badges -->
                                 <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
                                     <TextBlock Text="Style:" VerticalAlignment="Center" 
                                                Foreground="{DynamicResource TextBrush}" Width="100"/>
-                                    <ComboBox x:Name="TransformationDirectionComboBox" Width="200">
-                                        <ComboBoxItem Content="Formal" Tag="Formal" IsSelected="True"/>
-                                        <ComboBoxItem Content="Informal" Tag="Informal"/>
-                                    </ComboBox>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border x:Name="FormalBadge" Background="{DynamicResource AccentBrush}" 
+                                                CornerRadius="12" Padding="12,6" Margin="0,0,8,0" Cursor="Hand"
+                                                BorderThickness="1" BorderBrush="{DynamicResource AccentBrush}"
+                                                MouseLeftButtonDown="StyleBadge_Click" Tag="Formal">
+                                            <TextBlock Text="Formal" Foreground="White" FontWeight="SemiBold"/>
+                                        </Border>
+                                        <Border x:Name="InformalBadge" Background="{DynamicResource CardBrush}" 
+                                                CornerRadius="12" Padding="12,6" Margin="0,0,8,0" Cursor="Hand"
+                                                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                                                MouseLeftButtonDown="StyleBadge_Click" Tag="Informal">
+                                            <TextBlock Text="Informal" Foreground="{DynamicResource TextBrush}"/>
+                                        </Border>
+                                        <Border x:Name="CreativeBadge" Background="{DynamicResource CardBrush}" 
+                                                CornerRadius="12" Padding="12,6" Margin="0,0,8,0" Cursor="Hand"
+                                                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                                                MouseLeftButtonDown="StyleBadge_Click" Tag="Creative">
+                                            <TextBlock Text="Creative" Foreground="{DynamicResource TextBrush}"/>
+                                        </Border>
+                                        <Border x:Name="HumorBadge" Background="{DynamicResource CardBrush}" 
+                                                CornerRadius="12" Padding="12,6" Cursor="Hand"
+                                                BorderThickness="1" BorderBrush="{DynamicResource BorderBrush}"
+                                                MouseLeftButtonDown="StyleBadge_Click" Tag="Humor">
+                                            <TextBlock Text="Humor" Foreground="{DynamicResource TextBrush}"/>
+                                        </Border>
+                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -1665,6 +1687,32 @@
                                              Padding="5"
                                              LostFocus="InformalPromptTextBox_LostFocus"/>
                                     <TextBlock Text="Default: Make this text more informal. Keep all the same words and meaning. Only change the tone."
+                                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,3,0,15"/>
+
+                                    <!-- Creative Prompt -->
+                                    <TextBlock Text="Creative Prompt:" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}" Margin="0,0,0,5"/>
+                                    <TextBox x:Name="CreativePromptTextBox"
+                                             AcceptsReturn="True"
+                                             TextWrapping="Wrap"
+                                             Height="80"
+                                             VerticalScrollBarVisibility="Auto"
+                                             Padding="5"
+                                             LostFocus="CreativePromptTextBox_LostFocus"/>
+                                    <TextBlock Text="Default: Transform this text using a creative writing style while preserving the core message."
+                                               Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,3,0,15"/>
+
+                                    <!-- Humor Prompt -->
+                                    <TextBlock Text="Humor Prompt:" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextBrush}" Margin="0,0,0,5"/>
+                                    <TextBox x:Name="HumorPromptTextBox"
+                                             AcceptsReturn="True"
+                                             TextWrapping="Wrap"
+                                             Height="80"
+                                             VerticalScrollBarVisibility="Auto"
+                                             Padding="5"
+                                             LostFocus="HumorPromptTextBox_LostFocus"/>
+                                    <TextBlock Text="Default: Transform this text, adjusting the humor and tone level while preserving the core message."
                                                Foreground="{DynamicResource SecondaryTextBrush}" FontSize="11" Margin="0,3,0,10"/>
 
                                     <Button x:Name="SavePromptsButton" Content="Save Prompts"
